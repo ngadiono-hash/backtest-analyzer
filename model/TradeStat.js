@@ -65,7 +65,6 @@ export class TradeStat {
     }
 
     this.stats = this._calculateAllStats();
-    console.log(this.stats)
     this._dispatchUpdate();
   }
 

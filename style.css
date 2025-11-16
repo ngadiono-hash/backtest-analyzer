@@ -395,6 +395,7 @@ tr:last-child td[data-tooltip]:hover::after {
     padding: 0;
     margin: 0;
     border-radius: 0;
+    box-shadow: none;
   }
 
   .controller {
@@ -454,7 +455,7 @@ tr:last-child td[data-tooltip]:hover::after {
 
 .stats-table {
   width: 100%;
-  /* border-collapse: collapse; */
+  border-collapse: collapse;
   border: 1px solid #eee;
   /* overflow: auto; */
 }
@@ -524,11 +525,13 @@ tr:last-child td[data-tooltip]:hover::after {
 
 #chart-container {
   position: relative;
-  width: 100%;          /* width otomatis */
-  height: 380px;        /* default height */
-  min-height: 160px;    /* minimum height biar tidak mepet */
-  max-height: 90vh;     /* biar tidak terlalu besar */
+  margin: 10px;
+  /* width: 100%; */          /* width otomatis */
+  height: 60vh;        /* default height */
+  min-height: 40vh;    /* minimum height biar tidak mepet */
+  max-height: 80vh;     /* biar tidak terlalu besar */
   background: #fff;
+  border: 2px solid #ccc;
 }
 
 /* area drag di bawah */
@@ -540,6 +543,7 @@ tr:last-child td[data-tooltip]:hover::after {
   height: 6px;           /* area drag */
   cursor: ns-resize;
   background: transparent;
+  
 }
 
 .resizer::after {

@@ -1,6 +1,6 @@
 // /view/TableStat.js
 import { num } from '../helpers/metrics_utils.js';
-import { drawEquityChart } from '../helpers/metrics_equity.js'
+import { renderChart } from '../helpers/chart_renderer.js'
 
 export class TableStat {
   constructor() {
@@ -22,9 +22,8 @@ export class TableStat {
       const { stats, balance, lotSize } = e.detail;
       this.render(stats);
       const equityCurve = stats.total.all.equityCurve;
-      if (equityCurve && equityCurve.length) {
-        drawEquityChart(equityCurve);
-      }
+      if (equityCurve && equityCurve.length) renderChart(equityCurve);
+      
     });
   }
 
