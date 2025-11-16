@@ -4,18 +4,9 @@ import { renderChart } from '../helpers/chart_renderer.js'
 
 export class TableStat {
   constructor() {
-    this.container = document.getElementById('statsTableContainer') ||
-      this._createContainer();
-
+    this.container = document.getElementById('stats-table-container');
     this._setupEventListener();
     this._renderSkeleton();
-  }
-
-  _createContainer() {
-    const div = document.createElement('div');
-    div.id = 'statsTableContainer';
-    document.body.appendChild(div);
-    return div;
   }
   _setupEventListener() {
     window.addEventListener('tradestat-updated', (e) => {
@@ -23,13 +14,13 @@ export class TableStat {
       this.render(stats);
       const equityCurve = stats.total.all.equityCurve;
       if (equityCurve && equityCurve.length) renderChart(equityCurve);
-      
+
     });
   }
 
   _renderSkeleton() {
     this.container.innerHTML = `
-      <table class="stats-table" id="statsTable">
+      <table id="stats-table">
         <tbody id="tableBody">
           <tr><td colspan="4" class="period">Loading statistics...</td></tr>
         </tbody>
@@ -41,8 +32,6 @@ export class TableStat {
   // FORMATTER
   // ============================================================
   fmt = {
-    num: num,
-
     sign(val, suffix = "") {
       if (val === 0) return `0${suffix}`;
 
@@ -108,99 +97,125 @@ export class TableStat {
     const { period, total } = stats;
     const { long: L, short: S, all: A } = total;
 
-    const r = []; // rows accumulator
     const R = this.Row;
     const f = this.fmt;
 
-    // ------------------------------------------------------------
+    // --- Buffer HTML langsung ---
+    const html = [];
+
+    // ============================
     // PERIOD
-    // ------------------------------------------------------------
-    r.push(R.period(`${period.start} → ${period.end} (${period.months} bulan)`));
-    r.push(R.header());
+    // ============================
+    html.push(R.period(`${period.start} → ${period.end} (${period.months} months)`));
+    html.push(R.header());
 
-    // Helper builder
-    const M = (label, a, l, s) => r.push(R.metric(label, a, l, s));
+    // ============================
+    // STEP 1 — Kumpulkan semua metric rows (tanpa HTML)
+    // ============================
+    const rows = [];
+    const add = (label, a, l, s) => rows.push({ label, a, l, s });
 
-    // ------------------------------------------------------------
     // TRADES
-    // ------------------------------------------------------------
-    M("Total Trades", A.trades, L.trades, S.trades);
-    M("Win Trades", A.wintrades, L.wintrades, S.wintrades);
-    M("Loss Trades", A.losstrades, L.losstrades, S.losstrades);
-    M("Winrate", f.percent(A.winrate), f.percent(L.winrate), f.percent(S.winrate));
-    // ------------------------------------------------------------
+    add("Total Trades", A.trades, L.trades, S.trades);
+    add("Win Trades", A.wintrades, L.wintrades, S.wintrades);
+    add("Loss Trades", A.losstrades, L.losstrades, S.losstrades);
+    add("Winrate", f.percent(A.winrate), f.percent(L.winrate), f.percent(S.winrate));
+
     // NET
-    // ------------------------------------------------------------
-    M("Net Profit", f.dollar(A.netDollar), f.dollar(L.netDollar), f.dollar(S.netDollar));
-    M("Net Profit", f.percent((A.netDollar / 10000) * 100), f.percent((L.netDollar / 10000) * 100), f.percent((S.netDollar / 10000) * 100));
-    M("Net Profit", f.pips(A.netPips), f.pips(L.netPips), f.pips(S.netPips));
-    // ------------------------------------------------------------
+    add("Net Profit", f.dollar(A.netDollar), f.dollar(L.netDollar), f.dollar(S.netDollar));
+    add("Net Profit", f.percent((A.netDollar / 10000) * 100), f.percent((L.netDollar / 10000) * 100), f.percent((S.netDollar / 10000) * 100));
+    add("Net Profit", f.pips(A.netPips), f.pips(L.netPips), f.pips(S.netPips));
+
     // GROSS
-    // ------------------------------------------------------------
-    M("Gross Profit", f.raw(A.grossProfitDollar, 'USD'), f.raw(L.grossProfitDollar, 'USD'), f.raw(S.grossProfitDollar, 'USD'));
-    M("Gross Profit", f.raw(A.grossProfitPips, 'pips'), f.raw(L.grossProfitPips, 'pips'), f.raw(S.grossProfitPips, 'pips'));
-    M("Gross Loss", f.raw(A.grossLossDollar, 'USD'), f.raw(L.grossLossDollar, 'USD'), f.raw(S.grossLossDollar, 'USD'));
-    M("Gross Loss", f.raw(A.grossLossPips, 'pips'), f.raw(L.grossLossPips, 'pips'), f.raw(S.grossLossPips, 'pips'));
+    add("Gross Profit", f.raw(A.grossProfitDollar, 'USD'), f.raw(L.grossProfitDollar, 'USD'), f.raw(S.grossProfitDollar, 'USD'));
+    add("Gross Profit", f.raw(A.grossProfitPips, 'pips'), f.raw(L.grossProfitPips, 'pips'), f.raw(S.grossProfitPips, 'pips'));
+    add("Gross Loss", f.raw(A.grossLossDollar, 'USD'), f.raw(L.grossLossDollar, 'USD'), f.raw(S.grossLossDollar, 'USD'));
+    add("Gross Loss", f.raw(A.grossLossPips, 'pips'), f.raw(L.grossLossPips, 'pips'), f.raw(S.grossLossPips, 'pips'));
 
-    // ------------------------------------------------------------
     // PROFIT FACTOR
-    // ------------------------------------------------------------
-    M("Profit Factor", f.raw(A.profitFactor), f.raw(L.profitFactor), f.raw(S.profitFactor));
-    // ------------------------------------------------------------
+    add("Profit Factor", f.raw(A.profitFactor), f.raw(L.profitFactor), f.raw(S.profitFactor));
+
     // AVERAGES
-    // ------------------------------------------------------------
-    M("Avg Profit", f.raw(A.avgProfitDollar, 'USD'), f.raw(L.avgProfitDollar, 'USD'), f.raw(S.avgProfitDollar, 'USD'));
-    M("Avg Profit", f.raw(A.avgProfitPips, "pips"), f.raw(L.avgProfitPips, "pips"), f.raw(S.avgProfitPips, "pips"));
-    M("Avg Loss", f.raw(A.avgLossDollar, "USD"), f.raw(L.avgLossDollar, "USD"), f.raw(S.avgLossDollar, "USD"));
-    M("Avg Loss", f.raw(A.avgLossPips, "pips"), f.raw(L.avgLossPips, "pips"), f.raw(S.avgLossPips, "pips"));
+    add("Avg Profit", f.raw(A.avgProfitDollar, 'USD'), f.raw(L.avgProfitDollar, 'USD'), f.raw(S.avgProfitDollar, 'USD'));
+    add("Avg Profit", f.raw(A.avgProfitPips, 'pips'), f.raw(L.avgProfitPips, 'pips'), f.raw(S.avgProfitPips, 'pips'));
+    add("Avg Loss", f.raw(A.avgLossDollar, 'USD'), f.raw(L.avgLossDollar, 'USD'), f.raw(S.avgLossDollar, 'USD'));
+    add("Avg Loss", f.raw(A.avgLossPips, 'pips'), f.raw(L.avgLossPips, 'pips'), f.raw(S.avgLossPips, 'pips'));
 
-    // ------------------------------------------------------------
     // STREAKS
-    // ------------------------------------------------------------
-    M("Consecutive Profit", A.maxWinStreak, "—", "—");
-    M("Consecutive Loss", A.maxLossStreak, "—", "—");
+    add("Consecutive Profit", A.maxWinStreak, "—", "—");
+    add("Consecutive Loss", A.maxLossStreak, "—", "—");
 
-    // ------------------------------------------------------------
     // MONTHLY
-    // ------------------------------------------------------------
-    M("Monthly Net Min", f.pips(A.monthly.minNetPips), "—", "—");
-    M("Monthly Net Max", f.pips(A.monthly.maxNetPips), "—", "—");
-    M("Average RiskReward", A.riskReward, "—", "—");
-    M("Stability", f.percent(A.monthly.stability), "—", "—");
+    add("Monthly Net Min", f.pips(A.monthly.minNetPips), "—", "—");
+    add("Monthly Net Max", f.pips(A.monthly.maxNetPips), "—", "—");
+    add("Avg RiskReward", A.riskReward, "—", "—");
+    add("Stability", f.percent(A.monthly.stability), "—", "—");
 
-    // ------------------------------------------------------------
     // DRAWDOWN
-    // ------------------------------------------------------------
-    M("Max Drawdown", f.raw(A.maxDrawdownDollar, "USD"), "—", "—");
-    M("Max Drawdown", f.raw(A.maxDrawdownPips, "pips"), "—", "—");
-    M("Max Drawdown", `${A.maxDrawdownPercent}%`, "—", "—");
+    add("Max Drawdown", f.raw(A.maxDrawdownDollar, "USD"), "—", "—");
+    add("Max Drawdown", f.raw(A.maxDrawdownPips, "pips"), "—", "—");
+    add("Max Drawdown", `${A.maxDrawdownPercent}%`, "—", "—");
 
-    //M("AverageDrawdown", "—", "—", "—");
-
-    // ------------------------------------------------------------
     // PER MONTH / TRADE
-    // ------------------------------------------------------------
-    M("Avg Trade / month", num(A.avgTradePerMonth, 1), "—", "—");
-    M("Avg Net / month", f.pips(A.profitPerMonthPips), "—", "—");
-    M("Avg Net / month", f.dollar(A.profitPerMonthDollar), "—", "—");
-    M("Profit per trade", f.dollar(A.profitPerTradeDollar), f.dollar(L.profitPerTradeDollar), f.dollar(S.profitPerTradeDollar));
-    M("Profit per trade", f.pips(A.profitPerTradePips), f.pips(L.profitPerTradePips), f.pips(S.profitPerTradePips));
+    add("Avg Trade / month", num(A.avgTradePerMonth, 1), "—", "—");
+    add("Avg Net / month", f.pips(A.profitPerMonthPips), "—", "—");
+    add("Avg Net / month", f.dollar(A.profitPerMonthDollar), "—", "—");
+    add("Profit per trade", f.dollar(A.profitPerTradeDollar), f.dollar(L.profitPerTradeDollar), f.dollar(S.profitPerTradeDollar));
+    add("Profit per trade", f.pips(A.profitPerTradePips), f.pips(L.profitPerTradePips), f.pips(S.profitPerTradePips));
 
-    // ------------------------------------------------------------
     // RECOVERY
-    // ------------------------------------------------------------
-    M("RecoveryFactor", num(A.recoveryFactor), "", "");
-    M("MaxRecoveryTime", A.maxRecoveryTime, "", "");
-    M("AvgRecoveryTime", A.avgRecoveryTime, "", "");
+    add("RecoveryFactor", num(A.recoveryFactor), "", "");
+    add("MaxRecoveryTime", A.maxRecoveryTime, "", "");
+    add("AvgRecoveryTime", A.avgRecoveryTime, "", "");
 
-    // ------------------------------------------------------------
     // HOLD TIME
-    // ------------------------------------------------------------
-    M("AvgTradeHold", A.avgTradeHoldTime, L.avgTradeHoldTime, S.avgTradeHoldTime);
-    M("MaxTradeHold", A.maxTradeHoldTime, L.maxTradeHoldTime, S.maxTradeHoldTime);
+    add("AvgTradeHold", A.avgTradeHoldTime, L.avgTradeHoldTime, S.avgTradeHoldTime);
+    add("MaxTradeHold", A.maxTradeHoldTime, L.maxTradeHoldTime, S.maxTradeHoldTime);
 
-    // === FINAL RENDER ===
-    document.getElementById('tableBody').innerHTML = r.join('');
+    // =====================================================
+    // STEP 2 — AUTO ROWSPAN GENERATOR
+    // =====================================================
+    let i = 0;
+    while (i < rows.length) {
+      const start = i;
+      const label = rows[i].label;
+
+      // hitung berapa baris berurutan dgn label sama
+      let count = 1;
+      while (i + count < rows.length && rows[i + count].label === label) {
+        count++;
+      }
+
+      // row pertama dengan rowspan
+      const first = rows[start];
+      html.push(`
+      <tr>
+        <td rowspan="${count}" class="metric-label">${label}</td>
+        <td>${first.a}</td>
+        <td>${first.l}</td>
+        <td>${first.s}</td>
+      </tr>
+    `);
+
+      // baris berikutnya tanpa label
+      for (let k = 1; k < count; k++) {
+        const r = rows[start + k];
+        html.push(`
+        <tr>
+          <td>${r.a}</td>
+          <td>${r.l}</td>
+          <td>${r.s}</td>
+        </tr>
+      `);
+      }
+
+      i += count; // loncat ke data label berikutnya
+    }
+
+    // ============================
+    // FINAL RENDER
+    // ============================
+    document.getElementById('tableBody').innerHTML = html.join('');
   }
 }
 
