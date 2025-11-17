@@ -115,7 +115,7 @@ table td {
 /* STATUS AREA */
 #status-area {
   padding: 5px;
-  background: #fafaaa;
+  background: #e3f2fd;
 }
 
 #status-area .invalid {
@@ -352,7 +352,7 @@ td[data-tooltip]:hover::after {
 }
 
 #stats-table th.label,
-#stats-table tr td.metric-label {
+#stats-table tr td.label {
   background: var(--primary-bg) !important;
   color: #fff;
   font-weight: 500;

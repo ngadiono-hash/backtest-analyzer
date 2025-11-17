@@ -10,6 +10,7 @@ export class TradeStat {
     this.data = [];
     this.normalized = [];
     this.stats = {};
+    this.monthly = {};
     this._setupEventListeners();
   }
   
@@ -26,6 +27,8 @@ export class TradeStat {
   _runAnalysis() {
     const sorted = this._sortTrades(this.data);
     this.normalized = sorted.map(t => this._normalizeTrade(t)).filter(Boolean);
+    this.monthly = MM.aggregateMonthlyPips(this.normalized);
+    //console.log(this.monthly)
     this.stats = this._calculateAllStats();
     this._dispatchUpdate();
   }
@@ -49,12 +52,13 @@ export class TradeStat {
   
   _calculateAllStats() {
     const all = this.normalized;
+    
     const long = all.filter(t => t.type === 'Buy');
     const short = all.filter(t => t.type === 'Sell');
     const period = this._computePeriod(all);
     return {
       period,
-      monthly: MM.aggregateMonthlyPips(all),
+      monthly: this.monthly,
       total: {
         long: this._computeCategoryStats(long, period.months),
         short: this._computeCategoryStats(short, period.months),
@@ -77,7 +81,7 @@ export class TradeStat {
     const recovery = ME.calculateRecovery(equityCurve);
     const basic = MB.calculateBasicStats(trades);
     const streaks = MB.calculateStreaks(trades);
-    const monthly = MM.calculateMonthlyStats(this.monthlyNet);
+    const monthly = MM.calculateMonthlyStats(this.monthly);
     const rr = MB.calculateRiskReward(trades);
     const netPips = trades.reduce((s, t) => s + t.pipsSigned, 0);
     const wins = trades.filter(t => t.isWin);
