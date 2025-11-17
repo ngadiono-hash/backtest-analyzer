@@ -6,7 +6,7 @@ export function buildEquityCurve(trades = []) {
   let barIndex = 0;
   return trades.map(t => {
     equity += Number(t.pipsSigned) || 0;
-    return { ...t, equity, barIndex: barIndex++ };
+    return { equity, barIndex: barIndex++ };
   });
 }
 

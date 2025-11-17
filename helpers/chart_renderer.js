@@ -1,6 +1,4 @@
-// =======================================================
-// ELEMENT & CONTEXT
-// =======================================================
+
 const container = document.getElementById('chart-container');
 const ctx = document.getElementById('chart-equity').getContext('2d');
 const handle = container.querySelector('.resizer');
