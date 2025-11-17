@@ -1,9 +1,10 @@
-// script.js
+// ~/app.js
+import { $, $$, _ready } from "./helpers/shortcut.js";
 import { TradeData } from './model/TradeData.js';
 import { TableData } from './view/TableData.js';
 import { TradeStat } from './model/TradeStat.js';
 import { TableStat } from './view/TableStat.js';
-import { TabManager, Notify, $ } from './view/UIManager.js';
+import { TabManager, Notify} from './view/UIManager.js';
 
 export class App {
 	constructor() {

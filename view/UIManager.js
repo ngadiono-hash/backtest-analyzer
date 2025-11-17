@@ -1,11 +1,4 @@
-// ================== DOM UTILITIES ==================
-export const $ = selector => {
-	const el = document.querySelector(selector);
-	!el && location.hostname === 'localhost' && console.warn(`[DOM] Element not found: ${selector}`);
-	return el;
-};
-
-export const $$ = selector => Array.from(document.querySelectorAll(selector));
+import { $, $$, _ready } from "../helpers/shortcut.js";
 
 // ================== NOTIFY ==================
 export class Notify {
@@ -82,7 +75,7 @@ export class TabManager {
 		$(`#${target}`)?.classList.add('active');
 	}
 }
-
+new TabManager();
 // ================== UI MANAGER ==================
 export class UIManager {
 	constructor() {
@@ -119,4 +112,3 @@ export class UIManager {
 	}
 }
 
-new TabManager();

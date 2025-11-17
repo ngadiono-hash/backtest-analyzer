@@ -1,6 +1,6 @@
 // ~/view/TableData.js
+import { $, $$, _ready } from "../helpers/shortcut.js";
 import { HEADERS } from '../model/TradeData.js';
-import { $ } from '../view/UIManager.js';
 
 export class TableData {
 	constructor(tradeData) {
