@@ -10,19 +10,19 @@ export class TableStat {
     this._renderSkeleton();
     this._renderMonthlySkeleton(); // Skeleton untuk tabel bulanan
   }
-
+  
   _setupEventListener() {
     window.addEventListener('tradestat-updated', (e) => {
       const { stats, balance, lotSize, monthlyNet } = e.detail;
       this.render(stats);
       const equityCurve = stats.total.all.equityCurve;
       if (equityCurve && equityCurve.length) renderChart(equityCurve);
-
+      
       // Render tabel bulanan
       this._renderMonthlyTable(monthlyNet);
     });
   }
-
+  
   _renderSkeleton() {
     this.statsContainer.innerHTML = `
       <table id="stats-table">
@@ -32,7 +32,7 @@ export class TableStat {
       </table>
     `;
   }
-
+  
   _renderMonthlySkeleton() {
     this.monthlyContainer.innerHTML = `
       <div style="overflow-x: auto;">
@@ -44,11 +44,11 @@ export class TableStat {
       </div>
     `;
   }
-
+  
   render(stats) {
     const { period, total } = stats;
     const { long: L, short: S, all: A } = total;
-
+    
     const R = {
       header() {
         return `
@@ -69,7 +69,7 @@ export class TableStat {
         </tr>`;
       }
     };
-
+    
     const f = {
       sign(val, suffix = "") {
         if (val === 0) return `0${suffix}`;
@@ -85,14 +85,14 @@ export class TableStat {
         return (suffix == '') ? num(val) : num(val) + ' ' + suffix;
       }
     };
-
+    
     const html = [];
     html.push(R.period(`${period.start} → ${period.end} (${period.months} months)`));
     html.push(R.header());
-
+    
     const rows = [];
     const add = (label, a, l, s) => rows.push({ label, a, l, s });
-
+    
     // TRADES
     add("Total Trades", A.trades, L.trades, S.trades);
     add("Win Trades", A.wintrades, L.wintrades, S.wintrades);
@@ -139,7 +139,7 @@ export class TableStat {
     // HOLD TIME
     add("AvgTradeHold", A.avgTradeHoldTime, L.avgTradeHoldTime, S.avgTradeHoldTime);
     add("MaxTradeHold", A.maxTradeHoldTime, L.maxTradeHoldTime, S.maxTradeHoldTime);
-
+    
     let i = 0;
     while (i < rows.length) {
       const start = i;
@@ -148,7 +148,7 @@ export class TableStat {
       while (i + count < rows.length && rows[i + count].label === label) {
         count++;
       }
-
+      
       const first = rows[start];
       html.push(`
       <tr>
@@ -158,7 +158,7 @@ export class TableStat {
         <td>${first.s}</td>
       </tr>
     `);
-
+      
       for (let k = 1; k < count; k++) {
         const r = rows[start + k];
         html.push(`
@@ -167,22 +167,23 @@ export class TableStat {
         </tr>
       `);
       }
-
+      
       i += count;
     }
-
+    
     document.getElementById('stats-table-tbody').innerHTML = html.join('');
   }
-
+  
   // === TABEL BULANAN ===
   _renderMonthlyTable(monthlyData) {
     const table = document.getElementById('monthly-table');
     if (!table) return;
-
+    
     const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
+    
     let html = '';
-
+    let grandTotalPips = 0; // Hitung total semua pips
+    
     if (!monthlyData || Object.keys(monthlyData).length === 0) {
       html = `<tr><td colspan="14" class="no-data">Tidak ada data trade</td></tr>`;
     } else {
@@ -190,34 +191,46 @@ export class TableStat {
       html += `<thead><tr class="header-row">
       <th class="sticky-year header-cell">Tahun</th>`;
       MONTHS.forEach(m => html += `<th class="header-cell">${m}</th>`);
-      html += `<th class="header-cell ytd-header">YTD</th></tr></thead><tbody>`;
-
+      html += `<th class="header-cell ytd-header">Total</th></tr></thead><tbody>`;
+      
       // Body – urut tahun ascending
       const years = Object.keys(monthlyData).sort((a, b) => a - b);
       years.forEach(year => {
         const data = monthlyData[year];
         html += `<tr>
         <td class="sticky-year year-cell">${year}</td>`;
-
+        
         MONTHS.forEach(month => {
           const val = data[month];
-          if (val === null || val === undefined) {
-            html += `<td class="pips-null">—</td>`;
-          } else {
-            const formatted = val % 1 === 0 ? val : val.toFixed(2);
-            const cls = val > 0 ? 'pips-positive' : val < 0 ? 'pips-negative' : 'pips-zero';
+          if (val !== null && val !== undefined) {
+            const numVal = parseFloat(val);
+            grandTotalPips += numVal; // akumulasi grand total
+            
+            const formatted = numVal % 1 === 0 ? numVal : numVal.toFixed(1);
+            const cls = numVal > 0 ? 'pips-positive' : numVal < 0 ? 'pips-negative' : 'pips-zero';
             html += `<td class="${cls}">${formatted}</td>`;
+          } else {
+            html += `<td class="pips-null">—</td>`;
           }
         });
-
+        
         const ytd = data.YTD || 0;
         const ytdFormatted = ytd % 1 === 0 ? ytd : ytd.toFixed(1);
         const ytdCls = ytd > 0 ? 'pips-positive' : ytd < 0 ? 'pips-negative' : 'pips-zero';
         html += `<td class="${ytdCls} ytd-cell">${ytdFormatted}</td></tr>`;
       });
+      
+      // Baris grand total (hanya satu cell di kolom terakhir)
+      const grandFormatted = grandTotalPips % 1 === 0 ? grandTotalPips : grandTotalPips.toFixed(1);
+      const grandCls = grandTotalPips > 0 ? 'pips-positive' : grandTotalPips < 0 ? 'pips-negative' : 'pips-zero';
+      html += `<tr class="grand-total-row">
+      <td colspan="${MONTHS.length + 1}" class="grand-total-label">Grand Total</td>
+      <td class="${grandCls} ytd-cell grand-total-cell">${grandFormatted}</td>
+    </tr>`;
+      
       html += `</tbody>`;
     }
-
+    
     table.innerHTML = html;
   }
 }

@@ -30,7 +30,7 @@
 					<option value="USDCHF">USDCHF</option>
 					<option value="XAUUSD">XAUUSD</option>
 					<option value="ALL">ALL</option>
-					<option value="TEST">TEST</option>
+					<option value="ERROR">ERROR</option>
 					<option value="UJISTAT" selected>STAT</option>
 				</select>
 				<label>
@@ -40,24 +40,7 @@
 
 			<div id="status-area"></div>
 
-			<div class="table-wrapper">
-				<table id="trade-table">
-					<thead>
-						<tr>
-							<th>#</th>
-							<th>Pair</th>
-							<th>Type</th>
-							<th>Entry</th>
-							<th>Exit</th>
-							<th>Price</th>
-							<th>TP</th>
-							<th>SL</th>
-							<th>Result</th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
+			<div class="table-wrapper" id="trade-table-container"></div>
 		</div>
 
 		<!-- TAB 2: STATISTICS -->
@@ -67,14 +50,11 @@
 		    <input type="number" id="balance-input" placeholder="initial balance" value="10000">
 		  </div>
 		  <div class="table-wrapper" id="stats-table-container"></div>
-		  <img src="tf-1.jpg" alt="tf-1jpg" style="width: 100%">
-
 		</div>
 
 		<!-- TAB 3: MONTHLY NET -->
 		<div id="tab3" class="tab-content">
 			<div class="table-wrapper" id="monthly-table-container"></div>
-			<img src="tf-2.jpg" alt="tf-2jpg" style="width: 100%">
 		</div>
 
 		<!-- TAB 4: EQUITY CHART -->
