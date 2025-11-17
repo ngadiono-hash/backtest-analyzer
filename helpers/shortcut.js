@@ -23,18 +23,13 @@ export const _off = (el, event, handler, options) => {
   }
 };
 
-export const _ready = (fn) => {
-  if (document.readyState !== 'loading') fn();
-  else document.addEventListener('DOMContentLoaded', fn);
-};
+export const _ready = fn => document.addEventListener('DOMContentLoaded', fn);
 
-// 3. Class & attribute shortcuts
 export const _addClass = (el, ...classes) => el.classList.add(...classes);
 export const _removeClass = (el, ...classes) => el.classList.remove(...classes);
 export const _toggleClass = (el, className, force) => el.classList.toggle(className, force);
 export const _hasClass = (el, className) => el.classList.contains(className);
 
-// 4. Create element shortcut
 export const _create = (tag, props = {}, ...children) => {
   const el = document.createElement(tag);
   Object.assign(el, props);
