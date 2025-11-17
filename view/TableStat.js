@@ -161,7 +161,7 @@ export class TableStat {
     }
     
     document.getElementById('stats-table-tbody').innerHTML = html.join('');
-  }
+   }
   
   // === TABEL BULANAN ===
   _renderMonthlyTable(monthlyData) {
