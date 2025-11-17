@@ -13,13 +13,11 @@ export class TableStat {
   
   _setupEventListener() {
     window.addEventListener('tradestat-updated', (e) => {
-      const { stats, balance, lotSize, monthlyNet } = e.detail;
+      const { stats } = e.detail;
       this.render(stats);
       const equityCurve = stats.total.all.equityCurve;
       if (equityCurve && equityCurve.length) renderChart(equityCurve);
-      
-      // Render tabel bulanan
-      this._renderMonthlyTable(monthlyNet);
+      this._renderMonthlyTable(stats.monthly);
     });
   }
   

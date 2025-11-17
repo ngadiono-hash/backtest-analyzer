@@ -1,288 +1,137 @@
 // /model/TradeStat.js
-
-// --- General Stats (Basic) ---
-import { calculateRiskReward, calculateBasicStats, calculateStreaks } from '../helpers/metrics_basic.js';
-// --- Pips & Pip Value ---
-import { computePips } from '../helpers/metrics_pips.js';
-// --- Time / Bars ---
-import { parseDate, estimateBarsHeld, barsToTime } from '../helpers/metrics_time.js';
-// --- Equity & Curve Analytics ---
-import { buildEquityCurve, calculateMaxDrawdown, calculateRecovery } from '../helpers/metrics_equity.js';
-// --- Stats Monthly ---
-import { groupByMonth, calculateMonthlyStats, aggregateMonthlyPips } from '../helpers/metrics_monthly.js';
+import * as MB from '../helpers/metrics_basic.js';
+import * as MP from '../helpers/metrics_pips.js';
+import * as MT from '../helpers/metrics_time.js';
+import * as ME from '../helpers/metrics_equity.js';
+import * as MM from '../helpers/metrics_monthly.js';
 
 export class TradeStat {
   constructor() {
-    this.trades = [];
+    this.data = [];
     this.normalized = [];
     this.stats = {};
     this._setupEventListeners();
   }
-
-  /* ============================
-   * EVENT HANDLERS
-   * ============================ */
+  
   _setupEventListeners() {
-    window.addEventListener('tradedata-updated', (e) => {
-      this.trades = e.detail.trades;
-      this._runAnalysis();
+    window.addEventListener('tradedata-updated', e => {
+      if (e.detail.stats.invalid === 0) {
+        this.data = e.detail.trades;
+        this._runAnalysis();
+      }
+      return;
     });
   }
-
-  /* ============================
-   * MAIN ANALYSIS PROCESS
-   * ============================ */
+  
   _runAnalysis() {
-    if (!this.trades.length) {
-      this.stats = this._getEmptyStats();
-      return this._dispatchUpdate();
-    }
-    
-    const sorted = this._sortTrades(this.trades);
+    const sorted = this._sortTrades(this.data);
     this.normalized = sorted.map(t => this._normalizeTrade(t)).filter(Boolean);
-    if (!this.normalized.length) {
-      this.stats = this._getEmptyStats();
-      return this._dispatchUpdate();
-    }
-
     this.stats = this._calculateAllStats();
-    
     this._dispatchUpdate();
   }
-
+  
   _sortTrades(trades) {
-    return [...trades].sort((a, b) =>
-      parseDate(a.dateEX) - parseDate(b.dateEX)
-    );
+    return [...trades].sort((a, b) => MT.dateHours(a.dateEX) - MT.dateHours(b.dateEX));
   }
-
-  _normalizeTrade(raw) {
-    const pips = computePips(raw, raw.pair);
+  
+  _normalizeTrade(t) {
+    const p = MP.computePips(t, t.pair);
     return {
-      ...raw,
-      pair: raw.pair,
-      dateEN: parseDate(raw.dateEN),
-      dateEX: parseDate(raw.dateEX),
-      pips: Math.abs(pips),
-      pipsSigned: pips,
-      isWin: raw.result === 'TP',
-      barsHeld: estimateBarsHeld(raw.dateEN, raw.dateEX)
+      ...t,
+      dateEN: MT.dateHours(t.dateEN),
+      dateEX: MT.dateHours(t.dateEX),
+      pips: Math.abs(p),
+      pipsSigned: p,
+      isWin: t.result === 'TP',
+      barsHeld: MT.estimateBarsHeld(t.dateEN, t.dateEX)
     };
   }
-
-  /* ============================
-   * CALCULATE ALL STATS
-   * ============================ */
+  
   _calculateAllStats() {
     const all = this.normalized;
-    this.monthlyNet = aggregateMonthlyPips(all);
     const long = all.filter(t => t.type === 'Buy');
     const short = all.filter(t => t.type === 'Sell');
-    
     const period = this._computePeriod(all);
-
     return {
       period,
+      monthly: MM.aggregateMonthlyPips(all),
       total: {
         long: this._computeCategoryStats(long, period.months),
         short: this._computeCategoryStats(short, period.months),
         all: this._computeCategoryStats(all, period.months)
       }
-
     };
   }
-
-  /* ----------------------
-   * PERIOD CALCULATION
-   * ---------------------- */
+  
   _computePeriod(trades) {
-    const start = trades.reduce((a, b) => (a.dateEN < b.dateEN ? a : b)).dateEN;
-    const end = trades.reduce((a, b) => (a.dateEN > b.dateEN ? a : b)).dateEN;
-
-    const months =
-      Math.max(
-        1,
-        (end.getFullYear() - start.getFullYear()) * 12 +
-        (end.getMonth() - start.getMonth()) +
-        1
-      );
-
-    return {
-      start: this._formatDate(start),
-      end: this._formatDate(end),
-      months
-    };
+    const dates = trades.map(t => t.dateEN).sort((a, b) => a - b);
+    const [start, end] = [dates[0], dates.at(-1)];
+    
+    const months = Math.max(1, (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth() + 1);
+    return { start: MT.dateDMY(start), end: MT.dateDMY(end), months };
   }
-
-  /* ----------------------
-   * CATEGORY STATS
-   * ---------------------- */
+  
   _computeCategoryStats(trades, months) {
-    if (!trades.length) return this._emptyCategoryStats();
-
-    const pair = trades[0].pair;
-
-    const equityCurve = buildEquityCurve(trades);
-    const dd = calculateMaxDrawdown(equityCurve.map(p => p.equity));
-    const recovery = calculateRecovery(equityCurve);
-
-    const basic = calculateBasicStats(trades);
-    const streaks = calculateStreaks(trades);
-    const monthly = calculateMonthlyStats(this.monthlyNet);
-    const rr = calculateRiskReward(trades);
-
+    const equityCurve = ME.buildEquityCurve(trades);
+    const dd = ME.calculateMaxDrawdown(equityCurve.map(p => p.equity));
+    const recovery = ME.calculateRecovery(equityCurve);
+    const basic = MB.calculateBasicStats(trades);
+    const streaks = MB.calculateStreaks(trades);
+    const monthly = MM.calculateMonthlyStats(this.monthlyNet);
+    const rr = MB.calculateRiskReward(trades);
     const netPips = trades.reduce((s, t) => s + t.pipsSigned, 0);
-
     const wins = trades.filter(t => t.isWin);
     const losses = trades.filter(t => !t.isWin);
-
     const grossProfitPips = wins.reduce((s, t) => s + t.pips, 0);
     const grossLossPips = losses.reduce((s, t) => s + t.pips, 0);
-
-    const avgProfitPips = wins.length ? grossProfitPips / wins.length : 0;
-    const avgLossPips = losses.length ? Math.abs(grossLossPips) / losses.length : 0;
-    
+    const avgProfitPips = grossProfitPips / wins.length;
+    const avgLossPips = Math.abs(grossLossPips) / losses.length;
     const holdBars = trades.map(t => t.barsHeld);
     const avgHoldBars = holdBars.reduce((a, b) => a + b, 0) / holdBars.length;
-
     const maxDD = dd.absolute;
     const recoveryFactor = maxDD === 0 ? Infinity : netPips / maxDD;
-
+    
     return {
-      // === BASIC ===
-      equityCurve,
-      trades: trades.length,
-      wintrades: wins.length,
-      losstrades: losses.length,
-      winrate: basic.winrate, // number: 66.06
-      profitFactor: basic.profitFactor, // number atau Infinity
-
-      // === NET ===
-      netPips: netPips, // number
-
-      // === GROSS ===
-      grossProfitPips: grossProfitPips, // number
-      grossLossPips: grossLossPips, // number (negatif)
-
-      // === AVERAGE ===
-      avgProfitPips: avgProfitPips, // number
-      avgLossPips: avgLossPips, // number
-
-      // === STREAKS ===
-      maxWinStreak: streaks.maxWinStreak, // number
-      maxLossStreak: streaks.maxLossStreak, // number
-
-      // === MONTHLY ===
+      equityCurve: equityCurve ?? [],
+      trades: trades.length ?? 0,
+      wintrades: wins.length ?? 0,
+      losstrades: losses.length ?? 0,
+      winrate: basic?.winrate ?? 0,
+      profitFactor: basic?.profitFactor ?? 0,
+      netPips: netPips ?? 0,
+      grossProfitPips: grossProfitPips ?? 0,
+      grossLossPips: grossLossPips ?? 0,
+      avgProfitPips: avgProfitPips ?? 0,
+      avgLossPips: avgLossPips ?? 0,
+      maxWinStreak: streaks?.maxWinStreak ?? 0,
+      maxLossStreak: streaks?.maxLossStreak ?? 0,
       monthly: {
-        minNetPips: monthly.minPips,
-        maxNetPips: monthly.maxPips,
-        avgNetPips: monthly.avgPips,
-        stability: monthly.stability // number: 85.5
+        minNetPips: monthly?.minPips ?? 0,
+        maxNetPips: monthly?.maxPips ?? 0,
+        avgNetPips: monthly?.avgPips ?? 0,
+        stability: monthly?.stability ?? 0,
       },
-
-      // === RISK & REWARD ===
-      riskReward: rr, // string: "1:2.5"
-
-      // === DRAWDOWN ===
-      maxDrawdownPips: dd.absolute, // number
-      maxDrawdownPercent: dd.percent, // number: 22.67
-
-      // === RECOVERY ===
-      recoveryFactor: recoveryFactor, // number atau Infinity
-      maxRecoveryBars: recovery.max, // number
-      maxRecoveryTime: barsToTime(recovery.max), // string
-      avgRecoveryBars: Math.round(recovery.avg), // number
-      avgRecoveryTime: barsToTime(Math.round(recovery.avg)), // string
-
-      // === HOLD TIME ===
-      avgTradeHoldBars: Math.round(avgHoldBars), // number
-      avgTradeHoldTime: barsToTime(Math.round(avgHoldBars)), // string
-      maxTradeHoldBars: Math.max(...holdBars), // number
-      maxTradeHoldTime: barsToTime(Math.max(...holdBars)), // string
-
-      // === PER TRADE / MONTH ===
-      avgTradePerMonth: trades.length / months, // number
-      profitPerMonthPips: netPips / months, // number
-      profitPerTradePips: netPips / trades.length, // number
+      riskReward: rr ?? "—",
+      maxDrawdownPips: dd?.absolute ?? 0,
+      maxDrawdownPercent: dd?.percent ?? 0,
+      recoveryFactor: recoveryFactor ?? 0,
+      maxRecoveryBars: recovery?.max ?? 0,
+      maxRecoveryTime: MT.barsToTime(recovery?.max ?? 0),
+      avgRecoveryBars: Math.round(recovery?.avg ?? 0),
+      avgRecoveryTime: MT.barsToTime(Math.round(recovery?.avg ?? 0)),
+      avgTradeHoldBars: Math.round(avgHoldBars ?? 0),
+      avgTradeHoldTime: MT.barsToTime(Math.round(avgHoldBars ?? 0)),
+      maxTradeHoldBars: Math.max(...(holdBars.length ? holdBars : [0])),
+      maxTradeHoldTime: MT.barsToTime(Math.max(...(holdBars.length ? holdBars : [0]))),
+      avgTradePerMonth: months ? (trades.length / months) : 0,
+      profitPerMonthPips: months ? (netPips / months) : 0,
+      profitPerTradePips: trades.length ? (netPips / trades.length) : 0,
     };
   }
-
-  /* ============================
-   * FORMATTERS & DISPATCH
-   * ============================ */
-  _formatDate(date) {
-    const d = date.getDate().toString().padStart(2, '0');
-    const y = date.getFullYear().toString().slice(2);
-    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-    return `${d}-${m}-${y}`;
-  }
-
+  
   _dispatchUpdate() {
-    window.dispatchEvent(
-      new CustomEvent('tradestat-updated', {
-        detail: { stats: this.stats, monthlyNet: this.monthlyNet }
-        
-      })
-    );
+    window.dispatchEvent(new CustomEvent('tradestat-updated', {
+      detail: { stats: this.stats }
+    }));
   }
-
-  /* ============================
-   * EMPTY TEMPLATE
-   * ============================ */
-  _emptyCategoryStats() {
-    return {
-      trades: 0,
-      winrate: '0.00',
-      profitFactor: '0.00',
-      netPips: '0.00',
-
-      grossProfitPips: '0.00',
-      grossLossPips: '0.00',
-      
-      avgProfitPips: '0.00',
-      avgLossPips: '0.00',
-
-      maxWinStreak: 0,
-      maxLossStreak: 0,
-
-      monthly: {
-        minNetPips: '0.00',
-        maxNetPips: '0.00',
-        avgNetPips: '0.00',
-        stability: '0.00'
-      },
-
-      riskReward: '1:0',
-
-      maxDrawdownPips: '0.00',
-      maxDrawdownPercent: 0,
-
-      recoveryFactor: '0.00',
-      maxRecoveryBars: 0,
-      maxRecoveryTime: '0 hours',
-      avgRecoveryBars: 0,
-      avgRecoveryTime: '0 hours',
-
-      avgTradeHoldBars: 0,
-      avgTradeHoldTime: '0 hours',
-      maxTradeHoldBars: 0,
-      maxTradeHoldTime: '0 hours',
-
-      avgTradePerMonth: '0.00',
-      profitPerMonthPips: '0.00',
-      profitPerTradePips: '0.00',
-    };
-  }
-
-  _getEmptyStats() {
-    return {
-      period: { start: '-', end: '-', months: 0 },
-      total: {
-        long: this._emptyCategoryStats(),
-        short: this._emptyCategoryStats(),
-        all: this._emptyCategoryStats()
-      }
-    };
-  }
-
 }

@@ -1,39 +1,32 @@
-// metrics.time.js
-// Date parsing, estimate bars held and convert bars to human time.
+// ~/helpers/metrics_time.js
 
-const MONTHS = {
-  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
-};
+const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+const MONTH_NAMES = Object.keys(MONTHS);
 
-export function parseDate(dateStr, defaultHour = '12:00') {
-  // Accept either Date object or "DD-MMM-YY" format like "23-Feb-22"
-  if (!dateStr) return null;
-  if (dateStr instanceof Date) return dateStr;
-  const parts = String(dateStr).split('-').map(p => p.trim());
-  if (parts.length < 3) {
-    // fallback to Date constructor
-    return new Date(String(dateStr));
+export function dateDMY(date) {
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = MONTH_NAMES[date.getMonth()];
+    const y = date.getFullYear().toString().slice(2);
+    return `${d}-${m}-${y}`;
   }
-  const [d, m, y] = parts;
-  const year = y.length === 2 ? `20${y}` : y;
-  const monthIndex = MONTHS[m] !== undefined ? MONTHS[m] : (Number(m) - 1);
-  const day = String(d).padStart(2, '0');
-  const month = String((typeof monthIndex === 'number' ? monthIndex + 1 : 1)).padStart(2, '0');
-  const iso = `${year}-${month}-${day}T${defaultHour}:00`;
-  return new Date(iso);
+
+export function dateHours(dateStr, defaultHour = "12:00") {
+  const [d, m, y] = dateStr.split('-');
+  const year = `20${y}`;
+  const month = String(MONTHS[m] + 1).padStart(2, '0');  
+  const day = d.padStart(2, '0');
+
+  return new Date(`${year}-${month}-${day}T${defaultHour}:00`);
 }
 
+
 export function estimateBarsHeld(dateEN, dateEX) {
-  // returns approximate number of 4-hour bars between entry and exit, excluding full weekend days
-  const entry = parseDate(dateEN);
-  const exit = parseDate(dateEX);
+  const entry = dateHours(dateEN);
+  const exit = dateHours(dateEX);
   if (!entry || !exit) return 1;
   if (+entry === +exit) return 1;
+  let hours = (exit - entry) / (1000 * 60 * 60);
 
-  let hours = (exit - entry) / (1000 * 60 * 60); // total hours
-
-  // subtract weekend full-day hours (Sat & Sun)
   const startDay = new Date(entry.getFullYear(), entry.getMonth(), entry.getDate());
   const endDay = new Date(exit.getFullYear(), exit.getMonth(), exit.getDate());
   for (let d = new Date(startDay); d <= endDay; d.setDate(d.getDate() + 1)) {
