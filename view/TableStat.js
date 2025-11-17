@@ -99,20 +99,14 @@ export class TableStat {
     add("Loss Trades", A.losstrades, L.losstrades, S.losstrades);
     add("Winrate", f.percent(A.winrate), f.percent(L.winrate), f.percent(S.winrate));
     // NET
-    add("Net Profit", f.dollar(A.netDollar), f.dollar(L.netDollar), f.dollar(S.netDollar));
-    add("Net Profit", f.percent((A.netDollar / 10000) * 100), f.percent((L.netDollar / 10000) * 100), f.percent((S.netDollar / 10000) * 100));
     add("Net Profit", f.pips(A.netPips), f.pips(L.netPips), f.pips(S.netPips));
     // GROSS
-    add("Gross Profit", f.raw(A.grossProfitDollar, 'USD'), f.raw(L.grossProfitDollar, 'USD'), f.raw(S.grossProfitDollar, 'USD'));
     add("Gross Profit", f.raw(A.grossProfitPips, 'pips'), f.raw(L.grossProfitPips, 'pips'), f.raw(S.grossProfitPips, 'pips'));
-    add("Gross Loss", f.raw(A.grossLossDollar, 'USD'), f.raw(L.grossLossDollar, 'USD'), f.raw(S.grossLossDollar, 'USD'));
     add("Gross Loss", f.raw(A.grossLossPips, 'pips'), f.raw(L.grossLossPips, 'pips'), f.raw(S.grossLossPips, 'pips'));
     // PROFIT FACTOR
     add("Profit Factor", f.raw(A.profitFactor), f.raw(L.profitFactor), f.raw(S.profitFactor));
     // AVERAGES
-    add("Avg Profit", f.raw(A.avgProfitDollar, 'USD'), f.raw(L.avgProfitDollar, 'USD'), f.raw(S.avgProfitDollar, 'USD'));
     add("Avg Profit", f.raw(A.avgProfitPips, 'pips'), f.raw(L.avgProfitPips, 'pips'), f.raw(S.avgProfitPips, 'pips'));
-    add("Avg Loss", f.raw(A.avgLossDollar, 'USD'), f.raw(L.avgLossDollar, 'USD'), f.raw(S.avgLossDollar, 'USD'));
     add("Avg Loss", f.raw(A.avgLossPips, 'pips'), f.raw(L.avgLossPips, 'pips'), f.raw(S.avgLossPips, 'pips'));
     // STREAKS
     add("Consecutive Profit", A.maxWinStreak, "—", "—");
@@ -123,14 +117,11 @@ export class TableStat {
     add("Avg RiskReward", A.riskReward, "—", "—");
     add("Stability", f.percent(A.monthly.stability), "—", "—");
     // DRAWDOWN
-    add("Max Drawdown", f.raw(A.maxDrawdownDollar, "USD"), "—", "—");
     add("Max Drawdown", f.raw(A.maxDrawdownPips, "pips"), "—", "—");
     add("Max Drawdown", `${A.maxDrawdownPercent}%`, "—", "—");
     // PER MONTH / TRADE
     add("Avg Trade / month", num(A.avgTradePerMonth, 1), "—", "—");
     add("Avg Net / month", f.pips(A.profitPerMonthPips), "—", "—");
-    add("Avg Net / month", f.dollar(A.profitPerMonthDollar), "—", "—");
-    add("Profit per trade", f.dollar(A.profitPerTradeDollar), f.dollar(L.profitPerTradeDollar), f.dollar(S.profitPerTradeDollar));
     add("Profit per trade", f.pips(A.profitPerTradePips), f.pips(L.profitPerTradePips), f.pips(S.profitPerTradePips));
     // RECOVERY
     add("RecoveryFactor", num(A.recoveryFactor), "", "");
