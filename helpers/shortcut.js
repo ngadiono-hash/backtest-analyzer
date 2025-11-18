@@ -49,3 +49,16 @@ export const fetchJSON = async (url, options = {}) => {
 
 // 6. Log shortcut
 export const _log = (...args) => console.log('%c[LOG]', 'color: #0f9', ...args);
+
+export function num(val = 0, decimals = 2) {
+  const n = Number(val);
+  if (Number.isNaN(n)) return (0).toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  });
+  
+  return n.toLocaleString('en-us', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  });
+}

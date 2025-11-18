@@ -1,8 +1,6 @@
 // /view/TableStat.js
-import { $, $$, _on, _ready } from "../helpers/shortcut.js";
-
-import { num } from '../helpers/metrics_utils.js';
-import { renderChart } from '../helpers/chart_renderer.js';
+import { $, $$, _on, _ready, num } from "../helpers/shortcut.js";
+import * as CR from '../helpers/chart_renderer.js';
 
 export class TableStat {
   constructor() {
@@ -17,9 +15,10 @@ export class TableStat {
     window.addEventListener('tradestat-updated', (e) => {
       const { stats } = e.detail;
       this.renderStatsTable(stats);
-      const equityCurve = stats.total.all.equityCurve;
-      if (equityCurve && equityCurve.length) renderChart(equityCurve);
-      this._renderMonthlyTable(stats.monthly);
+      this.renderMonthlyTable(stats.monthly);
+      CR.renderPairsChart(stats.pairStats);
+      CR.renderEquityChart(stats.total.all.equityCurve);
+      
     });
   }
 //========== TABLE STATS  
@@ -130,18 +129,16 @@ export class TableStat {
 //========== TABLE MONTHLY
   _renderMonthlySkeleton() {
     this.monthlyContainer.innerHTML = `
-      <div style="overflow-x: auto;">
-        <table id="monthly-table" style="width: 100%; min-width: 800px; border-collapse: collapse; font-family: monospace;">
+        <table id="monthly-table">
           <tbody>
             <tr><td style="text-align:center; padding:20px; color:#999;">Loading monthly data...</td></tr>
           </tbody>
         </table>
-      </div>
     `;
   }
   
-  _renderMonthlyTable(monthlyData) {
-    const table = document.getElementById('monthly-table');
+  renderMonthlyTable(monthlyData) {
+    const table = $('#monthly-table');
     if (!table) return;
     
     const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -154,7 +151,7 @@ export class TableStat {
     } else {
       // Header
       html += `<thead><tr class="header-row">
-      <th class="sticky-year header-cell">Tahun</th>`;
+      <th class="sticky-year header-cell">Year</th>`;
       MONTHS.forEach(m => html += `<th class="header-cell">${m}</th>`);
       html += `<th class="header-cell ytd-header">Total</th></tr></thead><tbody>`;
       
@@ -171,7 +168,7 @@ export class TableStat {
             const numVal = parseFloat(val);
             grandTotalPips += numVal; // akumulasi grand total
             
-            const formatted = numVal % 1 === 0 ? numVal : numVal.toFixed(1);
+            const formatted = numVal % 1 === 0 ? numVal : num(numVal,1);
             const cls = numVal > 0 ? 'pips-positive' : numVal < 0 ? 'pips-negative' : 'pips-zero';
             html += `<td class="${cls}">${formatted}</td>`;
           } else {
@@ -182,7 +179,7 @@ export class TableStat {
         const ytd = data.YTD || 0;
         const ytdFormatted = ytd % 1 === 0 ? ytd : ytd.toFixed(1);
         const ytdCls = ytd > 0 ? 'pips-positive' : ytd < 0 ? 'pips-negative' : 'pips-zero';
-        html += `<td class="${ytdCls} ytd-cell">${ytdFormatted}</td></tr>`;
+        html += `<td class="${ytdCls} ytd-cell">${num(ytdFormatted,1)}</td></tr>`;
       });
       
       // Baris grand total (hanya satu cell di kolom terakhir)
@@ -190,7 +187,7 @@ export class TableStat {
       const grandCls = grandTotalPips > 0 ? 'pips-positive' : grandTotalPips < 0 ? 'pips-negative' : 'pips-zero';
       html += `<tr class="grand-total-row">
       <td colspan="${MONTHS.length + 1}" class="grand-total-label">Grand Total</td>
-      <td class="${grandCls} ytd-cell grand-total-cell">${grandFormatted}</td>
+      <td class="${grandCls} ytd-cell grand-total-cell">${num(grandFormatted,1)}</td>
     </tr>`;
       
       html += `</tbody>`;

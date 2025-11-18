@@ -14,11 +14,9 @@
 		<div class="tabs">
 			<button class="tab-button" data-tab="tab1">List Trades</button>
 			<button class="tab-button active" data-tab="tab2">Statistics</button>
-			<button class="tab-button" data-tab="tab3">Monthly Net</button>
-			<button class="tab-button" data-tab="tab4">Equity Chart</button>
+			<button class="tab-button" data-tab="tab3">Detail Equity</button>
 		</div>
-
-		<!-- TAB 1: LIST TRADES -->
+		
 		<div id="tab1" class="tab-content">
 			<div class="controller">
 				<button id="export-btn" disabled>Copy</button>
@@ -28,8 +26,8 @@
 					<option value="GBPJPY">GBPJPY</option>
 					<option value="GBPUSD">GBPUSD</option>
 					<option value="USDCHF">USDCHF</option>
-					<option value="XAUUSD" selected>XAUUSD</option>
-					<option value="ALL">ALL</option>
+					<option value="XAUUSD">XAUUSD</option>
+					<option value="ALL" selected>ALL</option>
 					<option value="ERROR">ERROR</option>
 					<option value="UJISTAT">STAT</option>
 				</select>
@@ -37,35 +35,35 @@
 					<input type="checkbox" id="filter-invalid">Show invalid
 				</label>
 			</div>
-
+			
 			<div id="status-area"></div>
-
+			
 			<div class="table-wrapper" id="trade-table-container"></div>
 		</div>
-
-		<!-- TAB 2: STATISTICS -->
+	
 		<div id="tab2" class="tab-content active">
-		  <div class="table-wrapper" id="stats-table-container"></div>
+			<div class="table-wrapper" id="stats-table-container"></div>
 		</div>
-
-		<!-- TAB 3: MONTHLY NET -->
+		
 		<div id="tab3" class="tab-content">
+			<h3>Monthly Net</h3>
 			<div class="table-wrapper" id="monthly-table-container"></div>
-		</div>
-
-		<!-- TAB 4: EQUITY CHART -->
-		<div id="tab4" class="tab-content">
-			<div id="chart-container">
-				<canvas id="chart-equity"></canvas>
+			<h3>Equity Chart</h3>
+			<div class="chart-container" id="equity-chart-container">
+				<canvas id="equity-chart"></canvas>
 				<div class="resizer"></div>
 			</div>
+			<h3>Based Symbols</h3>
+			<div class="chart-container" id="pairs-chart-container">
+				<canvas id="pairs-chart"></canvas>
+			</div>
 		</div>
-
+		
 	</div>
-
+	
 	<!-- MODULE SCRIPT -->
 	<script src="/cdn/chart.min.js"></script>
-  <script src="/cdn/chartjs-plugin-crosshair.min.js"></script>
+	<script src="/cdn/chartjs-plugin-crosshair.min.js"></script>
 	<script type="module" src="app.js"></script>
 </body>
 

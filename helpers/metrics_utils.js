@@ -8,9 +8,3 @@ export function standardDeviation(arr = []) {
   const variance = nums.reduce((a, b) => a + (b - mean) ** 2, 0) / nums.length;
   return Math.sqrt(variance);
 }
-
-export function num(val = 0, decimals = 2) {
-  const n = Number(val);
-  if (Number.isNaN(n)) return (0).toFixed(decimals);
-  return n.toFixed(decimals);
-}

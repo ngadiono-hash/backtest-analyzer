@@ -28,7 +28,6 @@ export class TradeStat {
     const sorted = this._sortTrades(this.data);
     this.normalized = sorted.map(t => this._normalizeTrade(t)).filter(Boolean);
     this.monthly = MM.aggregateMonthlyPips(this.normalized);
-    //console.log(this.monthly)
     this.stats = this._calculateAllStats();
     this._dispatchUpdate();
   }
@@ -43,8 +42,7 @@ export class TradeStat {
       ...t,
       dateEN: MT.dateHours(t.dateEN),
       dateEX: MT.dateHours(t.dateEX),
-      pips: Math.abs(p),
-      pipsSigned: p,
+      pips: p,
       isWin: t.result === 'TP',
       barsHeld: MT.estimateBarsHeld(t.dateEN, t.dateEX)
     };
@@ -59,6 +57,7 @@ export class TradeStat {
     return {
       period,
       monthly: this.monthly,
+      pairStats: this._groupStatsByPair(),
       total: {
         long: this._computeCategoryStats(long, period.months),
         short: this._computeCategoryStats(short, period.months),
@@ -83,11 +82,11 @@ export class TradeStat {
     const streaks = MB.calculateStreaks(trades);
     const monthly = MM.calculateMonthlyStats(this.monthly);
     const rr = MB.calculateRiskReward(trades);
-    const netPips = trades.reduce((s, t) => s + t.pipsSigned, 0);
+    const netPips = trades.reduce((s, t) => s + t.pips, 0);
     const wins = trades.filter(t => t.isWin);
     const losses = trades.filter(t => !t.isWin);
-    const grossProfitPips = wins.reduce((s, t) => s + t.pips, 0);
-    const grossLossPips = losses.reduce((s, t) => s + t.pips, 0);
+    const grossProfitPips = wins.reduce((s, t) => s + Math.abs(t.pips), 0);
+    const grossLossPips = losses.reduce((s, t) => s + Math.abs(t.pips), 0);
     const avgProfitPips = grossProfitPips / wins.length;
     const avgLossPips = Math.abs(grossLossPips) / losses.length;
     const holdBars = trades.map(t => t.barsHeld);
@@ -121,11 +120,11 @@ export class TradeStat {
       recoveryFactor: recoveryFactor ?? 0,
       maxRecoveryBars: recovery?.max ?? 0,
       maxRecoveryTime: MT.barsToTime(recovery?.max ?? 0),
-      avgRecoveryBars: Math.round(recovery?.avg ?? 0),
+      //avgRecoveryBars: Math.round(recovery?.avg ?? 0),
       avgRecoveryTime: MT.barsToTime(Math.round(recovery?.avg ?? 0)),
-      avgTradeHoldBars: Math.round(avgHoldBars ?? 0),
+      //avgTradeHoldBars: Math.round(avgHoldBars ?? 0),
       avgTradeHoldTime: MT.barsToTime(Math.round(avgHoldBars ?? 0)),
-      maxTradeHoldBars: Math.max(...(holdBars.length ? holdBars : [0])),
+      //maxTradeHoldBars: Math.max(...(holdBars.length ? holdBars : [0])),
       maxTradeHoldTime: MT.barsToTime(Math.max(...(holdBars.length ? holdBars : [0]))),
       avgTradePerMonth: months ? (trades.length / months) : 0,
       profitPerMonthPips: months ? (netPips / months) : 0,
@@ -133,6 +132,19 @@ export class TradeStat {
     };
   }
   
+  _groupStatsByPair() {
+    const map = {};
+    for (const t of this.normalized) {
+      if (!map[t.pair]) {
+        map[t.pair] = { pair: t.pair, count: 0, value: 0 };
+      }
+      map[t.pair].count++;
+      map[t.pair].value += t.pips;
+    }
+    
+    // urutkan dari profit terbesar → loss terbesar
+    return Object.values(map).sort((a, b) => b.value - a.value);
+  }
   _dispatchUpdate() {
     window.dispatchEvent(new CustomEvent('tradestat-updated', {
       detail: { stats: this.stats }

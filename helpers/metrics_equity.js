@@ -1,12 +1,13 @@
 // /helpers/metrics_equity.js
+import { dateDMY } from './metrics_time.js';
 // Build equity curve, calculate drawdown, and recovery metrics.
 
 export function buildEquityCurve(trades = []) {
   let equity = 0;
   let barIndex = 0;
   return trades.map(t => {
-    equity += Number(t.pipsSigned) || 0;
-    return { equity, barIndex: barIndex++ };
+    equity += Number(t.pips) || 0;
+    return { equity, pair: t.pair, type: t.type, pips: t.pips, date: dateDMY(t.dateEX), barIndex: barIndex++ };
   });
 }
 

@@ -39,16 +39,12 @@ export function getMonthlyNetExtremes(monthlyMap = {}, pipValue = 1) {
     return {
       minNetPips: 0,
       maxNetPips: 0,
-      minNetDollar: 0,
-      maxNetDollar: 0
     };
   }
 
   return {
     minNetPips: Math.min(...pipsValues),
     maxNetPips: Math.max(...pipsValues),
-    minNetDollar: Math.min(...dollarValues),
-    maxNetDollar: Math.max(...dollarValues)
   };
 }
 
@@ -120,7 +116,7 @@ export function aggregateMonthlyPips(trades) {
     
     const year = d.getFullYear();
     const month = MONTHS[d.getMonth()];
-    const pips = Number(t.pipsSigned) || 0;
+    const pips = Number(t.pips) || 0;
     
     if (!map[year]) {
       map[year] = {};

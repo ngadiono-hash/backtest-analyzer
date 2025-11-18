@@ -9,8 +9,6 @@ export class TableData {
 		this.editingCell = null;
 		this.showInvalidOnly = false;
 		
-		if (!this.container) return console.error('#trade-table-container not found');
-		
 		this.renderSkeleton();
 		this.tbody = this.table.querySelector('tbody');
 		
@@ -21,7 +19,7 @@ export class TableData {
 	initFilter() {
 		$('#filter-invalid')?.addEventListener('change', e => {
 			this.showInvalidOnly = e.target.checked;
-			this.render(this.data.getTrades());
+			this.render(this.data);
 		});
 	}
 	
@@ -60,15 +58,12 @@ export class TableData {
 		thead.appendChild(headerRow);
 		table.appendChild(thead);
 		
-		// ---- TBODY ----
 		const tbody = document.createElement('tbody');
 		table.appendChild(tbody);
 		
-		// Simpan referensi
 		this.table = table;
 		this.tbody = tbody;
-		
-		// Masukkan ke DOM
+	
 		this.container.appendChild(table);
 	}
 	
