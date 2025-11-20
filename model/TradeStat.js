@@ -30,7 +30,8 @@ export class TradeStat {
     this.pairsAgg = MM.aggregateByPair(this.normalized);
     this.curve = ME.buildEquityCurve(this.normalized);
     this.drawdown = ME.computeDrawdown(this.curve.pips, 300);
-    this.stats = this._calculateAllStats()
+    this.stats = this._calculateAllStats();
+    log(this.stats)
     this._dispatchUpdate();
   }
   
