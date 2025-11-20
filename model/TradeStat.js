@@ -30,7 +30,7 @@ export class TradeStat {
     this.pairsAgg = MM.aggregateByPair(this.normalized);
     this.curve = ME.buildEquityCurve(this.normalized);
     this.drawdown = ME.computeDrawdown(this.curve.pips, 300);
-    this.stats = this._calculateAllStats(this.normalized)
+    this.stats = this._calculateAllStats()
     this._dispatchUpdate();
   }
   
@@ -51,10 +51,10 @@ export class TradeStat {
     };
   }
 
-  _calculateAllStats(trades) {
+  _calculateAllStats() {
     
-    const long = trades.filter(t => t.type === 'Buy');
-    const short = trades.filter(t => t.type === 'Sell');
+    const long = this.normalized.filter(t => t.type === 'Buy');
+    const short = this.normalized.filter(t => t.type === 'Sell');
     return {
       monthlyAgg: this.monthlyAgg,
       monthlyStats: this.monthlyStats,

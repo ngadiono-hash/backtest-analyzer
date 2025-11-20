@@ -70,7 +70,7 @@ export function computeMonthlyStats(monthlyMap, stabilityTarget = 300) {
   
   // Untuk periode
   let firstDate = null;
-  let lastDate = null;
+  let lastDate = null
   
   for (const year in monthlyMap) {
     for (const m of MONTHS) {
@@ -78,13 +78,13 @@ export function computeMonthlyStats(monthlyMap, stabilityTarget = 300) {
       if (entry && typeof entry === 'object') {
         
         // entry.list harus punya minimal 1 trade
-        if (entry.list && entry.list.length > 0) {
+        
           // Ambil tanggal pertama & terakhir pada bulan itu
           const monthDates = entry.list.map(t => t.dateEX).sort((a, b) => a - b);
           
-          if (!firstDate) firstDate = monthDates[0];
+          firstDate = monthDates[0];
           lastDate = monthDates.at(-1);
-        }
+        
         
         monthlyList.push({
           year,
@@ -96,26 +96,6 @@ export function computeMonthlyStats(monthlyMap, stabilityTarget = 300) {
     }
   }
   
-  // Jika tidak ada bulan valid
-  if (monthlyList.length === 0) {
-    return {
-      // ---- period ----
-      period: { start: null, end: null, months: 0 },
-      
-      // ---- stats ----
-      months: 0,
-      totalPips: 0,
-      totalVPips: 0,
-      avgPips: 0,
-      avgVPips: 0,
-      highest: null,
-      lowest: null,
-      stdPips: 0,
-      stdVPips: 0,
-      stability: 0
-    };
-  }
-  
   // ---- PERIOD SECTION ----
   const startDate = firstDate;
   const endDate = lastDate;
@@ -123,11 +103,7 @@ export function computeMonthlyStats(monthlyMap, stabilityTarget = 300) {
   // Total bulan valid dihitung dari monthlyList
   const months = monthlyList.length;
   
-  const period = {
-    start: startDate,
-    end: endDate,
-    months
-  };
+  const period = { start: startDate, end: endDate, months };
   
   // ---- TOTALS ----
   const totalPips = monthlyList.reduce((s, m) => s + m.pips, 0);

@@ -4,7 +4,7 @@
 }
 
 /* === BASIC STYLE === */
-.hidden { display: none }
+.hidden { display: none}
 body {
   font-family: system-ui, sans-serif;
   margin: 20px;
@@ -19,8 +19,8 @@ table {
 }
 
 table td {
-  white-space: nowrap;
-  min-width: 80px;
+  /*white-space: nowrap;*/
+  /*min-width: 80px;*/
 }
 
 /* === TABS === */
@@ -417,7 +417,7 @@ td[data-tooltip]:hover::after {
   padding: 5px;
   text-align: center;
   /* border: 1px solid #ddd; */
-  min-width: max-content;
+  min-width: 40px;
 }
 
 #monthly-table .pips-positive { background: #d4edda; color: #155724; }

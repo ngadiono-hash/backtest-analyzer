@@ -18,10 +18,10 @@ export class UIManager {
 		
 		const showPips = (mode === 'pips');
 		
-		document.querySelectorAll('.pips-value')
+		$$('.pips-value')
 			.forEach(el => el.classList.toggle('hidden', !showPips));
 		
-		document.querySelectorAll('.vpips-value')
+		$$('.vpips-value')
 			.forEach(el => el.classList.toggle('hidden', showPips));
 		
 		this._updateToggleButtonLabel();
@@ -29,6 +29,8 @@ export class UIManager {
 	
 	toggleValue() {
 		this.setMode(this.mode === 'pips' ? 'vpips' : 'pips');
+		console.log (this.mode)
+
 	}
 	
 	_bindToggleButton() {
