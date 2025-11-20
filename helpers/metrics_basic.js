@@ -1,5 +1,4 @@
-// metrics_basic.js
-// Basic performance stats, streaks, and risk-reward.
+// ~/helpers/metrics_basic.js
 
 export function calculateRiskReward(trades = []) {
   const wins = trades.filter(t => t.isWin);

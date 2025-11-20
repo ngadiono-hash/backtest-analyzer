@@ -1,136 +1,176 @@
 // /helpers/metrics_monthly.js
-// Group trades by month and calculate monthly statistics.
+// AGGREGATE EVERY MONTH, PERIOD BACKTEST, AGGREGATE BY PAIRS
+import {
+  log
+} from "../helpers/shortcut.js";
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-import { standardDeviation } from './metrics_utils.js';
+export function aggregateByMonth(trades) {
 
-/* -------------------------------------------------
-   1. Group trades by month (YYYY-MM)
-   ------------------------------------------------- */
-export function groupByMonth(trades = []) {
   const map = {};
-  trades.forEach(t => {
-    const dt = t.dateEN instanceof Date ? t.dateEN : new Date(t.dateEN);
-    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-    if (!map[key]) map[key] = [];
-    map[key].push(t);
-  });
+
+  for (const t of trades) {
+    const d = t.dateEX;
+    if (!d || !(d instanceof Date)) continue;
+
+    const year = d.getFullYear();
+    const monthName = MONTHS[d.getMonth()];
+    const pips = Number(t.pips) || 0;
+    const vpips = Number(t.vpips) || 0;
+
+    // Jika tahun belum dibuat
+    if (!map[year]) {
+      map[year] = {};
+
+      // Buat semua month slot = null → belum ada data
+      MONTHS.forEach(m => map[year][m] = null);
+
+      map[year].YTD_pips = 0;
+      map[year].YTD_vpips = 0;
+    }
+
+    // Jika bulan belum punya data, buat struktur baru
+    if (!map[year][monthName]) {
+      map[year][monthName] = {
+        pips: 0,
+        vpips: 0,
+        count: 0,
+        list: []
+      };
+    }
+
+    const entry = map[year][monthName];
+
+    // Tambahkan akumulasi
+    entry.pips += pips;
+    entry.vpips += vpips;
+    entry.count += 1;
+
+    // Simpan list trade
+    entry.list.push({
+      no: entry.count,
+      pair: t.pair,
+      type: t.type,
+      dateEX: d,
+      pips,
+      vpips
+    });
+
+    // Tambahkan YTD
+    map[year].YTD_pips += pips;
+    map[year].YTD_vpips += vpips;
+  }
+
   return map;
 }
 
-/* -------------------------------------------------
-   2. NEW – ambil min / max dari aggregateMonthlyPips
-   ------------------------------------------------- */
-export function getMonthlyNetExtremes(monthlyMap = {}, pipValue = 1) {
-  const pipsValues = [];
-  const dollarValues = [];
-  
-  // Iterasi semua tahun → semua bulan
+export function computeMonthlyStats(monthlyMap, stabilityTarget = 300) {
+
+  const monthlyList = [];
+  let firstDate = null;
+  let lastDate = null
+
   for (const year in monthlyMap) {
-    for (const month in monthlyMap[year]) {
-      const pips = monthlyMap[year][month];
-      if (pips === null || pips === undefined) continue;
-      
-      pipsValues.push(pips);
-      dollarValues.push(pips * pipValue);
+    for (const m of MONTHS) {
+      const entry = monthlyMap[year][m];
+      const monthDates = entry.list.map(t => t.dateEX).sort((a, b) => a - b);
+      firstDate = monthDates[0];
+      lastDate = monthDates.at(-1);
+      monthlyList.push({ year, month: m, pips: entry.pips, vpips: entry.vpips });
+
     }
   }
-  
-  if (pipsValues.length === 0) {
-    return {
-      minNetPips: 0,
-      maxNetPips: 0,
-      minNetDollar: 0,
-      maxNetDollar: 0
-    };
+
+  // ---- PERIOD SECTION ----
+  const startDate = firstDate;
+  const endDate = lastDate;
+  const months = monthlyList.length;
+
+  const period = { start: startDate, end: endDate, months };
+
+  // ---- TOTALS ----
+  const totalPips = monthlyList.reduce((s, m) => s + m.pips, 0);
+  const totalVPips = monthlyList.reduce((s, m) => s + m.vpips, 0);
+
+  // ---- AVERAGES ----
+  const avgPips = totalPips / months;
+  const avgVPips = totalVPips / months;
+
+  // ---- HIGHEST & LOWEST (berdasarkan vpips) ----
+  let highest = monthlyList[0];
+  let lowest = monthlyList[0];
+
+  for (const m of monthlyList) {
+    if (m.vpips > highest.vpips) highest = m;
+    if (m.vpips < lowest.vpips) lowest = m;
   }
 
-  return {
-    minNetPips: Math.min(...pipsValues),
-    maxNetPips: Math.max(...pipsValues),
-    minNetDollar: Math.min(...dollarValues),
-    maxNetDollar: Math.max(...dollarValues)
-  };
-}
+  // ---- STANDARD DEVIATION ----
+  const stdPips = Math.sqrt(
+    monthlyList.reduce((s, m) => s + Math.pow(m.pips - avgPips, 2), 0) / months
+  );
 
-/* -------------------------------------------------
-   3. calculateMonthlyStats – pakai aggregateMonthlyPips
-   ------------------------------------------------- */
-export function calculateMonthlyStats(monthlyMap = {}, pipValue = 1) {
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const monthlyPips = [];
-  const monthlyDollar = [];
-  for (const year in monthlyMap) {
-    const yearData = monthlyMap[year];
-    if (typeof yearData !== 'object') continue;
-    
-    for (const month of MONTHS) {
-      const pips = yearData[month];
-      if (pips === null || pips === undefined) continue; // skip bulan kosong
-      
-      monthlyPips.push(pips);
-      monthlyDollar.push(pips * pipValue);
-    }
-  }
-  //console.log(monthlyPips)
-  // Jika tidak ada data bulanan
-  if (monthlyPips.length === 0) {
-    return {
-      minPips: 0,
-      maxPips: 0,
-      avgPips: 0,
-      minDollar: 0,
-      maxDollar: 0,
-      avgDollar: 0,
-      stability: 0
-    };
-  }
-  
-  // Hitung min, max, avg
-  const minPips = Math.min(...monthlyPips);
-  const maxPips = Math.max(...monthlyPips);
-  const avgPips = monthlyPips.reduce((a, b) => a + b, 0) / monthlyPips.length;
-  const avgDollar = monthlyDollar.reduce((a, b) => a + b, 0) / monthlyDollar.length;
-  
-  // Stability: CV = (stdDev / |mean|) * 100
-  const stability = avgPips === 0 ?
-    0 :
-    Number((standardDeviation(monthlyPips) / Math.abs(avgPips)) * 100).toFixed(2);
-  
+  const stdVPips = Math.sqrt(
+    monthlyList.reduce((s, m) => s + Math.pow(m.vpips - avgVPips, 2), 0) / months
+  );
+
+  // ---- STABILITY (vpips ≥ target) ----
+  const stableCount = monthlyList.filter(m => m.vpips >= stabilityTarget).length;
+  const stability = (stableCount / months) * 100;
+
   return {
-    minPips,
-    maxPips,
-    avgPips: Number(avgPips.toFixed(2)),
-    minDollar: Number((minPips * pipValue).toFixed(2)),
-    maxDollar: Number((maxPips * pipValue).toFixed(2)),
-    avgDollar: Number(avgDollar.toFixed(2)),
+    period,
+    months,
+    totalPips,
+    totalVPips,
+    avgPips,
+    avgVPips,
+    highest,
+    lowest,
+    stdPips,
+    stdVPips,
     stability
   };
 }
 
-/* -------------------------------------------------
-   4. aggregateMonthlyPips – tetap seperti semula
-   ------------------------------------------------- */
-export function aggregateMonthlyPips(trades) {
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export function aggregateByPair(trades) {
   const map = {};
-  
+
   for (const t of trades) {
-    const d = t.dateEX;
-    if (!d || !(d instanceof Date)) continue;
-    
-    const year = d.getFullYear();
-    const month = MONTHS[d.getMonth()];
-    const pips = Number(t.pipsSigned) || 0;
-    
-    if (!map[year]) {
-      map[year] = {};
-      MONTHS.forEach(m => map[year][m] = null); // null → belum ada data
-      map[year].YTD = 0;
+    const pair = t.pair;
+    const pips = Number(t.pips) || 0;
+    const vpips = Number(t.vpips) || 0;
+
+    if (!map[pair]) {
+      map[pair] = {
+        pair,
+        count: 0,
+        win: 0,
+        loss: 0,
+        pips: 0,
+        vpips: 0
+      };
     }
-    
-    map[year][month] = (map[year][month] || 0) + pips;
-    map[year].YTD += pips;
+
+    const entry = map[pair];
+
+    entry.count++;
+    entry.pips += pips;
+    entry.vpips += vpips;
+
+    if (t.isWin) entry.win++;
+    else entry.loss++;
   }
-  
-  return map;
+
+  // transform → calculate derived metrics
+  const list = Object.values(map).map(entry => ({
+    ...entry,
+    avgPips: entry.count ? entry.pips / entry.count: 0,
+    avgVPips: entry.count ? entry.vpips / entry.count: 0
+  }));
+
+  // sorting: VPIPS lebih relevan secara ekonomis
+  list.sort((a, b) => b.vpips - a.vpips);
+
+  return list;
 }

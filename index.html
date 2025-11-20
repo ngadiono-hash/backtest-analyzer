@@ -10,67 +10,63 @@
 
 <body>
 	<div id="notify-area"></div>
-	<div class="container">
+	<div class="tab-container">
 		<div class="tabs">
 			<button class="tab-button" data-tab="tab1">List Trades</button>
 			<button class="tab-button active" data-tab="tab2">Statistics</button>
-			<button class="tab-button" data-tab="tab3">Monthly Net</button>
-			<button class="tab-button" data-tab="tab4">Equity Chart</button>
+			<button class="tab-button" data-tab="tab3">Detail Equity</button>
+			<select id="sample-select" size="1">
+				<option value="EURJPY" selected>EURJPY</option>
+				<option value="EURUSD">EURUSD</option>
+				<option value="GBPJPY">GBPJPY</option>
+				<option value="GBPUSD">GBPUSD</option>
+				<option value="USDCHF">USDCHF</option>
+				<option value="XAUUSD">XAUUSD</option>
+				<option value="ALL">ALL</option>
+				<option value="ERROR">ERROR</option>
+				<option value="UJISTAT">STAT</option>
+			</select>
 		</div>
-
-		<!-- TAB 1: LIST TRADES -->
+		
 		<div id="tab1" class="tab-content">
 			<div class="controller">
 				<button id="export-btn" disabled>Copy</button>
-				<select id="sample-select" size="1" multiple>
-					<option value="EURJPY">EURJPY</option>
-					<option value="EURUSD">EURUSD</option>
-					<option value="GBPJPY">GBPJPY</option>
-					<option value="GBPUSD">GBPUSD</option>
-					<option value="USDCHF">USDCHF</option>
-					<option value="XAUUSD">XAUUSD</option>
-					<option value="ALL">ALL</option>
-					<option value="ERROR">ERROR</option>
-					<option value="UJISTAT" selected>STAT</option>
-				</select>
 				<label>
-					<input type="checkbox" id="filter-invalid"> Show only invalid
+					<input type="checkbox" id="filter-invalid">Show invalid
 				</label>
 			</div>
-
+			
 			<div id="status-area"></div>
-
+			
 			<div class="table-wrapper" id="trade-table-container"></div>
 		</div>
-
-		<!-- TAB 2: STATISTICS -->
+		
 		<div id="tab2" class="tab-content active">
-		  <div class="controller">
-		    <input type="number" id="lot-input" placeholder="lot size" value="0.1">
-		    <input type="number" id="balance-input" placeholder="initial balance" value="10000">
-		  </div>
-		  <div class="table-wrapper" id="stats-table-container"></div>
+			<div class="table-wrapper" id="stats-table-container"></div>
 		</div>
-
-		<!-- TAB 3: MONTHLY NET -->
+		
 		<div id="tab3" class="tab-content">
-			<div class="table-wrapper" id="monthly-table-container"></div>
-		</div>
+		  <button id="toggle">Switch Mode</button>
 
-		<!-- TAB 4: EQUITY CHART -->
-		<div id="tab4" class="tab-content">
-			<div id="chart-container">
-				<canvas id="chart-equity"></canvas>
+			<h3>Monthly Net</h3>
+			<div class="table-wrapper" id="monthly-table-container"></div>
+			<h3>Equity Chart</h3>
+			<div class="chart-container" id="equity-chart-container">
+				<canvas id="equity-chart"></canvas>
 				<div class="resizer"></div>
 			</div>
+			<h3>Based Symbols</h3>
+			<div class="chart-container" id="pairs-chart-container">
+				<canvas id="pairs-chart"></canvas>
+			</div>
 		</div>
-
+		
 	</div>
-
+	
 	<!-- MODULE SCRIPT -->
+	<script src="/cdn/chart.min.js"></script>
+	<script src="/cdn/chartjs-plugin-crosshair.min.js"></script>
 	<script type="module" src="app.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-crosshair"></script>
 </body>
 
 </html>

@@ -1,79 +1,188 @@
 // /helpers/metrics_equity.js
-// Build equity curve, calculate drawdown, and recovery metrics.
+// Build equity curve, calculate drawdown, and recovery
 
 export function buildEquityCurve(trades = []) {
-  let equity = 0;
-  let barIndex = 0;
-  return trades.map(t => {
-    equity += Number(t.pipsSigned) || 0;
-    return { ...t, equity, barIndex: barIndex++ };
-  });
-}
-
-export function calculateMaxDrawdown(values = []) {
-  if (!Array.isArray(values) || values.length === 0) {
-    return { absolute: 0, percent: 0 };
+  let eqPips = 0,
+    eqVPips = 0,
+    barIndex = 0;
+  
+  const curvePips = [];
+  const curveVPips = [];
+  
+  for (const t of trades) {
+    const pips = Number(t.pips) || 0;
+    const vpips = Number(t.vpips) || 0;
+    
+    eqPips += pips;
+    eqVPips += vpips;
+    
+    const base = {
+      pair: t.pair,
+      type: t.type,
+      pips,
+      vpips,
+      date: t.dateEX,
+      barIndex: barIndex++
+    };
+    
+    curvePips.push({
+      ...base,
+      equity: eqPips
+    });
+    
+    curveVPips.push({
+      ...base,
+      equity: eqVPips
+    });
   }
-
-  let peak = values[0];
-  let maxDD = 0;
-  let maxDDPercent = 0;
-
-  for (const raw of values) {
-    const v = Number(raw) || 0;
-    if (v > peak) peak = v;
-
-    const dd = peak - v;
-    if (dd > maxDD) {
-      maxDD = dd;
-      maxDDPercent = peak !== 0 ?
-        Math.abs((dd / peak) * 100) :
-        0;
-    }
-  }
-
+  
   return {
-    absolute: Number(maxDD.toFixed(2)),
-    percent: Number(maxDDPercent.toFixed(2)),
+    pips: curvePips,
+    vpips: curveVPips
   };
 }
 
-export function calculateRecovery(curve = []) {
-  if (!curve.length) return { max: 0, avg: 0 };
-
-  const recoveries = [];
-  let peakEquity = curve[0].equity;
-  let peakIndex = curve[0].barIndex;
-  let inDrawdown = false;
-
+export function computeDrawdown(curve = [], threshold = 0) {
+  if (!curve.length) return emptyResult();
+  // --- PREP: gunakan timestamp dari dateEX / __ts ---
+  const getTs = (e) => e.date ?? e.__ts;
+  let peakVal = curve[0].equity;
+  let peakIdx = 0;
+  let peakTs = getTs(curve[0]);
+  
+  let troughVal = peakVal;
+  let troughIdx = 0;
+  let troughTs = peakTs;
+  
+  let inDD = false;
+  
+  const events = [];
+  let maxDD = 0;
+  let maxDDPercent = 0;
+  let totalDD = 0;
+  let ddCount = 0;
+  
   for (let i = 1; i < curve.length; i++) {
-    const { equity, barIndex } = curve[i];
-
-    // New peak → end previous drawdown (if any)
-    if (equity >= peakEquity) {
-      if (inDrawdown) {
-        // recovery completed
-        recoveries.push(barIndex - peakIndex);
-        inDrawdown = false;
+    const e = curve[i].equity;
+    const ts = getTs(curve[i]);
+    // --- PEAK BARU ---
+    if (e >= peakVal) {
+      if (inDD) {
+        const ddAbs = peakVal - troughVal;
+        
+        if (ddAbs >= threshold) {
+          const ddPct = peakVal !== 0 ? (ddAbs / peakVal) * 100 : 0;
+          
+          const recoveryTs = ts;
+          const durationMs = recoveryTs - troughTs;
+          const durationHours = durationMs / 3_600_000;
+          const durationBars = durationHours / 4;
+          
+          events.push({
+            peak: { value: peakVal, index: peakIdx, timestamp: peakTs },
+            trough: { value: troughVal, index: troughIdx, timestamp: troughTs },
+            recoveryIndex: i,
+            recoveryTimestamp: recoveryTs,
+            
+            ddAbs,
+            ddPct,
+            
+            durationMs,
+            durationHours,
+            durationBars,
+          });
+          
+          maxDD = Math.max(maxDD, ddAbs);
+          maxDDPercent = Math.max(maxDDPercent, ddPct);
+          totalDD += ddAbs;
+          ddCount++;
+        }
       }
-      // update peak
-      peakEquity = equity;
-      peakIndex = barIndex;
+      
+      // reset peak
+      peakVal = e;
+      peakIdx = i;
+      peakTs = ts;
+      
+      troughVal = e;
+      troughIdx = i;
+      troughTs = ts;
+      
+      inDD = false;
       continue;
     }
-
-    // below peak → drawdown active
-    if (equity < peakEquity) {
-      inDrawdown = true;
+    
+    // --- DRAWDOWN BERJALAN ---
+    if (!inDD) {
+      inDD = true;
+      troughVal = e;
+      troughIdx = i;
+      troughTs = ts;
+    } else if (e < troughVal) {
+      troughVal = e;
+      troughIdx = i;
+      troughTs = ts;
     }
   }
-
-  if (!recoveries.length) return { max: 0, avg: 0 };
-
-  const sum = recoveries.reduce((a, b) => a + b, 0);
-
+  
+  // --- END OF SERIES (unrecovered DD) ---
+  if (inDD) {
+    const ddAbs = peakVal - troughVal;
+    
+    if (ddAbs >= threshold) {
+      const ddPct = peakVal !== 0 ? (ddAbs / peakVal) * 100 : 0;
+      
+      events.push({
+        peak: { value: peakVal, index: peakIdx, timestamp: peakTs },
+        trough: { value: troughVal, index: troughIdx, timestamp: troughTs },
+        recoveryIndex: null,
+        recoveryTimestamp: null,
+        
+        ddAbs,
+        ddPct,
+        
+        durationMs: null,
+        durationHours: null,
+        durationBars: null,
+        durationStr: "Unrecovered"
+      });
+      
+      maxDD = Math.max(maxDD, ddAbs);
+      maxDDPercent = Math.max(maxDDPercent, ddPct);
+      totalDD += ddAbs;
+      ddCount++;
+    }
+  }
+  
+  // --- AVERAGE RECOVERY TIME ---
+  const recovered = events.filter(e => e.recoveryIndex !== null);
+  
+  let avgHours = 0;
+  let avgBars = 0;
+  if (recovered.length > 0) {
+    avgHours = recovered.reduce((s, e) => s + e.durationHours, 0) / recovered.length;
+    avgBars = recovered.reduce((s, e) => s + e.durationBars, 0) / recovered.length;
+  }
+  
   return {
-    max: Math.max(...recoveries),
-    avg: sum / recoveries.length
+    maxDD,
+    maxDDPercent,
+    avgDD: ddCount > 0 ? totalDD / ddCount : 0,
+    count: ddCount,
+    events,
+    avgRecoveryBars: avgBars,
+  };
+}
+
+
+
+// Utility for empty results
+function emptyResult() {
+  return {
+    maxDD: 0,
+    maxDDPercent: 0,
+    avgDD: 0,
+    count: 0,
+    events: []
   };
 }

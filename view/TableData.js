@@ -1,17 +1,15 @@
 // ~/view/TableData.js
+import { $, $$, _ready } from "../helpers/shortcut.js";
 import { HEADERS } from '../model/TradeData.js';
-import { $ } from '../view/UIManager.js';
 
 export class TableData {
-	constructor(tradeData) {
-		this.tradeData = tradeData;
-		this.container = $('#trade-table-container'); // <-- container baru
+	constructor(data) {
+		this.data = data;
+		this.container = $('#trade-table-container');
 		this.editingCell = null;
 		this.showInvalidOnly = false;
 		
-		if (!this.container) return console.error('#trade-table-container not found');
-		
-		this.renderTableSkeleton();
+		this.renderSkeleton();
 		this.tbody = this.table.querySelector('tbody');
 		
 		this.initFilter();
@@ -21,7 +19,7 @@ export class TableData {
 	initFilter() {
 		$('#filter-invalid')?.addEventListener('change', e => {
 			this.showInvalidOnly = e.target.checked;
-			this.render(this.tradeData.getTrades());
+			this.render(this.data);
 		});
 	}
 	
@@ -38,26 +36,18 @@ export class TableData {
 		});
 	}
 	
-	renderTableSkeleton() {
-		// Hapus isi container (jika ada)
+	renderSkeleton() {
 		this.container.innerHTML = '';
-		
-		// Buat <table>
 		const table = document.createElement('table');
 		table.id = 'trade-table';
-		table.className = 'trade-table'; // class untuk styling
-		
-		// ---- THEAD ----
+		table.className = 'trade-table';
 		const thead = document.createElement('thead');
 		const headerRow = document.createElement('tr');
-		
-		// Kolom nomor urut (toggle raw)
 		const thToggle = document.createElement('th');
 		thToggle.textContent = '#';
 		thToggle.className = 'col-toggle';
 		headerRow.appendChild(thToggle);
 		
-		// Header kolom data
 		HEADERS.forEach(h => {
 			const th = document.createElement('th');
 			th.textContent = h;
@@ -68,15 +58,12 @@ export class TableData {
 		thead.appendChild(headerRow);
 		table.appendChild(thead);
 		
-		// ---- TBODY ----
 		const tbody = document.createElement('tbody');
 		table.appendChild(tbody);
 		
-		// Simpan referensi
 		this.table = table;
 		this.tbody = tbody;
-		
-		// Masukkan ke DOM
+	
 		this.container.appendChild(table);
 	}
 	
@@ -109,7 +96,6 @@ export class TableData {
 			textContent: idx + 1,
 			className: 'toggle-raw',
 			style: 'cursor:pointer',
-			title: 'Klik untuk lihat baris asli (raw)'
 		});
 		tr.appendChild(tdRow);
 		
@@ -179,10 +165,10 @@ export class TableData {
 			val = isNaN(n) ? null : n;
 		}
 		
-		const updated = { ...this.tradeData.getTrades()[rowIdx], [key]: val };
-		this.tradeData.saveRow(rowIdx, updated);
+		const updated = { ...this.data.getTrades()[rowIdx], [key]: val };
+		this.data.saveRow(rowIdx, updated);
 		this.editingCell = null;
-		this.render(this.tradeData.getTrades());
+		this.render(this.data.getTrades());
 		this.ui?.notify?.show?.('success', 'Cell saved!');
 	}
 	
