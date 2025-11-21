@@ -1,7 +1,8 @@
 // /helpers/metrics_monthly.js
 // AGGREGATE EVERY MONTH, PERIOD BACKTEST, AGGREGATE BY PAIRS
 import { log } from "../helpers/shortcut.js";
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const  MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function aggregateByMonth(trades) {
   
