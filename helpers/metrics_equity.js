@@ -1,5 +1,4 @@
 // /helpers/metrics_equity.js
-// Build equity curve, calculate drawdown, and recovery
 
 export function buildEquityCurve(trades = []) {
   let eqPips = 0,

@@ -1,5 +1,4 @@
 // /helpers/metrics_pips.js
-
 const pairsMap = {
   XAUUSD: { mul: 0.5, max: 500, min: 360 },
   GBPJPY: { mul: 1, max: 400, min: 180 },

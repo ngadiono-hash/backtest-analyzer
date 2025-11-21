@@ -12,9 +12,7 @@ export function dateISO(dateStr, defaultHour = "12:00") {
   return new Date(`${year}-${month}-${day}T${defaultHour}:00`);
 }
 
-export function estimateBarsHeld(dateEN, dateEX) {
-  const entry = dateISO(dateEN);
-  const exit = dateISO(dateEX);
+export function estimateBarsHeld(entry, exit) {
   if (!entry || !exit) return 1;
   
   // SAME DAY TRADE → karena tidak ada waktu → minimal 1 bar

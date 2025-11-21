@@ -1,10 +1,24 @@
-// ============================================================================
-// TradeStat — Final Complete Class
-// ============================================================================
-export class TradeStat {
+// /model/StatisticsModel.js
+import * as MP from '../helpers/metrics_pips.js';
+import * as MT from '../helpers/metrics_time.js';
+import { log } from "../helpers/shortcut.js";
 
-  constructor(trades) {
-    this.raw = trades;
+export class StatisticsModel {
+
+  constructor() {
+    this._setupEventListeners();
+  }
+  
+  _setupEventListeners() {
+    window.addEventListener('tradedata-updated', e => {
+      if (e.detail.stats.total >= 50 && e.detail.stats.invalid === 0) {
+        this.data = e.detail.trades;
+        this.stats = this.build();
+        log(this.stats)
+        return
+        this._dispatchUpdate();
+      }
+    });
   }
 
   // ------------------------------
@@ -44,10 +58,7 @@ export class TradeStat {
       avgDD: this.avg(ddList)
     };
   }
-
-  // ------------------------------
-  // Recovery factor computation
-  // ------------------------------
+  
   computeRecovery(equityList) {
     const { maxDD } = this.computeDrawdown(equityList);
     const finalGain = equityList.at(-1);
@@ -303,7 +314,7 @@ export class TradeStat {
   // FINAL OUTPUT
   // ============================================================================
   build() {
-    const rows = this._scanTrades(this.raw);
+    const rows = this._scanTrades(this.data);
 
     const symbols = this._aggSymbols(rows);
     const monthly = this._aggMonthly(rows);
@@ -320,5 +331,11 @@ export class TradeStat {
       double,
       triple
     };
+  }
+  
+  _dispatchUpdate() {
+    window.dispatchEvent(new CustomEvent('Statistics-updated', {
+      detail: { stats: this.stats }
+    }));
   }
 }
