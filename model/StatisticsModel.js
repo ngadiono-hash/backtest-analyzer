@@ -20,7 +20,29 @@ export class StatisticsModel {
       }
     });
   }
+  // ============================================================================
+  // FINAL OUTPUT
+  // ============================================================================
+  
+  build() {
+    const rows = this._scanTrades(this.data);
 
+    const symbols = this._aggSymbols(rows);
+    const monthly = this._aggMonthly(rows);
+    const equity  = this._aggEquity(rows);
+    const single  = this._aggSingle(rows, monthly);
+    const double  = this._aggDouble(rows);
+    const triple  = this._aggTriple(rows);
+
+    return {
+      symbols,
+      accumulations: monthly,
+      equity,
+      single,
+      double,
+      triple
+    };
+  }
   // ------------------------------
   // Utility math helper
   // ------------------------------
@@ -309,32 +331,9 @@ export class StatisticsModel {
 
     return result;
   }
-
-  // ============================================================================
-  // FINAL OUTPUT
-  // ============================================================================
-  build() {
-    const rows = this._scanTrades(this.data);
-
-    const symbols = this._aggSymbols(rows);
-    const monthly = this._aggMonthly(rows);
-    const equity  = this._aggEquity(rows);
-    const single  = this._aggSingle(rows, monthly);
-    const double  = this._aggDouble(rows);
-    const triple  = this._aggTriple(rows);
-
-    return {
-      symbols,
-      accumulations: monthly,
-      equity,
-      single,
-      double,
-      triple
-    };
-  }
   
   _dispatchUpdate() {
-    window.dispatchEvent(new CustomEvent('Statistics-updated', {
+    window.dispatchEvent(new CustomEvent('statistics-updated', {
       detail: { stats: this.stats }
     }));
   }

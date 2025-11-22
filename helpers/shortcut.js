@@ -38,7 +38,6 @@ export const _create = (tag, props = {}, ...children) => {
   return el;
 };
 
-// 5. Ajax / Fetch shortcut (mirip $.ajax)
 export const fetchJSON = async (url, options = {}) => {
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json', ...options.headers },
@@ -48,5 +47,5 @@ export const fetchJSON = async (url, options = {}) => {
   return res.json();
 };
 
-// 6. Log shortcut
+
 export const log = (...args) => console.log(...args);
