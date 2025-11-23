@@ -1,5 +1,5 @@
 // ~/helpers/chart_renderer.js
-import { $, $$, _on, _ready } from "../helpers/shortcut.js";
+import { $, $$, _on, _ready, log } from "../helpers/shortcut.js";
 import * as FM from "../helpers/formatter.js";
 
 window._charts = {};
@@ -40,112 +40,99 @@ export function renderPairsChart(stats) {
   window._charts.pairs = pairsChart;
 }
 
-// =======================================================
-// RENDER CHART
-// =======================================================
-export function renderEquityChart(data) {
-  if (window._charts.equity) window._charts.equity.destroy();
-  const labels = data.pips.map((_, index) => index + 1); // 1, 2, 3, 4... (bisa juga kosongin "")
 
+export function renderEquityChart(data) {
+  //log(data.pips)
+  //console.log(JSON.stringify(data.pips, null, 2));
+  if (window._charts.equity) window._charts.equity.destroy();
+  
+  const labels = data.pips.map((_, index) => index + 1);
   const equityPips   = data.pips.map(item   => item.graph);
-  const equityVpips  = data.vpips.map(item  => item.graph);
+  const equityVPips  = data.vpips.map(item  => item.graph);
   
-  const datesPips    = data.pips.map(item   => item.date);
-  const datesVpips   = data.vpips.map(item  => item.date);
-  const valuesPips   = data.pips.map(item   => item.value);
-  const valuesVpips  = data.vpips.map(item  => item.value);
-  
-  new Chart(equityCanvas, {
-    type: 'line',
+  const equityChart = new Chart(equityCanvas, {
+    type: "line",
     data: {
-      labels: labels,  // hanya angka urut atau bisa diganti ["", "", ""] kalau mau kosong
+      labels,
       datasets: [
         {
-          label: 'Equity (Pips)',
+          label: "Pips",
           data: equityPips,
-          borderColor: '#00b894',
-          backgroundColor: 'rgba(0, 184, 148, 0.1)',
+          borderColor: "#e17055",
           fill: true,
-          tension: 0.3,
-          pointRadius: 0,              // titik kecil biar clean
-          pointHoverRadius: 6,
-          pointHoverBackgroundColor: '#00b894',
-          pointHoverBorderColor: '#fff',
-          pointHoverBorderWidth: 2
+          backgroundColor: "#e1705500",
+          pointRadius: 0,
+          borderWidth: 1,
+          tension: 0.25,
+          hoverRadius: 5,
         },
         {
-          label: 'Equity (VPips)',
-          data: equityVpips,
-          borderColor: '#e17055',
-          backgroundColor: 'rgba(225, 112, 85, 0.1)',
+          label: "VPips",
+          data: equityVPips,
+          borderColor: "#10a37f",
           fill: true,
-          tension: 0.3,
+          backgroundColor: "#F4FBFA",
           pointRadius: 0,
-          pointHoverRadius: 6,
-          pointHoverBackgroundColor: '#e17055',
-          pointHoverBorderColor: '#fff',
-          pointHoverBorderWidth: 2
-        }
+          borderWidth: 1,
+          tension: 0.25,
+          hoverRadius: 5,
+        },
+      
       ]
     },
+    
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: {
-        mode: 'index',
-        intersect: false
+        mode: "index",
+        intersect: false,
       },
+      
       plugins: {
         title: {
           display: true,
-          text: 'Equity Curve Comparison',
-          font: { size: 16 }
-        },
-        legend: {
-          position: 'top'
+          text: "Equity Chart"
         },
         tooltip: {
+          //mode: 'interpolate',
+          intersect: false,
+          //displayColors: false,
           callbacks: {
-            // Label X di tooltip (bisa nomor trade atau date)
-            title: function(tooltipItems) {
-              const idx = tooltipItems[0].dataIndex;
-              const date = new Date(data.pips[idx].date); // asumsi date sama untuk kedua dataset
-              return FM.dateDMY(date);
-            },
-            label: function(context) {
-              const idx = context.dataIndex;
-              const dataset = context.dataset.label.includes('Pips') ? data.pips : data.vpips;
-              const val = dataset[idx].value;
-              return `\( {context.dataset.label}: \){context.parsed.y.toFixed(2)} (Δ ${val.toFixed(2)})`;
+          // Judul: ambil tanggal dari pips (atau vpips, terserah — biasanya sama)
+          title: (t) => {
+            if (!t.length) return '';
+            const i = t[0].dataIndex;
+            const dateStr = FM.dateLocal(data.pips[i].date);
+            return `Trade #${i + 1} | ${dateStr}`;
+          },
+    
+          // Label per dataset
+          label: (context) => {
+            const i = context.dataIndex;
+            const isPips = context.datasetIndex === 0;
+    
+            if (isPips) {
+              const item = data.pips[i];
+              return `P: ${FM.num(item.value)} | ${FM.num(item.graph)}`;
+            } else {
+              const item = data.vpips[i];
+              return `V: ${FM.num(item.value)} | ${FM.num(item.graph)}`;
             }
+          },
+          footer: (t) => {
+            const i = t[0].dataIndex;
+            const isWin = data.pips[i].value >= 0 ? '🟢' : '🔴';
+            const pair  = data.pips[i].pair;
+            const isLong   = data.pips[i].isLong ? "Long" : "Short";
+            return `${pair} | ${isLong} | ${isWin}`;
           }
-        }
-      },
-      scales: {
-        x: {
-          ticks: {
-            callback: function(value) {
-              // Kosongin label X biar super clean (mirip TradingView)
-              return '';
-              // atau kalau mau nomor trade: return value;
-            }
-          },
-          grid: {
-            display: false
-          },
-          title: {
-            display: true,
-            text: 'Trade Sequence'
           }
         },
-        y: {
-          title: {
-            display: true,
-            text: 'Equity (pips)'
-          },
-          grid: {
-            color: 'rgba(0,0,0,0.05)'
-          }
-        }
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { display: false }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { display: false }, grid: { display: false } }
       }
     }
   });

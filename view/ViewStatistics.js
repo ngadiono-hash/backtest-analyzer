@@ -17,8 +17,8 @@ export class ViewStatistics {
 			//this.renderStatsTable(stats);
 			//this.renderMonthlyTable(stats.monthlyAgg);
 			//CR.renderPairsChart(stats.pairStats);
-			//console.log(JSON.stringify(stats.equity, null, 2));
-			//CR.renderEquityChart(stats);
+			log(stats.single)
+			CR.renderEquityChart(stats.equity);
 			
 		});
 	}

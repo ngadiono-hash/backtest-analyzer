@@ -48,4 +48,5 @@ export const fetchJSON = async (url, options = {}) => {
 };
 
 
-export const log = (...args) => console.log(...args);
+export const log = (...args) => console.log(...args)
+

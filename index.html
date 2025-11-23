@@ -83,12 +83,10 @@
 	  </div>
 		
 	</div>
-	
-	<!-- MODULE SCRIPT -->
 	<script src="/cdn/chart.min.js"></script>
-	<script src="/cdn/chartjs-plugin-crosshair.min.js"></script>
-	<script type="module" src="app.js"></script>
-<script type="text/javascript" charset="utf-8">
+  <!-- <script src="/cdn/chartjs-plugin-crosshair.min.js"></script> -->
+  <script type="module" src="app.js"></script>
+<script>
 function initTab(container) {
   // ambil semua tab-group dalam container (termasuk nested)
   const groups = container.querySelectorAll('.tab-group');
@@ -129,36 +127,85 @@ function initTab(container) {
   });
 }
 
-{
-  "pips": [
-    {
-      "graph": 117.99999999999922,
-      "date": "2022-01-13T05:00:00.000Z",
-      "value": 117.99999999999922
-    },
-    {
-      "graph": 225.09999999999917,
-      "date": "2022-01-27T05:00:00.000Z",
-      "value": 107.09999999999997
-    }
-    ],
-  "vpips": [
-    {
-      "graph": 117.99999999999922,
-      "date": "2022-01-13T05:00:00.000Z",
-      "value": 117.99999999999922
-    },
-    {
-      "graph": 225.09999999999917,
-      "date": "2022-01-27T05:00:00.000Z",
-      "value": 107.09999999999997
-    }
-    ]
-}
-
 
 // init pada seluruh body (atau bisa pass element lain)
 initTab(document.getElementById('app'));
+
+</script>
+
+<script>
+// === GLOBAL ERROR HANDLER YANG BISA LIHAT NAMA FILE ASLI DI MODULE ===
+function setupUltimateErrorHandler() {
+  // 1. Tangkap error biasa + module
+  window.onerror = function(msg, url, lineNo, columnNo, error) {
+    showDetailedError(msg, url, lineNo, columnNo, error);
+    return false;
+  };
+
+  // 2. Tangkap Promise rejection
+  window.onunhandledrejection = function(event) {
+    const error = event.reason;
+    let url = 'unknown';
+    let lineNo = 0;
+    let columnNo = 0;
+
+    if (error && error.stack) {
+      const stackLines = error.stack.split('\n');
+      // Cari baris yang mengandung file asli (bisa .js, .ts, .vue, dll)
+      for (let line of stackLines) {
+        const match = line.match(/\((.*):(\d+):(\d+)\)$/);
+        if (match) {
+          url = match[1];
+          lineNo = match[2];
+          columnNo = match[3];
+          break;
+        }
+        // Untuk format tanpa kurung (Chrome terbaru)
+        const match2 = line.match(/at\s+(.*):(\d+):(\d+)/);
+        if (match2) {
+          url = match2[1];
+          lineNo = match2[2];
+          columnNo = match2[3];
+          break;
+        }
+      }
+    }
+
+    showDetailedError('UNHANDLED PROMISE REJECTION', error?.message || event.reason, url, lineNo, columnNo, error);
+  };
+
+  // Fungsi untuk tampilkan error dengan rapi + nama file asli
+  function showDetailedError(message, url, lineNo, columnNo, error) {
+    console.log(`%c ${error} `, 'background:#fff;color:#c0392b;font-weight:bold;');
+    console.groupCollapsed('%c Detail', 'color:#e74c3c; cursor:pointer;');
+
+    // Tampilkan nama file yang benar (bukan URL panjang)
+    let fileName = url || 'unknown file';
+    try {
+      // Ambil hanya bagian nama file + folder terdekat (lebih bersih)
+      const cleanPath = new URL(url).pathname;
+      const parts = cleanPath.split('/');
+      fileName = parts.slice(-3).join('/'); // contoh: src/utils/chart.js
+    } catch(e) {}
+
+    console.log('%cFile     : %c' + fileName, 'font-weight:bold;', 'color:#3498db;');
+    console.log('%cLine     : %c' + lineNo +':'+ columnNo,    'font-weight:bold;', 'color:#e67e22;');
+    //console.log('%cColumn   : %c' + columnNo,  'font-weight:bold;', 'color:#e67e22;');
+    console.log('%cMessage  : %c' + message,   'font-weight:bold;', 'color:#e74c3c;');
+    
+    if (error?.stack) {
+      console.log('%cStack Trace:', 'font-weight:bold;');
+      console.log(error.stack);
+    }
+
+    console.groupEnd();
+  }
+}
+
+// JALANKAN SEKARANG
+setupUltimateErrorHandler();
+
+//console.log('%cGlobal Error Handler ACTIVE!', 'color:#00b894;font-size:14px;font-weight:bold;');
 </script>
 </body>
 

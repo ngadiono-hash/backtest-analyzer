@@ -13,7 +13,6 @@ export class StatisticsModel {
       if (e.detail.stats.total >= 50 && e.detail.stats.invalid === 0) {
         this.data = e.detail.trades;
         this.stats = this.build();
-        //console.log(this.stats.equity)
         this._dispatchUpdate();
       }
     });
@@ -34,6 +33,7 @@ export class StatisticsModel {
     const triple  = this._aggTriple(rows);
 
     return {
+      rows,
       symbols,
       monthly,
       equity,
@@ -93,9 +93,10 @@ export class StatisticsModel {
   }
 
   _scanTrades(rows) {
-    return rows.map(t => this._normalizeTrade(t));
+    return rows
+      .map(t => this._normalizeTrade(t))        // 1. Normalisasi dulu
+      .sort((a, b) => a.dateEX - b.dateEX);     // 2. Sort ascending berdasarkan dateEX
   }
-
   // ============================================================================
   // 2. AGGREGATORS
   // ============================================================================
@@ -146,18 +147,22 @@ export class StatisticsModel {
     const pips = [];
     const vpips = [];
   
-    for (const { dateEX, netPips, netVPips } of rows) {
+    for (const { pair, isLong, dateEX, netPips, netVPips } of rows) {
   
       cumP += netPips;
       cumV += netVPips;
   
       pips.push({
+        isLong,
+        pair,
         graph: cumP,
         date: dateEX,
         value: netPips
       });
   
       vpips.push({
+        isLong,
+        pair,
         graph: cumV,
         date: dateEX,
         value: netVPips
@@ -188,16 +193,15 @@ export class StatisticsModel {
     const stableMonths = monthsArr.filter(m => m.pips > 0).length;
     const stability = monthsArr.length ? (stableMonths / monthsArr.length) * 100 : 0;
     // Streak
-    const c = HM.computeStreaks(rows);
+    const streaks = HM.computeStreaks(rows);
     // Bars held
     const allBars = rows.map(r => r.barsHeld);
   
     return {
       period: { start, end, monthCount },
       stability,
+      streaks,
       winrate: wins / rows.length,
-      consProfit: c.consProfit,
-      consLoss: c.consLoss,
       avgHoldBar: this.avg(allBars),
       maxHoldBar: this.max(allBars)
     };

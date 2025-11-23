@@ -40,7 +40,7 @@ export function computePips(trade = {}, pair = '') {
   };
 }
 
-export function computeStreaks(trades, MIN_STREAK = 2) {
+export function omputeStreaks(trades, MIN_STREAK = 2) {
   if (!trades.length) return { consProfit: {}, consLoss: {}, streakDetails: [] };
 
   // Urutkan trades berdasarkan dateEX ascending
@@ -94,6 +94,93 @@ export function computeStreaks(trades, MIN_STREAK = 2) {
   return { consProfit, consLoss, streakDetails };
 }
 
+export function computeStreaks(trades, MIN_STREAK = 2) {
+  if (!trades || trades.length === 0) {
+    return {
+      consProfit: {}, consLoss: {},
+      exactProfit: {}, exactLoss: {},
+      streakDetails: [],
+      longestWin: 0,
+      longestLoss: 0
+    };
+  }
+
+  const consProfit = {};
+  const consLoss = {};
+  const exactProfit = {};
+  const exactLoss = {};
+  const streakDetails = [];
+
+  let currentLength = 0;
+  let currentType = null; // 'win' atau 'loss'
+
+  const endStreak = (endIndex) => {
+    if (currentLength < MIN_STREAK) return;
+
+    const isWin = currentType === 'win';
+    const cons = isWin ? consProfit : consLoss;
+    const exact = isWin ? exactProfit : exactLoss;
+
+    // Cumulative: semua dari MIN_STREAK sampai currentLength
+    for (let len = MIN_STREAK; len <= currentLength; len++) {
+      cons[len] = (cons[len] || 0) + 1;
+    }
+
+    // Exact: hanya yang benar-benar berhenti di panjang ini
+    exact[currentLength] = (exact[currentLength] || 0) + 1;
+
+    const startIndex = endIndex - currentLength + 1;
+    streakDetails.push({
+      type: isWin ? 'Profit' : 'Loss',
+      length: currentLength,
+      startIndex,
+      endIndex,
+      trades: trades.slice(startIndex, endIndex + 1)
+    });
+  };
+
+  for (let i = 0; i < trades.length; i++) {
+    const t = trades[i];
+    const isWin = t.isWin;
+
+    if (currentLength === 0) {
+      // Mulai streak baru
+      currentType = isWin ? 'win' : 'loss';
+      currentLength = 1;
+    } else if (
+      (currentType === 'win' && isWin) ||
+      (currentType === 'loss' && !isWin)
+    ) {
+      // Lanjutkan streak yang sama
+      currentLength++;
+    } else {
+      // Streak putus → akhiri yang lama
+      endStreak(i - 1);
+      // Mulai streak baru dari trade ini
+      currentType = isWin ? 'win' : 'loss';
+      currentLength = 1;
+    }
+  }
+
+  // Akhiri streak terakhir (running streak)
+  if (currentLength >= MIN_STREAK) {
+    endStreak(trades.length - 1);
+  }
+
+  // Hitung longest
+  const longestWin = Math.max(0, ...Object.keys(consProfit).map(Number));
+  const longestLoss = Math.max(0, ...Object.keys(consLoss).map(Number));
+
+  return {
+    consProfit,
+    consLoss,
+    exactProfit,
+    exactLoss,
+    streakDetails,
+    longestWin,
+    longestLoss
+  };
+}
 /**
  * computeDrawdown - threshold pct based, returns positive dd values and consistent aggregates
  * - curve: array of numbers OR array of objects like { equity, dateEX, cumPips, cumVPips, ... }
