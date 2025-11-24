@@ -40,60 +40,6 @@ export function computePips(trade = {}, pair = '') {
   };
 }
 
-export function omputeStreaks(trades, MIN_STREAK = 2) {
-  if (!trades.length) return { consProfit: {}, consLoss: {}, streakDetails: [] };
-
-  // Urutkan trades berdasarkan dateEX ascending
-  const sorted = [...trades].sort((a, b) => new Date(a.dateEX) - new Date(b.dateEX));
-
-  const consProfit = {};
-  const consLoss = {};
-  const streakDetails = []; // optional, untuk simpan streak lengkap
-
-  let curW = [];
-  let curL = [];
-
-  for (const t of sorted) {
-    if (t.isWin) {
-      curW.push(t);
-      // streak loss selesai
-      if (curL.length >= MIN_STREAK) {
-        for (let len = MIN_STREAK; len <= curL.length; len++) {
-          consLoss[len] = (consLoss[len] || 0) + 1;
-        }
-        streakDetails.push({ type: 'Loss', trades: [...curL] });
-      }
-      curL = [];
-    } else {
-      curL.push(t);
-      // streak win selesai
-      if (curW.length >= MIN_STREAK) {
-        for (let len = MIN_STREAK; len <= curW.length; len++) {
-          consProfit[len] = (consProfit[len] || 0) + 1;
-        }
-        streakDetails.push({ type: 'Profit', trades: [...curW] });
-      }
-      curW = [];
-    }
-  }
-
-  // Push streak terakhir
-  if (curW.length >= MIN_STREAK) {
-    for (let len = MIN_STREAK; len <= curW.length; len++) {
-      consProfit[len] = (consProfit[len] || 0) + 1;
-    }
-    streakDetails.push({ type: 'Profit', trades: [...curW] });
-  }
-  if (curL.length >= MIN_STREAK) {
-    for (let len = MIN_STREAK; len <= curL.length; len++) {
-      consLoss[len] = (consLoss[len] || 0) + 1;
-    }
-    streakDetails.push({ type: 'Loss', trades: [...curL] });
-  }
-
-  return { consProfit, consLoss, streakDetails };
-}
-
 export function computeStreaks(trades, MIN_STREAK = 2) {
   if (!trades || trades.length === 0) {
     return {
@@ -181,11 +127,7 @@ export function computeStreaks(trades, MIN_STREAK = 2) {
     longestLoss
   };
 }
-/**
- * computeDrawdown - threshold pct based, returns positive dd values and consistent aggregates
- * - curve: array of numbers OR array of objects like { equity, dateEX, cumPips, cumVPips, ... }
- * - thresholdPct: percent drawdown threshold (e.g. 5)
- */
+
 export function computeDrawdown(curve = [], thresholdPct = 5) {
   if (curve.length === 0) {
     return { maxDD: 0, maxDDPercent: 0, avgDD: 0, avgDDPercent: 0, events: [] };

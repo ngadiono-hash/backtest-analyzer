@@ -32,9 +32,6 @@
 		<div id="tab1" class="tab-content">
 			<div class="controller">
 				<button id="export-btn" disabled>Copy</button>
-				<label>
-					<input type="checkbox" id="filter-invalid">Show invalid
-				</label>
 			</div>
 			
 			<div id="status-area"></div>
@@ -54,11 +51,9 @@
           <div class="accordion">
             <!-- ITEM 1 — DEFAULT OPEN -->
             <div class="accordion-item">
-              <button class="accordion-header" data-target="#acc-equity">
-                Equity Chart
-              </button>
+              <button class="accordion-header" data-target="#acc-equity">Equity Chart</button>
               <div id="acc-equity" class="accordion-content open">
-                <div class="chart-container" id="equity-chart-container">
+                <div class="chart-wrapper" id="equity-chart-container">
                   <canvas id="equity-chart"></canvas>
                   <div class="resizer"></div>
                 </div>
@@ -67,11 +62,9 @@
           
             <!-- ITEM 2 -->
             <div class="accordion-item">
-              <button class="accordion-header" data-target="#acc-pairs">
-                Pairs Chart
-              </button>
+              <button class="accordion-header" data-target="#acc-pairs">Symbols Chart</button>
               <div id="acc-pairs" class="accordion-content">
-                <div class="chart-container" id="pairs-chart-container">
+                <div class="chart-wrapper" id="pairs-chart-container">
                   <canvas id="pairs-chart"></canvas>
                 </div>
               </div>
@@ -79,9 +72,7 @@
           
             <!-- ITEM 3 -->
             <div class="accordion-item">
-              <button class="accordion-header" data-target="#acc-monthly">
-                Monthly Table
-              </button>
+              <button class="accordion-header" data-target="#acc-monthly">Monthly Net</button>
               <div id="acc-monthly" class="accordion-content">
                 <div class="table-wrapper" id="monthly-table-container"></div>
               </div>

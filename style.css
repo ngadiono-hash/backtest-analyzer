@@ -258,6 +258,46 @@ body {
   pointer-events: none;
 }
 
+/* RESIZER */
+.resizer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  cursor: ns-resize;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Garis tengah tipis */
+.resizer::before {
+  content: "";
+  width: 40%;
+  height: 3px;
+  border-radius: 2px;
+  background: #bcbcbc;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+/* Hover efek */
+.resizer:hover::before {
+  background: #969696;
+  opacity: 1;
+}
+
+/* Fokus via keyboard */
+.resizer:focus {
+  outline: none;
+}
+
+.resizer:focus-visible::before {
+  background: #555;
+  opacity: 1;
+}
 /* ============================
    TABLE LAYOUT
 ============================ */
@@ -538,41 +578,11 @@ td[data-tooltip]:hover::after {
 }
 
 /* === CHART CONTAINER === */
-#monthly-table-container,
-.chart-container {
+.table-wrapper,
+.chart-wrapper {
   position: relative;
   margin: 5px;
-  background: #fff;
-  border: 2px solid var(--pm-bg);
   margin-bottom: 10px;
-}
-#equity-chart-container {
-  /* height: 30vh; */
-  /* min-height: 30vh; */
-  /* max-height: 80vh; */
-}
-
-.resizer {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 6px;
-  cursor: ns-resize;
-  background: transparent;
-}
-
-.resizer::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  width: 100%;
-  height: 4px;
-  background: #cccc;
-}
-
-.resizer:focus {
-  
 }
 
 /* === MOBILE === */
@@ -591,6 +601,8 @@ td[data-tooltip]:hover::after {
     text-align: center;
     margin: 0;
   }
+  
+  .accordion { margin-top: 10px; }
 
   .tabs {
     position: sticky;
@@ -611,10 +623,6 @@ td[data-tooltip]:hover::after {
     padding: 0;
     border-radius: 0;
     box-shadow: none;
-  }
-  
-  .tab-content#tab3 {
-    padding-top: 10px;
   }
 
   .controller {

@@ -49,7 +49,7 @@ export function renderPairsChart(data, sortBy = "vpips") {
         y: { grid: { display: false } }
       },
       plugins: {
-        title: { display: true, text: "Net by Symbols" },
+        //title: { display: true, text: "Net by Symbols" },
         legend: { position: "top" },
         tooltip: {
           callbacks: {
@@ -70,7 +70,7 @@ export function renderEquityChart(data) {
   const equityVPips = data.vpips.map(v => v.graph);
 
   const config = {
-    _height: 350,
+    _height: 400,
     type: "line",
     data: {
       labels,
@@ -91,7 +91,7 @@ export function renderEquityChart(data) {
       },
 
       plugins: {
-        title: { display: true, text: "Equity Chart" },
+        //title: { display: true, text: "Equity Chart" },
         tooltip: {
           intersect: false,
 

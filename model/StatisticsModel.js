@@ -13,6 +13,8 @@ export class StatisticsModel {
       if (e.detail.stats.total >= 50 && e.detail.stats.invalid === 0) {
         this.data = e.detail.trades;
         this.stats = this.build();
+        //console.log(this.stats.ddown.pips)
+        return;
         this._dispatchUpdate();
       }
     });
@@ -27,14 +29,13 @@ export class StatisticsModel {
     const symbols = this._aggSymbols(rows); // ok
     const monthly = this._aggMonthly(rows); // ok
     const equity  = this._aggEquity(rows); // ok
-    const ddown   = this._aggDrawdown(equity);  //ok
-    const single  = this._aggSingle(rows, monthly); // ok
-    const double  = this._aggDouble(rows); // ok
+    const ddown   = this._aggDrawdown(equity);
+    const single  = this._aggSingle(rows, monthly); 
+    const double  = this._aggDouble(rows); 
     const triple  = this._aggTriple(rows);
 
 
     return {
-      rows,
       symbols,
       monthly,
       equity,
@@ -101,7 +102,6 @@ export class StatisticsModel {
   // ============================================================================
   // 2. AGGREGATORS
   // ============================================================================
-
   _aggSymbols(rows) {
     const map = {};
 
@@ -116,7 +116,6 @@ export class StatisticsModel {
     return Object.values(map);
   }
 
-  // -------- monthly accumulations --------
   _aggMonthly(trades) {
     const monthly = {}, yearly = {}, total = { pips: 0, vpips: 0 };
   
@@ -141,7 +140,6 @@ export class StatisticsModel {
     return { monthly, yearly, total };
   }
 
-  // -------- equity curve --------
   _aggEquity(rows) {
     let cumP = 0, cumV = 0;
     const pips = [];
@@ -173,13 +171,13 @@ export class StatisticsModel {
   }
 
   _aggDrawdown(curve) {
-    //console.log(curve)
+    console.log(curve)
     return {
-      ddPips: HM.computeDrawdown(curve.curvePips),
-      ddVPips: HM.computeDrawdown(curve.curveVPips),
+      pips: HM.computeDrawdown(curve.pips),
+      vpips: HM.computeDrawdown(curve.vips)
     };
   }
-  // -------- single stats (1-dim) --------
+
   _aggSingle(rows, monthly) {
     const start = rows[0].dateEN;
     const end = rows.at(-1).dateEN;
@@ -201,13 +199,12 @@ export class StatisticsModel {
       period: { start, end, monthCount },
       stability,
       streaks,
-      winrate: wins / rows.length,
+      winrate: wins / rows.length * 100,
       avgHoldBar: this.avg(allBars),
       maxHoldBar: this.max(allBars)
     };
   }
 
-  // -------- double stats (dual mode: pips/vpips) --------
   _aggDouble(rows) {
     const out = {
       highestNet: [],
@@ -231,7 +228,6 @@ export class StatisticsModel {
     return out;
   }
 
-  // -------- triple stats (A/L/S breakdown) --------
   _aggTriple(rows) {
     const groups = {
       a: rows,
@@ -255,40 +251,6 @@ export class StatisticsModel {
       expectancy: { a:[], l:[], s:[] }
     };
 
-    for (const k of ['a','l','s']) {
-      const g = groups[k];
-
-      for (const mode of ['netPips','netVPips']) {
-        const arr = g.map(r => r[mode]);
-
-        result.net[k].push(this.sum(arr));
-        result.avgNet[k].push(this.avg(arr));
-
-        const wins  = arr.filter(v => v > 0);
-        const losses = arr.filter(v => v < 0);
-
-        const gp = this.sum(wins);
-        const gl = this.sum(losses);
-
-        result.grossProfit[k].push(gp);
-        result.grossLoss[k].push(Math.abs(gl));
-
-        result.avgProfit[k].push(this.avg(wins));
-        result.avgLoss[k].push(this.avg(losses));
-
-        const pf = gl ? gp / gl : 0;
-        result.profitFactor[k].push(pf);
-
-        const N = arr.length;
-        const wr = wins.length / N;
-        const lr = losses.length / N;
-
-        const ex = wr * this.avg(wins) + lr * this.avg(losses);
-        result.expectancy[k].push(ex);
-      }
-    }
-
-    return result;
   }
   
   _dispatchUpdate() {

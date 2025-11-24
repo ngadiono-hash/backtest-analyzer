@@ -43,15 +43,15 @@ export class UIManager {
 					const path = `/sample/${name}.csv`;
 					const res = await fetch(path);
 					if (!res.ok) {
-						this.notif.error(`File not found: ${path}`);
-						continue;
+						return this.notif.error(`File not found: ${path}`);
+					} else {
+					  const text = await res.text();
+					  mergedText += text.trim() + '\n';
+				    this.data.renderFile(mergedText, names.join('-'));
+				    this.notif.success(`Sample ${names.join('-')} loaded`);
 					}
-					const text = await res.text();
-					mergedText += text.trim() + '\n';
 				}
-				this.data.renderFile(mergedText, names.join('-'));
 				
-				this.notif.success(`Sample ${names.join('-')} loaded`);
 			} catch (err) {
 				this.notif.error(err.message);
 			}
