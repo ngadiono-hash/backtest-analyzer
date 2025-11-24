@@ -32,6 +32,7 @@ export class StatisticsModel {
     const double  = this._aggDouble(rows); // ok
     const triple  = this._aggTriple(rows);
 
+
     return {
       rows,
       symbols,
@@ -101,7 +102,6 @@ export class StatisticsModel {
   // 2. AGGREGATORS
   // ============================================================================
 
-  // -------- symbols: performance per pair --------
   _aggSymbols(rows) {
     const map = {};
 

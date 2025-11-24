@@ -1,5 +1,5 @@
 // /view/TableStat.js
-import { $, $$, _on, _ready, log, } from "../helpers/shortcut.js";
+import { $, $$, _on, _ready } from "../helpers/shortcut.js";
 import * as CR from '../helpers/chart_renderer.js';
 import * as FM from "../helpers/formatter.js";
 export class ViewStatistics {
@@ -16,9 +16,9 @@ export class ViewStatistics {
 			const { stats } = e.detail;
 			//this.renderStatsTable(stats);
 			//this.renderMonthlyTable(stats.monthlyAgg);
-			//CR.renderPairsChart(stats.pairStats);
-			log(stats.single)
-			CR.renderEquityChart(stats.equity);
+			CR.renderPairsChart(stats.symbols); //ok
+			
+			CR.renderEquityChart(stats.equity); //ok
 			
 		});
 	}

@@ -1,192 +1,199 @@
 // ~/helpers/chart_renderer.js
-import { $, $$, _on, _ready, log } from "../helpers/shortcut.js";
+import { $, $$, _on, _ready } from "../helpers/shortcut.js";
 import * as FM from "../helpers/formatter.js";
 
 window._charts = {};
-const equityContainer = $('#equity-chart-container');
-const equityCanvas = $('#equity-chart').getContext('2d');
-const handleResizer = equityContainer.querySelector('.resizer');
-const pairsCanvas = $('#pairs-chart').getContext('2d');
 
-export function renderPairsChart(stats) {
-  if (window._charts.pairs) window._charts.pairs.destroy();
-  const labels = stats.map(d => `${d.pair}`);
-  const values = stats.map(d => d.value);
-  const colors = values.map(v => (v >= 0 ? '#1d4ed8' : '#dc2626'));
-  
-  const pairsChart = new Chart(pairsCanvas, {
-    type: 'bar',
+// DOM refs
+const equityContainer = $('#equity-chart-container');
+const equityCanvas    = $('#equity-chart').getContext('2d');
+const pairsCanvas     = $('#pairs-chart').getContext('2d');
+const handleResizer   = equityContainer.querySelector('.resizer');
+
+// -------------------------------------------------------
+// Utility — safely (re)create chart
+// -------------------------------------------------------
+const initChart = (key, canvas, config) => {
+  if (window._charts[key]) window._charts[key].destroy();
+  if (config._height) {
+    canvas.canvas.height = config._height;
+  }
+  window._charts[key] = new Chart(canvas, config);
+  return window._charts[key];
+};
+
+export function renderPairsChart(data, sortBy = "vpips") {
+  if (sortBy === "pips") {
+    data = [...data].sort((a, b) => b.pips - a.pips);
+  } else if (sortBy === "vpips") {
+    data = [...data].sort((a, b) => b.vpips - a.vpips);
+  }
+
+  const labels = data.map(d => d.pair);
+
+  const config = {
+    _height: data.length * 60,
+    type: "bar",
     data: {
       labels,
-      datasets: [{
-        data: values,
-        backgroundColor: colors,
-        borderRadius: 0,
-        // borderSkipped: false,
-      }]
+      datasets: [
+        { label: "Pips",  data: data.map(d => d.pips) },
+        { label: "VPips", data: data.map(d => d.vpips) }
+      ]
     },
     options: {
-      indexAxis: 'y',
+      indexAxis: "y",
+      responsive: true,
       scales: {
-        x: { ticks: { display: true }, grid: { display: false } },
-        y: { ticks: { display: true }, grid: { display: false } }
+        x: { beginAtZero: true, grid: { display: false } },
+        y: { grid: { display: false } }
       },
       plugins: {
-        legend: { display: false },
-        tooltip: { enabled: true }
+        title: { display: true, text: "Net by Symbols" },
+        legend: { position: "top" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${FM.num(ctx.raw)}`
+          }
+        }
       }
     }
-  });
-  window._charts.pairs = pairsChart;
+  };
+
+  return initChart("pairs", pairsCanvas, config);
 }
 
-
 export function renderEquityChart(data) {
-  //log(data.pips)
-  //console.log(JSON.stringify(data.pips, null, 2));
-  if (window._charts.equity) window._charts.equity.destroy();
-  
-  const labels = data.pips.map((_, index) => index + 1);
-  const equityPips   = data.pips.map(item   => item.graph);
-  const equityVPips  = data.vpips.map(item  => item.graph);
-  
-  const equityChart = new Chart(equityCanvas, {
+
+  const labels      = data.pips.map((_, i) => i + 1);
+  const equityPips  = data.pips.map(v  => v.graph);
+  const equityVPips = data.vpips.map(v => v.graph);
+
+  const config = {
     type: "line",
     data: {
       labels,
       datasets: [
-        {
-          label: "Pips",
-          data: equityPips,
-          borderColor: "#e17055",
-          fill: true,
-          backgroundColor: "#e1705500",
-          pointRadius: 0,
-          borderWidth: 1,
-          tension: 0.25,
-          hoverRadius: 5,
-        },
-        {
-          label: "VPips",
-          data: equityVPips,
-          borderColor: "#10a37f",
-          fill: true,
-          backgroundColor: "#F4FBFA",
-          pointRadius: 0,
-          borderWidth: 1,
-          tension: 0.25,
-          hoverRadius: 5,
-        },
-      
+        { label: "Pips",  data: equityPips,  pointRadius: 0, borderWidth: 1, tension: 0.25, hoverRadius: 5 },
+        { label: "VPips", data: equityVPips, pointRadius: 0, borderWidth: 1, tension: 0.25, hoverRadius: 5 }
       ]
     },
-    
+
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false,
-      },
-      
-      plugins: {
-        title: {
-          display: true,
-          text: "Equity Chart"
-        },
-        tooltip: {
-          //mode: 'interpolate',
-          intersect: false,
-          //displayColors: false,
-          callbacks: {
-          // Judul: ambil tanggal dari pips (atau vpips, terserah — biasanya sama)
-          title: (t) => {
-            if (!t.length) return '';
-            const i = t[0].dataIndex;
-            const dateStr = FM.dateLocal(data.pips[i].date);
-            return `Trade #${i + 1} | ${dateStr}`;
-          },
-    
-          // Label per dataset
-          label: (context) => {
-            const i = context.dataIndex;
-            const isPips = context.datasetIndex === 0;
-    
-            if (isPips) {
-              const item = data.pips[i];
-              return `P: ${FM.num(item.value)} | ${FM.num(item.graph)}`;
-            } else {
-              const item = data.vpips[i];
-              return `V: ${FM.num(item.value)} | ${FM.num(item.graph)}`;
-            }
-          },
-          footer: (t) => {
-            const i = t[0].dataIndex;
-            const isWin = data.pips[i].value >= 0 ? '🟢' : '🔴';
-            const pair  = data.pips[i].pair;
-            const isLong   = data.pips[i].isLong ? "Long" : "Short";
-            return `${pair} | ${isLong} | ${isWin}`;
-          }
-          }
-        },
-      },
+      interaction: { mode: "index", intersect: false },
+
       scales: {
-        x: { beginAtZero: true, ticks: { display: false }, grid: { display: false } },
-        y: { beginAtZero: true, ticks: { display: false }, grid: { display: false } }
+        x: { grid: { display: false }, ticks: { display: false } },
+        y: { grid: { display: false }, ticks: { display: true }, beginAtZero: true }
+      },
+
+      plugins: {
+        title: { display: true, text: "Equity Chart" },
+        tooltip: {
+          intersect: false,
+
+          callbacks: {
+            title: (items) => {
+              const i = items?.[0]?.dataIndex ?? 0;
+              return `#${i + 1} | ${FM.dateLocal(data.pips[i].date)}`;
+            },
+            label: (ctx) => {
+              const i = ctx.dataIndex;
+              const src = ctx.datasetIndex === 0 ? data.pips[i] : data.vpips[i];
+              return `${ctx.dataset.label[0]}: ${FM.num(src.value)} | ${FM.num(src.graph)}`;
+            },
+            footer: (items) => {
+              const i = items[0].dataIndex;
+              const p = data.pips[i];
+              return `${p.pair} | ${p.isLong ? "Long" : "Short"} | ${p.value >= 0 ? "🟢" : "🔴"}`;
+            }
+          }
+        }
       }
     }
+  };
+
+  const chart = initChart("equity", equityCanvas, config);
+
+  // cleanup observer / resize
+  if (window._charts.equityObserver) {
+    window._charts.equityObserver.disconnect();
+    delete window._charts.equityObserver;
+  }
+  if (window._charts.equityResizeCleanup) {
+    window._charts.equityResizeCleanup();
+    delete window._charts.equityResizeCleanup;
+  }
+
+  // observer baru
+  const observer = new ResizeObserver(() => {
+    if (!chart?.canvas?.ownerDocument) return;
+    chart.resize();
   });
-  
-  window._charts.equity = equityChart;
-  const observer = new ResizeObserver(() => equityChart.resize());
   observer.observe(equityContainer);
-  enableResize(equityContainer, handleResizer, equityChart);
+  window._charts.equityObserver = observer;
+
+  // simpan cleanup drag resize
+  window._charts.equityResizeCleanup = enableResize(equityContainer, handleResizer, chart);
+
+  return chart;
 }
 
 
-// =======================================================
-// DRAG RESIZER — REFAC (Mobile + Desktop)
-// =======================================================
-function enableResize(container, handle, chartInstance) {
-  let startY = 0;
-  let startHeight = 0;
-  
+
+
+/* =======================================================
+   R E S I Z E R   (Drag to Resize Chart Container)
+   ======================================================= */
+// --- GANTI fungsi enableResize agar mengembalikan cleanup function ---
+function enableResize(container, handle, chart) {
+  let startY = 0, startHeight = 0;
   const minHeight = 150;
-  
   const getY = (e) => (e.touches ? e.touches[0].clientY : e.clientY);
-  
-  function start(e) {
+
+  function dragStart(e) {
     e.preventDefault();
     startY = getY(e);
     startHeight = container.offsetHeight;
-    
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", stop);
-    
-    document.addEventListener("touchmove", move, { passive: false });
-    document.addEventListener("touchend", stop);
+
+    document.addEventListener("mousemove", dragMove);
+    document.addEventListener("mouseup", dragStop);
+    document.addEventListener("touchmove", dragMove, { passive: false });
+    document.addEventListener("touchend", dragStop);
   }
-  
-  function move(e) {
+
+  function dragMove(e) {
     e.preventDefault();
-    const currentY = getY(e);
-    
-    let newHeight = startHeight + (currentY - startY);
-    if (newHeight < minHeight) newHeight = minHeight;
-    
+    // guard: jika chart atau canvas sudah tidak valid, stop dan cleanup
+    if (!chart || !chart.canvas || !chart.canvas.ownerDocument) {
+      dragStop();
+      return;
+    }
+
+    const newHeight = Math.max(minHeight, startHeight + (getY(e) - startY));
     container.style.height = newHeight + "px";
-    
-    chartInstance.resize();
+    // guard sebelum resize
+    if (typeof chart.resize === 'function') chart.resize();
   }
-  
-  function stop() {
-    document.removeEventListener("mousemove", move);
-    document.removeEventListener("mouseup", stop);
-    
-    document.removeEventListener("touchmove", move);
-    document.removeEventListener("touchend", stop);
+
+  function dragStop() {
+    document.removeEventListener("mousemove", dragMove);
+    document.removeEventListener("mouseup", dragStop);
+    document.removeEventListener("touchmove", dragMove);
+    document.removeEventListener("touchend", dragStop);
   }
-  
-  handle.addEventListener("mousedown", start);
-  handle.addEventListener("touchstart", start, { passive: false });
+
+  handle.addEventListener("mousedown", dragStart);
+  handle.addEventListener("touchstart", dragStart, { passive: false });
+
+  // kembalikan fungsi cleanup supaya pemanggil bisa memutus listener jika perlu
+  return () => {
+    try {
+      handle.removeEventListener("mousedown", dragStart);
+      handle.removeEventListener("touchstart", dragStart);
+    } catch (e) {}
+    dragStop();
+  };
 }

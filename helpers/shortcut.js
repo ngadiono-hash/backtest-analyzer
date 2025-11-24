@@ -46,7 +46,3 @@ export const fetchJSON = async (url, options = {}) => {
   if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
   return res.json();
 };
-
-
-export const log = (...args) => console.log(...args)
-
