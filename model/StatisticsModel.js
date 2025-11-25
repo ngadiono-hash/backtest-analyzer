@@ -13,8 +13,7 @@ export class StatisticsModel {
       if (e.detail.stats.total >= 50 && e.detail.stats.invalid === 0) {
         this.data = e.detail.trades;
         this.stats = this.build();
-        //console.log(this.stats.ddown.pips)
-        return;
+        console.log(this.stats.ddown.pips)
         this._dispatchUpdate();
       }
     });
@@ -171,7 +170,6 @@ export class StatisticsModel {
   }
 
   _aggDrawdown(curve) {
-    console.log(curve)
     return {
       pips: HM.computeDrawdown(curve.pips),
       vpips: HM.computeDrawdown(curve.vips)

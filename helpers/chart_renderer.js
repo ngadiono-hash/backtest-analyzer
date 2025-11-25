@@ -79,22 +79,35 @@ export function renderEquityChart(data) {
         { label: "VPips", data: equityVPips, pointRadius: 0, borderWidth: 1, tension: 0.25, hoverRadius: 5 }
       ]
     },
-
     options: {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
-
+    
       scales: {
         x: { grid: { display: false }, ticks: { display: false } },
         y: { grid: { display: false }, ticks: { display: true }, beginAtZero: true }
       },
-
+    
       plugins: {
-        //title: { display: true, text: "Equity Chart" },
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: "xy"   // pan hanya horizontal
+          },
+          zoom: {
+            wheel: {
+              enabled: true, // zoom pakai scroll
+            },
+            pinch: {
+              enabled: true  // zoom pakai pinch di layar sentuh
+            },
+            mode: "xy"       // zoom hanya horizontal
+          }
+        },
+    
         tooltip: {
           intersect: false,
-
           callbacks: {
             title: (items) => {
               const i = items?.[0]?.dataIndex ?? 0;
@@ -114,7 +127,7 @@ export function renderEquityChart(data) {
         }
       }
     }
-  };
+  }
 
   const chart = initChart("equity", equityCanvas, config);
 
@@ -136,7 +149,6 @@ export function renderEquityChart(data) {
   observer.observe(equityContainer);
   window._charts.equityObserver = observer;
 
-  // simpan cleanup drag resize
   window._charts.equityResizeCleanup = enableResize(equityContainer, handleResizer, chart);
 
   return chart;

@@ -129,15 +129,31 @@ export function computeStreaks(trades, MIN_STREAK = 2) {
 }
 
 export function computeDrawdown(curve = [], thresholdPct = 5) {
-  if (curve.length === 0) {
+
+  // === Strict Getters (no silent fallback) =====================
+  const getTs = (e) => {
+    if (!e || !e.date) {
+      throw new Error("Missing field `date` in item: " + JSON.stringify(e));
+    }
+    return e.date;
+  };
+
+  const getEquity = (e) => {
+    if (typeof e === "number") return e;
+
+    if (typeof e.value === "number") return e.value;
+    if (typeof e.graph === "number") return e.graph;
+
+    throw new Error("Missing numeric field `value` or `graph` in item: " + JSON.stringify(e));
+  };
+  // =============================================================
+
+  if (!Array.isArray(curve) || curve.length === 0) {
     return { maxDD: 0, maxDDPercent: 0, avgDD: 0, avgDDPercent: 0, events: [] };
   }
 
-  const getTs = (e) => (e && (e.dateEX ?? e.date ?? e.__ts)) ?? null;
-  const getEquity = (e) =>
-    typeof e === 'number' ? e : (e?.equity ?? e?.cumPips ?? e?.cumVPips ?? 0);
-
   const events = [];
+
   let peakIndex = 0;
   let peakValue = getEquity(curve[0]);
   let peakTs = getTs(curve[0]);
@@ -154,7 +170,7 @@ export function computeDrawdown(curve = [], thresholdPct = 5) {
     const v = getEquity(item);
     const ts = getTs(item);
 
-    // update peak if not in drawdown and new high
+    // update peak
     if (!inDD && v > peakValue) {
       peakIndex = i;
       peakValue = v;
@@ -165,7 +181,7 @@ export function computeDrawdown(curve = [], thresholdPct = 5) {
     const thresholdValue = peakValue * thresholdFactor;
 
     if (!inDD) {
-      // start drawdown when crossing threshold
+      // start drawdown
       if (v <= thresholdValue) {
         inDD = true;
         troughIndex = i;
@@ -173,16 +189,16 @@ export function computeDrawdown(curve = [], thresholdPct = 5) {
         troughTs = ts;
       }
     } else {
-      // update trough while in DD
+      // update trough
       if (v < troughValue) {
         troughValue = v;
         troughIndex = i;
         troughTs = ts;
       }
 
-      // recovery: equity goes above prior peak
+      // recovery
       if (v > peakValue) {
-        const ddAbs = peakValue - troughValue;                 // POSITIVE
+        const ddAbs = peakValue - troughValue;
         const ddPct = peakValue ? (ddAbs / peakValue) * 100 : 0;
 
         events.push({
@@ -200,19 +216,17 @@ export function computeDrawdown(curve = [], thresholdPct = 5) {
           recoveryBars: i - troughIndex,
         });
 
-        // reset for next sequence
+        // reset
         inDD = false;
         peakIndex = i;
         peakValue = v;
         peakTs = ts;
-        troughIndex = null;
-        troughValue = null;
-        troughTs = null;
+        troughIndex = troughValue = troughTs = null;
       }
     }
   }
 
-  // close last unrecovered drawdown
+  // last unrecovered
   if (inDD && troughIndex !== null) {
     const ddAbs = peakValue - troughValue;
     const ddPct = peakValue ? (ddAbs / peakValue) * 100 : 0;
@@ -233,123 +247,19 @@ export function computeDrawdown(curve = [], thresholdPct = 5) {
     });
   }
 
-  // if no events
   if (events.length === 0) {
     return { maxDD: 0, maxDDPercent: 0, avgDD: 0, avgDDPercent: 0, events: [] };
   }
 
-  // build arrays and compute aggregates consistently from same positive lists
   const ddAbsList = events.map(e => e.ddAbs);
   const ddPctList = events.map(e => e.ddPct);
 
-  const maxDD = Math.max(...ddAbsList);           // largest absolute drop
-  const maxDDPercent = Math.max(...ddPctList);   // largest percent drop
+  const maxDD = Math.max(...ddAbsList);
+  const maxDDPercent = Math.max(...ddPctList);
 
   const avgDD = ddAbsList.reduce((s, x) => s + x, 0) / ddAbsList.length;
   const avgDDPercent = ddPctList.reduce((s, x) => s + x, 0) / ddPctList.length;
 
-  return {
-    maxDD,
-    maxDDPercent,
-    avgDD,
-    avgDDPercent,
-    events
-  };
+  return { maxDD, maxDDPercent, avgDD, avgDDPercent, events };
 }
 
-export function Drawdown(curve = [], threshold = 200) {
-  if (!curve.length) {
-    return {
-      maxDD: 0,
-      maxDDPercent: 0,
-      avgDD: 0,
-      avgDDPercent: 0,
-      count: 0,
-      events: [],
-      avgRecoveryHours: 0,
-      avgRecoveryBars: 0,
-    };
-  }
-
-  const getTs = (e) => e.date ?? e.__ts;
-
-  let peak = { value: curve[0].equity, index: 0, ts: getTs(curve[0]) };
-  let trough = { ...peak };
-  let inDD = false;
-
-  const events = [];
-  let maxDD = 0, maxDDPercent = 0, totalDD = 0;
-
-  const pushEvent = (peak, trough, recoveryIdx = null, recoveryTs = null) => {
-    const ddAbs = peak.value - trough.value;
-    if (ddAbs < threshold) return;
-
-    const ddPct = peak.value ? (ddAbs / peak.value) * 100 : 0;
-
-    const durationMs = recoveryTs ? (recoveryTs - trough.ts) : null;
-    const durationHours = durationMs ? durationMs / 3_600_000 : null;
-    const durationBars  = durationHours ? durationHours / 4 : null;
-
-    events.push({
-      peak,
-      trough,
-      recoveryIndex: recoveryIdx,
-      recoveryTimestamp: recoveryTs,
-      ddAbs,
-      ddPct,
-      durationMs,
-      durationHours,
-      durationBars,
-      durationStr: recoveryTs ? null : "Unrecovered",
-    });
-
-    maxDD = Math.max(maxDD, ddAbs);
-    maxDDPercent = Math.max(maxDDPercent, ddPct);
-    totalDD += ddAbs;
-  };
-
-  // --- LOOP CURVE ---
-  for (let i = 1; i < curve.length; i++) {
-    const equity = curve[i].equity;
-    const ts = getTs(curve[i]);
-
-    const newPoint = { value: equity, index: i, ts };
-
-    if (equity >= peak.value) {
-      if (inDD) pushEvent(peak, trough, i, ts);
-      peak = newPoint;
-      trough = newPoint;
-      inDD = false;
-    } else {
-      inDD = true;
-      if (equity < trough.value) trough = newPoint;
-    }
-  }
-
-  // --- UNRECOVERED DD ---
-  if (inDD) pushEvent(peak, trough);
-
-  const count = events.length;
-  const avgDD = count ? totalDD / count : 0;
-  const avgDDPercent = count ? events.reduce((s, e) => s + e.ddPct, 0) / count : 0;
-
-  const recovered = events.filter(e => e.recoveryIndex !== null);
-  const avgRecoveryHours = recovered.length
-    ? recovered.reduce((s, e) => s + e.durationHours, 0) / recovered.length
-    : 0;
-
-  const avgRecoveryBars = recovered.length
-    ? recovered.reduce((s, e) => s + e.durationBars, 0) / recovered.length
-    : 0;
-
-  return {
-    maxDD,
-    maxDDPercent,
-    avgDD,
-    avgDDPercent,
-    count,
-    events,
-    avgRecoveryHours,
-    avgRecoveryBars,
-  };
-}

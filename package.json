@@ -1,0 +1,29 @@
+{
+  "name": "v4",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ngadiono-hash/v4.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ngadiono-hash/v4/issues"
+  },
+  "homepage": "https://github.com/ngadiono-hash/v4#readme",
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {}
+}

@@ -99,10 +99,17 @@
 	  </div>
 		
 	</div>
-	<script src="/cdn/chart.min.js"></script>
+	<!-- <script src="/cdn/chart.min.js"></script> -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script> -->
   <!-- <script src="/cdn/chartjs-plugin-crosshair.min.js"></script> -->
+  <script src="/cdn/eruda.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
+
+<script>
+Chart.register(zoomPlugin);
+</script>
   <script type="module" src="app.js"></script>
-  <script src="/eruda/eruda.min.js"></script>
   <script src="debug.js"></script>
 </body>
 </html>
