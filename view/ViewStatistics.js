@@ -4,29 +4,221 @@ import * as CR from '../helpers/chart_renderer.js';
 import * as FM from "../helpers/formatter.js";
 export class ViewStatistics {
 	constructor() {
-		this.statsContainer = $('#stats-table-container');
-		this.monthlyContainer = $('#monthly-table-container');
+		this.generalContainer = $('#general-container');
+		this.monthlyContainer = $('#monthly-container');
 		this._setupEventListener();
 	}
 	
 	_setupEventListener() {
 		window.addEventListener('statistics-updated', (e) => {
 			const { stats } = e.detail;
-			//log(stats.single)
-			//this.renderStatsTable(stats);
+      this.renderGeneralTable(stats.general);
 			this.renderMonthlyTable(stats.monthly); //ok
 			CR.renderPairsChart(stats.symbols); //ok
 			CR.renderEquityChart(stats.equity); //ok
 			
 		});
 	}
-	//========== TABLE STATS  
-	
-	
-	renderStatsTable(stats) {
-
+	toggle(table){
+	  const toggleBtn = document.createElement("div");
+    toggleBtn.className = "toggle-wrapper";
+    const toggleSwitch = document.createElement("label");
+    toggleSwitch.className = "switch";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = "toggle-pips-vpips";
+    const slider = document.createElement("span");
+    slider.className = "slider";
+    toggleSwitch.appendChild(checkbox);
+    toggleSwitch.appendChild(slider);
+    toggleBtn.appendChild(toggleSwitch);
+    
+    checkbox.addEventListener("change", () => {
+      const valsMode = $$(".value", table);
+      const dualMode = $$(".pivot", table);
+      dualMode.forEach(e => {
+        e.classList.toggle("pips-mode");
+        e.classList.toggle("vpips-mode");
+      });
+      valsMode.forEach(e => {
+        e.classList.toggle("hidden");
+      });
+    });
+    return toggleBtn;
 	}
-	
+	//========== TABLE STATS  
+  renderGeneralTable(result) {
+    const frag = document.createDocumentFragment();
+    const table = document.createElement("table");
+    table.id = "general-table";
+  
+    // ===========================
+    // HEADER
+    // ===========================
+    const thead = document.createElement("thead");
+    thead.innerHTML = `
+      <tr>
+        <th>Metric</th>
+        <th>All</th>
+        <th>Long</th>
+        <th>Short</th>
+      </tr>
+    `;
+    table.appendChild(thead);
+  
+    const tbody = document.createElement("tbody");
+  
+    // ==========================================
+    //  DEFINISI METRIK & LABEL + TIPE FORMAT
+    // ==========================================
+    const metrics = [
+      ["trades", "Total Trades", "int"],
+      ["winTrades", "Win Trades", "int"],
+      ["lossTrades", "Loss Trades", "int"],
+      ["winrate", "Win Rate", "percent"],
+      ["avgProfit", "Avg Profit"],
+      ["avgLoss", "Avg Loss"],
+      ["profitMedian", "Median Profit"],
+      ["lossMedian", "Median Loss"],
+      ["grossProfit", "Gross Profit"],
+      ["grossLoss", "Gross Loss"],
+      ["netTotal", "Net Total"],
+      ["expectancy", "Expectancy"],
+      ["profitStd", "Profit StdDev"],
+      ["lossStd", "Loss StdDev"],
+      ["maxProfit", "Max Profit"],
+      ["maxLoss", "Max Loss"],
+      ["minProfit", "Min Profit"],
+      ["minLoss", "Min Loss"],
+      ["avgRR", "Average R/R", "rr"],
+      ["holdAvg", "Average Hold", "hold"],
+      ["holdMax", "Max Hold", "hold"],
+    ];
+  
+    // ==========================================
+    // COLOR RULES (hanya metrik finansial!)
+    // ==========================================
+    const colorRules = {
+      avgProfit: "profit",
+      avgLoss: "loss",
+      profitMedian: "profit",
+      lossMedian: "loss",
+      grossProfit: "profit",
+      grossLoss: "loss",
+      maxProfit: "profit",
+      maxLoss: "loss",
+      minProfit: "profit",
+      minLoss: "loss",
+  
+      netTotal: "dynamic",
+      avgNet: "dynamic",
+      expectancy: "dynamic",
+  
+      // netral:
+      trades: "none",
+      winTrades: "none",
+      lossTrades: "none",
+      winrate: "none",
+      profitStd: "none",
+      lossStd: "none",
+      avgRR: "none",
+      holdAvg: "none",
+      holdMax: "none",
+    };
+  
+  // =====================================================
+  // HELPER: tentukan kelas positif/negatif
+  // =====================================================
+  const classify = (metricKey, value) => {
+    if (value === 0) return ""; 
+  
+    // return-based metrics → izinkan warna
+    const returnMetrics = ["avgRR", "expectancy", "netTotal"];
+  
+    // profit → pos, loss → neg
+    if (metricKey.includes("Profit")) return "pos";
+    if (metricKey.includes("Loss"))  return "neg";
+  
+    // if metric is not a return metric → always neutral
+    if (!returnMetrics.includes(metricKey)) return "";
+  
+    return value > 0 ? "pos" : "neg";
+  };
+  
+  // =====================================================
+  // HELPER: FORMAT VALUE + PREFIX UNTUK POS/NEG
+  // =====================================================
+  const formatValue = (metricKey, value, cls) => {
+    // HIDE prefix for neutral
+    if (!cls) return FM.num(value);
+  
+    // avoid prefix for zero
+    if (value === 0) return FM.num(value);
+  
+    const sign = cls === "pos" ? "+" : "-";
+    return sign + FM.num(Math.abs(value));
+  };
+  
+  // =====================================================
+  // HELPER: membuat 1 sel p/v OR special hold metric
+  // =====================================================
+  const makePV = (metricKey, obj) => {
+    const wrap = document.createElement("td");
+  
+    // --- SPECIAL CASE: holdAvg / holdMax ---
+    if (metricKey === "holdAvg" || metricKey === "holdMax") {
+      wrap.textContent = FM.barsToTime(obj.p);  // obj.p dan obj.v sama
+      return wrap;
+    }
+  
+    // --- NORMAL METRICS (pips + vpips) ---
+    const pCls = classify(metricKey, obj.p);
+    const vCls = classify(metricKey, obj.v);
+  
+    const pVal = formatValue(metricKey, obj.p, pCls);
+    const vVal = formatValue(metricKey, obj.v, vCls);
+  
+    wrap.innerHTML = `
+      <span class="pips ${pCls}">${pVal}</span>
+      <span class="vpips hidden ${vCls}">${vVal}</span>
+    `;
+    return wrap;
+  };
+  
+    // ==========================================
+    // RENDER ROWS
+    // ==========================================
+    for (const [key, label, type] of metrics) {
+      const row = document.createElement("tr");
+  
+      const tdLabel = document.createElement("td");
+      tdLabel.textContent = label;
+      tdLabel.className = "label";
+      row.appendChild(tdLabel);
+  
+      const mA = result.a[key];
+      const mL = result.l[key];
+      const mS = result.s[key];
+  
+      if (!mA || !mL || !mS) {
+        row.appendChild(document.createElement("td"));
+        row.appendChild(document.createElement("td"));
+        row.appendChild(document.createElement("td"));
+        tbody.appendChild(row);
+        continue;
+      }
+  
+      row.appendChild(makePV(key, mA, type));
+      row.appendChild(makePV(key, mL, type));
+      row.appendChild(makePV(key, mS, type));
+  
+      tbody.appendChild(row);
+    }
+  
+    table.appendChild(tbody);
+    frag.appendChild(table);
+    this.generalContainer.append(frag);
+  }
 	//========== TABLE MONTHLY
   renderMonthlyTable(stats) {
     const container = this.monthlyContainer;
@@ -36,7 +228,7 @@ export class ViewStatistics {
       container.innerHTML = `
         <table id="monthly-table">
           <tbody>
-            <tr><td style="padding:20px; text-align:center;">Tidak ada data trade</td></tr>
+            <tr><td style="padding:20px; text-align:center;">Nothing to show</td></tr>
           </tbody>
         </table>`;
       return;
@@ -47,61 +239,40 @@ export class ViewStatistics {
     // =====================================================
     // 1. GLOBAL TOGGLE SWITCH
     // =====================================================
-    const toggleWrapper = document.createElement("div");
-    toggleWrapper.className = "toggle-wrapper dual-toggle";
-  
-    const toggleLabel = document.createElement("label");
-    toggleLabel.textContent = "Pips";
-  
-    const toggleSwitch = document.createElement("label");
-    toggleSwitch.className = "switch";
-  
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = "toggle-pips-vpips";
-  
-    const slider = document.createElement("span");
-    slider.className = "slider";
-  
-    toggleSwitch.appendChild(checkbox);
-    toggleSwitch.appendChild(slider);
-  
-    toggleWrapper.appendChild(toggleSwitch);
-    toggleWrapper.appendChild(toggleLabel);
-    container.appendChild(toggleWrapper);
+
   
     // =====================================================
     // 3. TABLE
     // =====================================================
     const table = document.createElement("table");
     table.id = "monthly-table";
-    table.classList.add("pips-mode"); // default
+    //table.classList.add("pips-mode"); // default
   
     const thead = document.createElement("thead");
     const tbody = document.createElement("tbody");
   
     // ------------------ HEADER ------------------ //
-    const headerRow = document.createElement("tr");
+    const pivotRow = document.createElement("tr");
   
-    const thYear = document.createElement("th");
-    thYear.className = "sticky-year dual-mode";
-    thYear.textContent = "Year";
-    headerRow.appendChild(thYear);
+    const pivotXY = document.createElement("th");
+    pivotXY.className = "pivot pivot-xy pips-mode";
+    pivotXY.appendChild(this.toggle(table));
+    pivotRow.appendChild(pivotXY);
   
     ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
       .forEach(text => {
         const th = document.createElement("th");
-        th.className = "dual-mode";
+        th.className = "pivot pivot-x pips-mode";
         th.textContent = text;
-        headerRow.appendChild(th);
+        pivotRow.appendChild(th);
       });
   
     const thYtd = document.createElement("th");
-    thYtd.className = "dual-mode";
+    thYtd.className = "pivot pivot-x pips-mode";
     thYtd.textContent = "Total";
-    headerRow.appendChild(thYtd);
+    pivotRow.appendChild(thYtd);
   
-    thead.appendChild(headerRow);
+    thead.appendChild(pivotRow);
   
   
     // ------------------ BODY ------------------ //
@@ -114,7 +285,7 @@ export class ViewStatistics {
       const row = document.createElement("tr");
   
       const yearCell = document.createElement("td");
-      yearCell.className = "sticky-year dual-mode";
+      yearCell.className = "pivot pivot-y pips-mode";
       yearCell.textContent = year;
       row.appendChild(yearCell);
   
@@ -127,10 +298,10 @@ export class ViewStatistics {
         const td = document.createElement("td");
   
         const spanP = document.createElement("span");
-        spanP.className = "pips-value";
+        spanP.className = "value";
   
         const spanV = document.createElement("span");
-        spanV.className = "vpips-value hidden";
+        spanV.className = "value hidden";
   
         if (entry) {
           const p = entry.pips ?? 0;
@@ -163,11 +334,11 @@ export class ViewStatistics {
       ytd.className = yP > 0 ? "positive" : yP < 0 ? "negative" : "zero";
   
       const ypSpan = document.createElement("span");
-      ypSpan.className = "pips-value";
+      ypSpan.className = "value";
       ypSpan.textContent = FM.num(yP, 1);
   
       const yvSpan = document.createElement("span");
-      yvSpan.className = "vpips-value hidden";
+      yvSpan.className = "value hidden";
       yvSpan.textContent = FM.num(yV, 1);
   
       ytd.appendChild(ypSpan);
@@ -189,11 +360,11 @@ export class ViewStatistics {
     cell.className = grandPips > 0 ? "positive" : grandPips < 0 ? "negative" : "zero";
   
     const gpSpan = document.createElement("span");
-    gpSpan.className = "pips-value";
+    gpSpan.className = "value";
     gpSpan.textContent = FM.num(grandPips, 1);
   
     const gvSpan = document.createElement("span");
-    gvSpan.className = "vpips-value hidden";
+    gvSpan.className = "value hidden";
     gvSpan.textContent = FM.num(grandVPips, 1);
   
     cell.appendChild(gpSpan);
@@ -211,30 +382,7 @@ export class ViewStatistics {
     // =====================================================
     // 4. TOGGLE LISTENER (GLOBAL)
     // =====================================================
-    checkbox.addEventListener("change", () => {
-      const pips = table.querySelectorAll(".pips-value");
-      const vpips = table.querySelectorAll(".vpips-value");
-      const dualHeaders = table.querySelectorAll(".dual-mode");
-  
-      if (checkbox.checked) {
-        // VPIPS MODE
-        table.classList.remove("pips-mode");
-        table.classList.add("vpips-mode");
-        toggleLabel.textContent = "VPips";
-  
-        pips.forEach(e => e.classList.add("hidden"));
-        vpips.forEach(e => e.classList.remove("hidden"));
-  
-      } else {
-        // PIPS MODE
-        table.classList.add("pips-mode");
-        table.classList.remove("vpips-mode");
-        toggleLabel.textContent = "Pips";
-  
-        pips.forEach(e => e.classList.remove("hidden"));
-        vpips.forEach(e => e.classList.add("hidden"));
-      }
-    });
+    
   }
 	
 	

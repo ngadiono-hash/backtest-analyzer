@@ -1,5 +1,5 @@
 // ~/model/TradeData.js
-import { parseText, normalize, validate } from '../helpers/Tools.js'
+import { parseText, normalize, validate } from '../helpers/dataTools.js'
 export const HEADERS = ['pair', 'type', 'dateEN', 'dateEX', 'priceEN', 'priceTP', 'priceSL', 'result'];
 
 export class TradeData {

@@ -132,24 +132,24 @@ export function renderEquityChart(data) {
   const chart = initChart("equity", equityCanvas, config);
 
   // cleanup observer / resize
-  if (window._charts.equityObserver) {
-    window._charts.equityObserver.disconnect();
-    delete window._charts.equityObserver;
-  }
-  if (window._charts.equityResizeCleanup) {
-    window._charts.equityResizeCleanup();
-    delete window._charts.equityResizeCleanup;
-  }
+  // if (window._charts.equityObserver) {
+  //   window._charts.equityObserver.disconnect();
+  //   delete window._charts.equityObserver;
+  // }
+  // if (window._charts.equityResizeCleanup) {
+  //   window._charts.equityResizeCleanup();
+  //   delete window._charts.equityResizeCleanup;
+  // }
 
-  // observer baru
-  const observer = new ResizeObserver(() => {
-    if (!chart?.canvas?.ownerDocument) return;
-    chart.resize();
-  });
-  observer.observe(equityContainer);
-  window._charts.equityObserver = observer;
+  // // observer baru
+  // const observer = new ResizeObserver(() => {
+  //   if (!chart?.canvas?.ownerDocument) return;
+  //   chart.resize();
+  // });
+  // observer.observe(equityContainer);
+  // window._charts.equityObserver = observer;
 
-  window._charts.equityResizeCleanup = enableResize(equityContainer, handleResizer, chart);
+  // window._charts.equityResizeCleanup = enableResize(equityContainer, handleResizer, chart);
 
   return chart;
 }

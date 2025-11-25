@@ -24,6 +24,5 @@
   "dependencies": {
     "chart.js": "^4.5.1",
     "zod": "^4.1.13"
-  },
-  "devDependencies": {}
+  }
 }

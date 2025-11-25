@@ -24,43 +24,10 @@ export function barsToTime(bars = 0) {
   const days = Math.floor(totalHours / 24);
   const hours = Math.round(totalHours % 24);
   if (days > 0) {
-    return `${days} days ${hours} hours`;
+    if (hours > 3) return `${days}d, ${hours}h`;
+    return `${days}d`;
+  } else {
+    return `${hours}h`;  
   }
-  return `${hours} hours`;
-}
-
-export function checkSort(arr, name) {
-    if (!arr || arr.length === 0) {
-        console.log("%c[checkSort] Array kosong atau undefined", "color:#e67e22");
-        return true;
-    }
-
-    name = name || "DATA";
-    var sorted = [...arr].sort(function(a, b) { return new Date(a.dateEX) - new Date(b.dateEX); });
-    var allOk = true;
-
-    console.log("%c=== CHECK SORT: " + name + " ===", "color:#3498db; font-weight:bold");
-
-    arr.forEach(function(item, i) {
-        var origPair  = item.pair  ? item.pair  : "—";
-        var origDate  = dateDMY(item.dateEX);
-        var sortPair  = sorted[i] && sorted[i].pair  ? sorted[i].pair  : "—";
-        var sortDate  = sorted[i] ? dateDMY(sorted[i].dateEX) : "—";
-
-        var line = (i+1 + "   ").slice(0,3) + " │ " +
-                   (origPair + "          ").slice(0,10) + " " + origDate + " │ " +
-                   (sortPair + "          ").slice(0,10) + " " + sortDate + " │ " +
-                   (origDate === sortDate && origPair === sortPair ? "OK" : "WRONG");
-
-        if (origDate !== sortDate || origPair !== sortPair) allOk = false;
-
-        console.log(line);
-    });
-
-    console.log(allOk 
-        ? "%cSEMUA URUTAN BENAR" 
-        : "%cADA YANG SALAH URUTAN → SORT DULU!", 
-        allOk ? "color:#2ecc71; font-weight:bold" : "color:#e74c3c; font-weight:bold");
-
-    return allOk;
+  
 }

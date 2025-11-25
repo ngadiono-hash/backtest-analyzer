@@ -18,6 +18,29 @@ const pairsMap = {
   EURGBP: { mul: 2, max: 200, min: 90 },
 };
 
+export function sum(arr) { return arr.reduce((a,b) => a + b, 0); }
+export function avg(arr) { return arr.length ? sum(arr) / arr.length : 0; }
+export function min(arr) { return Math.min(...arr); }
+export function max(arr) { return Math.max(...arr); }
+
+export function median(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+export function std(arr) {
+  if (!arr.length) return 0;
+  const mean = avg(arr);
+  const variance = avg(arr.map(v => (v - mean) ** 2));
+  return Math.sqrt(variance);
+}
+
+export function countUnique(arr) {
+  return new Set(arr).size;
+}
+
 export function computePips(trade = {}, pair = '') {
   const { priceEN, priceTP, priceSL, result, type } = trade;
   

@@ -7,8 +7,6 @@
 /* ============================
    GENERAL LAYOUT
 ============================ */
-.hidden { display: none !important; }
-
 body {
   font-family: system-ui, sans-serif;
   margin: 20px;
@@ -168,28 +166,16 @@ body {
 .toggle-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+  padding: 4px;
+  background: #fff !important;
 }
 
-.toggle-wrapper label {
-  font-size: 0.9em;
-  font-weight: 600;
-  color: #555;
-}
 
 .switch {
   position: relative;
   display: inline-block;
-  width: 46px;
-  height: 24px;
-}
-
-.switch input,
-.switch input:focus {
-  opacity: 0;
-  width: 0;
-  height: 0;
+  width: 60px; /* perlu lebih lebar */
+  height: 28px;
 }
 
 .slider {
@@ -198,14 +184,16 @@ body {
   inset: 0;
   background-color: var(--pips-bg);
   transition: .3s;
-  border-radius: 24px;
+  border-radius: 28px;
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* Circle */
 .slider:before {
-  position: absolute;
   content: "";
-  height: 18px;
-  width: 18px;
+  position: absolute;
+  height: 22px;
+  width: 22px;
   left: 3px;
   bottom: 3px;
   background-color: white;
@@ -213,12 +201,35 @@ body {
   border-radius: 50%;
 }
 
+/* Text: left (vpips) */
+.slider::after {
+  content: "pips";
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  opacity: 1;
+  transition: opacity .3s;
+}
+
+/* Text when ON (vpips mode) */
 .switch input:checked + .slider {
   background-color: var(--vpips-bg);
 }
 
+.switch input:checked + .slider::after {
+  content: "vpips";
+  left: 6px;
+  right: auto;
+  opacity: 1;
+}
+
+/* move circle */
 .switch input:checked + .slider:before {
-  transform: translateX(22px);
+  transform: translateX(32px);
 }
 
 /* NAV */
@@ -308,15 +319,45 @@ table {
 
 table td {
   white-space: nowrap;
+  position: relative;
 }
 
+/* SWITCH TD VALUE */
+td .value {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;          /* penting */
+  display: flex;         /* untuk centering */
+  align-items: center;   /* vertical center */
+  justify-content: center; /* horizontal center */
+  backface-visibility: hidden;
+  transition: transform .35s ease, opacity .35s ease;
+  transform-origin: center;
+}
+
+/* tampil */
+td .value:not(.hidden) {
+  transform: rotateX(0deg);
+  opacity: 1;
+}
+
+/* tersembunyi (flip keluar) */
+td .value.hidden {
+  transform: rotateX(90deg);
+  opacity: 0;
+  pointer-events: none; /* aman */
+}
+
+/*  */
 .table-wrapper {
   overflow: auto;
   border: 1px solid var(--pm-bg);
   position: relative;
 }
 
-.table-wrapper:not(#monthly-table-container) {
+.table-wrapper:not(#monthly-container) {
   max-height: 80vh;
 }
 
@@ -335,7 +376,7 @@ td.pips-null { color: #ccc; }
 
 #trade-table th {
   position: sticky;
-  top: 0;
+  top: -1px;
   background: var(--pm-bg);
   color: #fff;
   z-index: 99;
@@ -468,107 +509,100 @@ td[data-tooltip]:hover::after {
 
 
 
-/* STATS TABLE */
-#stats-table {
+/* GENERAL TABLE */
+#general-table {
   width: 100%;
   border-collapse: collapse;
   border: 1px solid #eee;
 }
 
-#stats-table th,
-#stats-table td {
+#general-table th,
+#general-table td {
   padding: 10px 12px;
   border: 1px solid #eee;
 }
 
-#stats-table th {
+#general-table th {
   background: var(--pm-bg);
   text-align: center;
   color: #fff;
   position: sticky;
-  top: 0px;
+  top: -1px;
   z-index: 11;
 }
 
-#stats-table td {
+#general-table td {
   text-align: right;
 }
 
-#stats-table th.label {
+#general-table th.label {
   background: var(--pm-bg) !important;
 }
 
-#stats-table th.label,
-#stats-table tr td.label {
+#general-table th.label,
+#general-table tr td.label {
   background: var(--pm-bg) !important;
   color: #fff;
   font-weight: 500;
   text-align: left;
   position: sticky;
-  left: 0;
+  left: -1px;
   z-index: 10;
 }
 
-#stats-table th.label {
+#general-table th.label {
   z-index: 13;
 }
 
-#stats-table .period {
+#general-table .period {
   background: #e3f2fd;
   text-align: center;
 }
 
-#stats-table .positive {
+#general-table .pos {
   color: #089981;
 }
 
-#stats-table .negative {
+#general-table .neg {
   color: #f23645;
 }
 
-#stats-table .neutral {
-  color: #666;
+#general-table .neutral {
+  /* color: #666; */
 }
 
 /* TABLE MONTHLY */
-.monthly-title {
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #444;
-}
-
 #monthly-table {
-  width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
-
-#monthly-table th.sticky-year,
-#monthly-table td.sticky-year {
-  position: sticky;
-  left: 0;
-  background: #fafafa;
-  z-index: 3;
+#monthly-table .pivot-xy {
+  
 }
-
-#monthly-table th {
-  padding: 6px;
-  background: #f5f5f5;
-  border-bottom: 2px solid #ddd;
+.pivot-y, .pivot-x, .pivot.xy {
+  color: #fff;
+  border: 1px solid #fff;
+  font-weight: bold;
   text-align: center;
-}
-
-.pips-mode .dual-mode {
-  background: var(--pips-bg) !important;
-}
-.vpips-mode .dual-mode {
-  background: var(--vpips-bg) !important;
-}
-
-#monthly-table td {
   padding: 8px;
-  border-bottom: 1px solid #eee;
+}
+#monthly-table .pivot-y, 
+#monthly-table .pivot-xy {
+  position: sticky;
+  left: -1px;
+  z-index: 10;
+}
+
+/* #monthly-table th {
+  padding: 6px;
+  color: #fff;
+  text-align: center;
+} */
+
+#monthly-table td:not(.pivot) {
+  border: 1px solid #eee;
+  min-width: 45px;
+  padding: 10px 8px;
   text-align: center;
 }
 
@@ -585,6 +619,12 @@ td[data-tooltip]:hover::after {
   margin-bottom: 10px;
 }
 
+.pips-mode {
+  background: var(--pips-bg) !important;
+}
+.vpips-mode {
+  background: var(--vpips-bg) !important;
+}
 /* === MOBILE === */
 @media (max-width: 430px) {
   
@@ -606,7 +646,7 @@ td[data-tooltip]:hover::after {
 
   .tabs {
     position: sticky;
-    top: 0;
+    top: -1px;
     margin: 0;
     z-index: 999;
     flex-wrap: nowrap;
@@ -650,19 +690,6 @@ td[data-tooltip]:hover::after {
     width: 100%;
     max-width: 400px;
     animation: slideIn 0.4s ease-out;
-  }
-  
-  #trade-table th,
-  #trade-table td,
-  #stats-table th,
-  #stats-table td {
-    /* padding: 8px; */
-    /* width: max-content; */
-    /* min-width: max-content; */
-  }
-  
-  #monthly-table {
-    /* border-collapse: unset; */
   }
 
   @keyframes slideIn {
