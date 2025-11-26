@@ -24,50 +24,36 @@ export function barsToTime(bars = 0) {
   const days = Math.floor(totalHours / 24);
   const hours = Math.round(totalHours % 24);
   if (days > 0) {
-    if (hours > 3) return `${days}d, ${hours}h`;
-    return `${days}d`;
+    return `${days}d,${hours}h`;
   } else {
     return `${hours}h`;  
   }
   
 }
 
-export const metricsFormat = (key, type, value) => {
-    let css = "";
-    let txt = value;
-    if (type === "float") {
-      txt = num(value);
-    }
-    
-    if (key === "winrate") {
-      txt = num(value) + "%";
-    }
+export function metricsFormat(key, type, value) {
+  const METRIC_RULES = {
+    winrate: { formatter: (v) => num(v), suffix: "%" },
+    avgRR: { formatter: (v) => `1:${num(v)}`, color: false},
+    netReturn:  { color: true, prefix: true },
+    medReturn:  { color: true, prefix: true },
+    avgReturn:  { color: true, prefix: true },
+    stdReturn:  { color: true, prefix: true },
+    pFactor:    { color: false, prefix: false },
+    avgHold: { formatter: (v) => barsToTime(v) },
+    maxHold: { formatter: (v) => barsToTime(v) }
+  };
   
-    if (key.includes("Hold")) {
-      txt = barsToTime(value);
-    }
-  
-    // ========== 2. TENTUKAN METRIC RETURN (tanpa helper) ==========
-    const isReturnMetric =
-      key === "netReturn"   ||
-      key === "medReturn"   ||
-      key === "avgReturn"   ||
-      key === "stdReturn"   ||
-      key === "pFactor"     ||
-      key === "avgRR";
-  
-    // ========== 3. WARNA (hanya metric return) ==========
-    if (isReturnMetric) {
-      css = (value > 0) ? "pos" :"neg";
-    }
-  
-    // ========== 4. PREFIX + / - dan avgRR (khusus return metric KECUALI profit factor) ==========
-    const needsPrefix = isReturnMetric && key !== "pFactor" && key !== "avgRR";
-  
-    if (needsPrefix && type === "float") {
-      if (value > 0) txt = "+" + txt;
-    }
-  
-    // ========== 5. RETURNNYA ADALAH OBJEK ==========
-    return { txt, css };
+  const rule = METRIC_RULES[key] || {};
+  let txt = value;
+  let css = "";
+  if (type === "float") txt = num(value);
+  if (rule.formatter) txt = rule.formatter(value);
+  if (rule.suffix) txt += rule.suffix;
+  if (rule.color) css = value > 0 ? "pos" : value < 0 ? "neg" : "";
+  if (rule.prefix && value > 0) {
+    if (!rule.formatter) txt = "+" + txt;
   }
+  
+  return { txt, css };
+}

@@ -19,364 +19,279 @@ export class ViewStatistics {
 			
 		});
 	}
-	toggle(table){
-	  const toggleBtn = document.createElement("div");
-    toggleBtn.className = "toggle-wrapper";
-    const toggleSwitch = document.createElement("label");
-    toggleSwitch.className = "switch";
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = "toggle-pips-vpips";
-    const slider = document.createElement("span");
-    slider.className = "slider";
-    toggleSwitch.appendChild(checkbox);
-    toggleSwitch.appendChild(slider);
-    toggleBtn.appendChild(toggleSwitch);
-    
+
+  toggle(table) {
+    const checkbox = _create("input", {
+      type: "checkbox",
+      id: "toggle-pips-vpips"
+    });
+  
     checkbox.addEventListener("change", () => {
-      const valsMode = $$(".value", table);
-      const dualMode = $$(".pivot", table);
-      dualMode.forEach(e => {
+      $$(".pivot", table).forEach(e => {
         e.classList.toggle("pips-mode");
         e.classList.toggle("vpips-mode");
       });
-      valsMode.forEach(e => {
-        e.classList.toggle("hidden");
-      });
+      $$(".value", table).forEach(e => e.classList.toggle("hidden"));
     });
-    return toggleBtn;
-	}
-	//========== TABLE STATS 
-renderGeneralTable(stats) {
-  const container = this.generalContainer;
-  const tableId = "general-table"; // supaya toggle bisa target
-  const metrics = [
-      ["trade", "Total Trades", "int"],
-      ["win", "Win Trades", "int"],
-      ["loss", "Loss Trades", "int"],
-      ["winrate", "Win Rate", "float"],
-      ["gProfit", "Gross Profit", "float"],
-      ["gLoss", "Gross Loss", "float"],
-      ["netReturn", "Net Return", "float"],
-      ["medReturn", "Median Return", "float"],
-      ["avgReturn", "Average Return", "float"],
-      ["stdReturn", "StDev Return", "float"],
-      ["avgProfit", "Average Profit", "float"],
-      ["avgLoss", "Average Loss", "float"],
-      ["maxProfit", "Max Profit", "float"],
-      ["maxLoss", "Max Loss", "float"],
-      ["pFactor", "Profit Factor", "float"],
-      ["avgRR", "Avg Risk:Reward", "float"],
-      ["avgHold", "Average Hold", "int"],
-      ["maxHold", "Max Hold", "int"]
-  ];
-
-  const table = _create("table", { id: tableId });
-
-  // ====================== THEAD ==========================
-  const thead = _create("thead");
-  const trHead = _create("tr");
-
-  // ---- Pivot XY (pojok kiri atas + toggle) ----
-  const thXY = _create("th", { className: "pivot pivot-xy pips-mode" });
-  thXY.appendChild(this.toggle(tableId))
-  trHead.append(thXY);
-
-  // ---- Kolom Pivot X ----
-  trHead.append(_create("th", {
-    className: "pivot pivot-x pips-mode",
-    textContent: "All"
-  }));
-  trHead.append(_create("th", {
-    className: "pivot pivot-x pips-mode",
-    textContent: "Long"
-  }));
-  trHead.append(_create("th", {
-    className: "pivot pivot-x pips-mode",
-    textContent: "Short"
-  }));
-
-  thead.append(trHead);
-  table.append(thead);
-
-
-  // ====================== TBODY ==========================
-  const tbody = _create("tbody");
-
-  for (const [key, label, type] of metrics) {
-    const row = _create("tr");
-
-    // ========== pivot Y (nama metrik) ==========
-    row.append(
-      _create("td", {
-        className: "pivot pivot-y pips-mode",
-        textContent: label
-      })
+  
+    return _create(
+      "div",
+      { className: "toggle-wrapper" },
+      _create(
+        "label",
+        { className: "switch" },
+        checkbox,
+        _create("span", { className: "slider" })
+      )
     );
-
-    // ==== helper untuk kolom nilai ====
-    const renderCol = (obj) => {
+  }
+  
+	//========== TABLE STATS 
+  enderGeneralTable(stats) {
+    const container = this.generalContainer;
+    container.innerHTML = "";
+    const metrics = [
+      ["trade",     "Total Trades",     "int"],
+      ["win",       "Win Trades",       "int"],
+      ["loss",      "Loss Trades",      "int"],
+      ["winrate",   "Win Rate",         "float"],
+      ["gProfit",   "Gross Profit",     "float"],
+      ["gLoss",     "Gross Loss",       "float"],
+      ["netReturn", "Net Return",       "float"],
+      ["medReturn", "Median Return",    "float"],
+      ["avgReturn", "Average Return",   "float"],
+      ["stdReturn", "StDev Return",     "float"],
+      ["avgProfit", "Average Profit",   "float"],
+      ["avgLoss",   "Average Loss",     "float"],
+      ["maxProfit", "Max Profit",       "float"],
+      ["maxLoss",   "Max Loss",         "float"],
+      ["pFactor",   "Profit Factor",    "float"],
+      ["avgRR",     "Avg Risk:Reward",  "float"],
+      ["avgHold",   "Average Hold",     "int"],
+      ["maxHold",   "Max Hold",         "int"]
+    ];
+  
+    const pivots = ["All", "Long", "Short"];
+    const mapStats = (k) => stats[k]; // stats.a / stats.l / stats.s
+  
+    const table = _create("table", { id: "monthly-table" });
+    const thead = _create("thead");
+    const trHead = _create("tr");
+  
+    // pivot XY
+    trHead.append(
+      _create("th", {
+        className: "pivot pivot-xy pips-mode"
+      }, this.toggle(table))
+    );
+  
+    // pivot X (All / Long / Short)
+    pivots.forEach(label =>
+      trHead.append(
+        _create("th", {
+          className: "pivot pivot-x pips-mode",
+          textContent: label
+        })
+      )
+    );
+  
+    thead.append(trHead);
+    table.append(thead);
+  
+    // ====================== TBODY ==========================
+    const tbody = _create("tbody");
+    const renderCol = (key, type, obj) => {
       const p = obj?.p ?? 0;
       const v = obj?.v ?? 0;
-
+  
       const { txt: txtP, css: cssP } = FM.metricsFormat(key, type, p);
       const { txt: txtV, css: cssV } = FM.metricsFormat(key, type, v);
-
-      return _create(
-        "td",
-        { className: "td-value" },
+  
+      return _create("td",
         _create("span", { className: `value ${cssP}`, textContent: txtP }),
         _create("span", { className: `value hidden ${cssV}`, textContent: txtV })
       );
     };
+  
+    metrics.forEach(([key, label, type]) => {
+      const tr = _create("tr");
+      tr.append(_create("td", {
+        className: "pivot pivot-y pips-mode",
+        textContent: label
+      }));
 
-    row.append(renderCol(stats.a[key]));
-    row.append(renderCol(stats.l[key]));
-    row.append(renderCol(stats.s[key]));
+      ["a", "l", "s"].forEach(pivotKey =>
+        tr.append(renderCol(key, type, stats[pivotKey][key]))
+      );
+      tbody.append(tr);
+    });
+    table.append(tbody);
+    container.append(table);
+  }	
+renderGeneralTable(stats) {
+  const container = this.generalContainer;
+  container.innerHTML = "";
 
-    tbody.append(row);
-  }
+  const metrics = [
+    ["trade","Total Trades","int"],
+    ["win","Win Trades","int"],
+    ["loss","Loss Trades","int"],
+    ["winrate","Win Rate","float"],
+    ["gProfit","Gross Profit","float"],
+    ["gLoss","Gross Loss","float"],
+    ["netReturn","Net Return","float"],
+    ["medReturn","Median Return","float"],
+    ["avgReturn","Average Return","float"],
+    ["stdReturn","StDev Return","float"],
+    ["avgProfit","Average Profit","float"],
+    ["avgLoss","Average Loss","float"],
+    ["maxProfit","Max Profit","float"],
+    ["maxLoss","Max Loss","float"],
+    ["pFactor","Profit Factor","float"],
+    ["avgRR","Avg Risk:Reward","float"],
+    ["avgHold","Average Hold","int"],
+    ["maxHold","Max Hold","int"]
+  ];
+
+  const table = _create("table", { id: "general-table" });
+
+  // HEADER (note: always pass props object)
+  const thead = _create("thead", {},
+    _create("tr", {},
+      _create("th", { className: "pivot pivot-xy pips-mode" }, this.toggle(table)),
+      _create("th", { className: "pivot pivot-x pips-mode", textContent: "All" }),
+      _create("th", { className: "pivot pivot-x pips-mode", textContent: "Long" }),
+      _create("th", { className: "pivot pivot-x pips-mode", textContent: "Short" })
+    )
+  );
+  table.append(thead);
+
+  // BODY
+  const tbody = _create("tbody", {});
+
+  const renderCol = (key, type, dataObj) => {
+    const p = dataObj?.p ?? 0;
+    const v = dataObj?.v ?? 0;
+
+    const { txt: txtP, css: cssP } = FM.metricsFormat(key, type, p);
+    const { txt: txtV, css: cssV } = FM.metricsFormat(key, type, v);
+
+    return _create("td", {},
+      _create("span", { className: `value ${cssP}`.trim(), textContent: txtP }),
+      _create("span", { className: `value hidden ${cssV}`.trim(), textContent: txtV })
+    );
+  };
+
+  metrics.forEach(([key, label, type]) => {
+    tbody.append(
+      _create("tr", {},
+        _create("td", { className: "pivot pivot-y pips-mode", textContent: label }),
+        renderCol(key, type, stats.a[key]),
+        renderCol(key, type, stats.l[key]),
+        renderCol(key, type, stats.s[key])
+      )
+    );
+  });
 
   table.append(tbody);
-
   container.append(table);
 }	
- 	
-  enderGeneralTable(stats) {
-    const container = this.generalContainer;
-    if (!stats || Object.keys(stats).length === 0) {
-      container.innerHTML = `
-        <table id="general-table">
-          <tbody>
-            <tr><td style="padding:20px; text-align:center;">Nothing to show</td></tr>
-          </tbody>
-        </table>`;
-      return;
-    }
-    const frag = document.createDocumentFragment();
-    
-    const table = document.createElement("table");
-    table.id = "general-table";
-  
-    const thead = document.createElement("thead");
-    
-    table.appendChild(thead);
-  
-    const tbody = document.createElement("tbody");
-  
-    const metricsConfig = [
-      ["trade", "Total Trades", "int"],
-      ["win", "Win Trades", "int"],
-      ["loss", "Loss Trades", "int"],
-      ["winrate", "Win Rate", "float"],
-      ["gProfit", "Gross Profit", "float"],
-      ["gLoss", "Gross Loss", "float"],
-      ["netReturn", "Net Return", "float"],
-      ["medReturn", "Median Return", "float"],
-      ["avgReturn", "Average Return", "float"],
-      ["stdReturn", "StDev Return", "float"],
-      ["avgProfit", "Average Profit", "float"],
-      ["avgLoss", "Average Loss", "float"],
-      ["maxProfit", "Max Profit", "float"],
-      ["maxLoss", "Max Loss", "float"],
-      ["pFactor", "Profit Factor", "float"],
-      ["avgRR", "Avg Risk:Reward", "float"],
-      ["avgHold", "Average Hold", "int"],
-      ["maxHold", "Max Hold", "int"]
-    ];
-    
-
-
-  const makePV = (metricKey, obj) => {
-    const wrap = document.createElement("td");
-  
-  
-    const pVal = metricsFormat(metricKey, obj.p);
-    const vVal = metricsFormat(metricKey, obj.v);
-  
-    wrap.innerHTML = `
-      <span class="value ${pCls}">${pVal}</span>
-      <span class="value hidden ${vCls}">${vVal}</span>
-    `;
-    return wrap;
-  };
-  
-    for (const [key, label, type] of metrics) {
-      const row = document.createElement("tr");
-  
-      const tdLabel = document.createElement("td");
-      tdLabel.textContent = label;
-      tdLabel.className = "label";
-      row.appendChild(tdLabel);
-  
-      const mA = stats.a[key];
-      const mL = stats.l[key];
-      const mS = stats.s[key];
-  
-      if (!mA || !mL || !mS) {
-        row.appendChild(document.createElement("td"));
-        row.appendChild(document.createElement("td"));
-        row.appendChild(document.createElement("td"));
-        tbody.appendChild(row);
-        continue;
-      }
-  
-      row.appendChild(makePV(key, mA, type));
-      row.appendChild(makePV(key, mL, type));
-      row.appendChild(makePV(key, mS, type));
-  
-      tbody.appendChild(row);
-    }
-  
-    table.appendChild(tbody);
-    frag.appendChild(table);
-    container.append(frag);
-  }
-	//========== TABLE MONTHLY
+  //========== TABLE MONTHLY
   renderMonthlyTable(stats) {
     const container = this.monthlyContainer;
-    if (!stats || !stats.monthly || Object.keys(stats.monthly).length === 0) {
-      container.innerHTML = `
-        <table id="monthly-table">
-          <tbody>
-            <tr><td style="padding:20px; text-align:center;">Nothing to show</td></tr>
-          </tbody>
-        </table>`;
-      return;
-    }
+    container.innerHTML = "";
+  
     const MONTHS = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-    const table = document.createElement("table");
-    table.id = "monthly-table";
-    const thead = document.createElement("thead");
-    const tbody = document.createElement("tbody");
-    // ------------------ HEADER ------------------ //
-    const headerRow = document.createElement("tr");
-    const pivotXY = document.createElement("th");
-    pivotXY.className = "pivot pivot-xy pips-mode";
-    pivotXY.appendChild(this.toggle(table));
-    headerRow.appendChild(pivotXY);
-  
-    ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-      .forEach(text => {
-        const th = document.createElement("th");
-        th.className = "pivot pivot-x pips-mode";
-        th.textContent = text;
-        headerRow.appendChild(th);
-      });
-  
-    const thYtd = document.createElement("th");
-    thYtd.className = "pivot pivot-x pips-mode";
-    thYtd.textContent = "Total";
-    headerRow.appendChild(thYtd);
-  
-    thead.appendChild(headerRow);
-  
-  
-    // ------------------ BODY ------------------ //
+    const HEADER = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Total"];
     const years = [...new Set(Object.keys(stats.monthly).map(k => k.split("-")[0]))].sort();
-  
-    let grandPips = 0;
-    let grandVPips = 0;
-  
-    years.forEach(year => {
-      const row = document.createElement("tr");
-  
-      const yearCell = document.createElement("td");
-      yearCell.className = "pivot pivot-y pips-mode";
-      yearCell.textContent = year;
-      row.appendChild(yearCell);
-  
+    let grandP = 0;
+    let grandV = 0;
+    const table = _create("table", { id: "monthly-table" })
+
+    const headerRow = _create("tr", {},
+      // pivot-xy
+      _create("th", { className: "pivot pivot-xy pips-mode" },
+        this.toggle(table)
+      ),
+
+      ...HEADER.map(text =>
+        _create("th", { className: "pivot pivot-x pips-mode", textContent: text })
+      )
+    );
+
+    const bodyRows = years.map(year => {
       let yP = 0, yV = 0;
   
-      MONTHS.forEach(m => {
+      const monthCells = MONTHS.map(m => {
         const key = `${year}-${m}`;
         const entry = stats.monthly[key];
-  
-        const td = document.createElement("td");
-  
-        const spanP = document.createElement("span");
-        spanP.className = "value";
-  
-        const spanV = document.createElement("span");
-        spanV.className = "value hidden";
-  
-        if (entry) {
-          const p = entry.pips ?? 0;
-          const v = entry.vpips ?? 0;
-  
-          yP += p;  
-          yV += v;
-  
-          grandPips += p;
-          grandVPips += v;
-  
-          td.classList.add(p > 0 ? "positive" : p < 0 ? "negative" : "zero");
-  
-          spanP.textContent = FM.num(p, 1);
-          spanV.textContent = FM.num(v, 1);
-  
-        } else {
-          td.classList.add("pips-null");
-          spanP.textContent = "—";
-          spanV.textContent = "—";
+        if (!entry) {
+          return _create("td", {},
+            _create("span", { className: "value null", textContent: "—" }),
+            _create("span", { className: "value hidden null", textContent: "—" })
+          );
         }
-  
-        td.appendChild(spanP);
-        td.appendChild(spanV);
-        row.appendChild(td);
+      
+        const p = entry.pips ?? 0;
+        const v = entry.vpips ?? 0;
+        yP += p;
+        yV += v;
+        grandP += p;
+        grandV += v;
+      
+        const clsP = p > 0 ? "pos" : p < 0 ? "neg" : "zero";
+        const clsV = v > 0 ? "pos" : v < 0 ? "neg" : "zero";
+        return _create("td", {},
+          _create("span", {
+            className: `value ${clsP}`,
+            textContent: FM.num(p, 1)
+          }),
+          _create("span", {
+            className: `value hidden ${clsV}`,
+            textContent: FM.num(v, 1)
+          })
+        );
       });
   
-      // ---- TOTAL/YTD ---- //
-      const ytd = document.createElement("td");
-      ytd.className = yP > 0 ? "positive" : yP < 0 ? "negative" : "zero";
+      // ---- TOTAL/YTD ----
+      const clsPTotal = yP > 0 ? "pos" : yP < 0 ? "neg" : "zero";
+      const clsVTotal = yV > 0 ? "pos" : yV < 0 ? "neg" : "zero";
+      const totalCell = _create("td",
+        _create("span", { className: `value ${clsPTotal}`, textContent: FM.num(yP, 1) }),
+        _create("span", { className: `value hidden ${clsVTotal}`, textContent: FM.num(yV, 1) })
+      );
   
-      const ypSpan = document.createElement("span");
-      ypSpan.className = "value";
-      ypSpan.textContent = FM.num(yP, 1);
-  
-      const yvSpan = document.createElement("span");
-      yvSpan.className = "value hidden";
-      yvSpan.textContent = FM.num(yV, 1);
-  
-      ytd.appendChild(ypSpan);
-      ytd.appendChild(yvSpan);
-      row.appendChild(ytd);
-  
-      tbody.appendChild(row);
+      return _create("tr", {},
+        _create("td", {
+          className: "pivot pivot-y pips-mode",
+          textContent: year
+        }),
+        ...monthCells,
+        totalCell
+      );
     });
+
+    const clsPGrand = grandP > 0 ? "pos" : grandP < 0 ? "neg" : "zero";
+    const clsVGrand = grandV > 0 ? "pos" : grandV < 0 ? "neg" : "zero";
   
-    // ------------------ GRAND TOTAL ------------------ //
-    const totalRow = document.createElement("tr");
-    totalRow.className = "grand-total-row";
+    const grandRow = _create("tr", { className: "grand-total-row" },
+      _create("td", { colSpan: 13, textContent: "Grand Total" }),
   
-    const label = document.createElement("td");
-    label.colSpan = 13; // 12 months + year
-    label.textContent = "Grand Total";
+      _create("td",
+        _create("span", { className: `value ${clsPGrand}`, textContent: FM.num(grandP, 1) }),
+        _create("span", { className: `value hidden ${clsVGrand}`, textContent: FM.num(grandV, 1) })
+      )
+    );
   
-    const cell = document.createElement("td");
-    cell.className = grandPips > 0 ? "positive" : grandPips < 0 ? "negative" : "zero";
-  
-    const gpSpan = document.createElement("span");
-    gpSpan.className = "value";
-    gpSpan.textContent = FM.num(grandPips, 1);
-  
-    const gvSpan = document.createElement("span");
-    gvSpan.className = "value hidden";
-    gvSpan.textContent = FM.num(grandVPips, 1);
-  
-    cell.appendChild(gpSpan);
-    cell.appendChild(gvSpan);
-  
-    totalRow.appendChild(label);
-    totalRow.appendChild(cell);
-    tbody.appendChild(totalRow);
-  
-    // Final assembly
+    // ----------------------
+    // ASSEMBLE TABLE
+    // ----------------------
+    const thead = _create("thead", {}, headerRow);
+    const tbody = _create("tbody", {}, ...bodyRows, grandRow);
     table.appendChild(thead);
     table.appendChild(tbody);
     container.appendChild(table);
-    
-  }
+}
 	
 	
 }
