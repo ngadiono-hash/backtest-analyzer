@@ -1,6 +1,6 @@
 // ~/model/StatisticsModel.js
-import * as HM from '../helpers/metrics.js';
 import * as FM from '../helpers/converter.js';
+import * as HM from '../helpers/metrics.js';
 
 export class StatisticsModel {
   constructor() {
@@ -49,10 +49,10 @@ export class StatisticsModel {
       priceSL: +priceSL,
       pips: +pips,
       vpips: +vpips,
-      absP,
-      absV,
-      netP: isWin ? absP : -absP,
-      netV: isWin ? absV : -absV,
+      // absP,
+      // absV,
+      // netP: isWin ? absP : -absP,
+      // netV: isWin ? absV : -absV,
       bars: FM.estimateBarsHeld(dEN, dEX),
     };
   }
@@ -70,8 +70,8 @@ export class StatisticsModel {
       if (!map[r.pair]) {
         map[r.pair] = { pair: r.pair, pips: 0, vpips: 0 };
       }
-      map[r.pair].pips  += r.netP;
-      map[r.pair].vpips += r.netV;
+      map[r.pair].pips  += r.pips;
+      map[r.pair].vpips += r.vpips;
     }
 
     return Object.values(map);
@@ -82,19 +82,19 @@ export class StatisticsModel {
     const yearly = {};
     const total = { p: 0, v: 0 };
   
-    trades.forEach(({ month, netP, netV }) => {
+    trades.forEach(({ month, pips, vpips }) => {
       const year = month.split("-")[0];
   
       if (!monthly[month]) monthly[month] = { p: 0, v: 0 };
-      monthly[month].p += netP;
-      monthly[month].v += netV;
+      monthly[month].p += pips;
+      monthly[month].v += vpips;
   
       if (!yearly[year]) yearly[year] = { p: 0, v: 0 };
-      yearly[year].p += netP;
-      yearly[year].v += netV;
+      yearly[year].p += pips;
+      yearly[year].v += vpips;
   
-      total.p += netP;
-      total.v += netV;
+      total.p += pips;
+      total.v += vpips;
     });
   
     const monthlyArr = Object.keys(monthly)
@@ -125,37 +125,37 @@ export class StatisticsModel {
 
   _aggEquity(rows) {
     let cumP = 0, cumV = 0;
-    const pips = [];
-    const vpips = [];
+    const p = [];
+    const v = [];
   
-    for (const { pair, isLong, dateEX, netP, netV } of rows) {
+    for (const { pair, isLong, dateEX, pips, vpips } of rows) {
   
-      cumP += netP;
-      cumV += netV;
+      cumP += pips;
+      cumV += vpips;
   
-      pips.push({
+      p.push({
         isLong,
         pair,
         equity: cumP,
         date: dateEX,
-        value: netP
+        value: pips
       });
   
-      vpips.push({
+      v.push({
         isLong,
         pair,
         equity: cumV,
         date: dateEX,
-        value: netV
+        value: vpips
       });
     }
   
-    return { pips, vpips };
+    return { p, v };
   }
 
   _aggDrawdown(curve) {
-    const pips  = HM.computeDrawdown(curve.pips);
-    const vpips = HM.computeDrawdown(curve.vpips);
+    const pips  = HM.computeDrawdown(curve.p);
+    const vpips = HM.computeDrawdown(curve.v);
     const merged = {};
   
     const DRAW_TYPES = {

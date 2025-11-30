@@ -23,9 +23,9 @@ export function renderEquityChart(data, userOptions = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...userOptions };
 
   // ── DATA PREPARATION ─────────────────────────────────────
-  const labels       = data.pips.map((_, i) => i + 1);
-  const pips   = data.pips.map(p  => p.equity);
-  const vpips  = data.vpips.map(v => v.equity);
+  const labels = data.p.map((_, i) => i + 1);
+  const pips   = data.p.map(p  => p.equity);
+  const vpips  = data.v.map(v => v.equity);
 
   // ── CHART CONFIG ─────────────────────────────────────────
   const config = {

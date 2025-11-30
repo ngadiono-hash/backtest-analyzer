@@ -1,4 +1,5 @@
-import { $, $$, create } from "./template.js";
+// ~/helpers/table_builder.js
+import { create } from "./template.js";
 import * as FM from "./converter.js";
 
 export class Tables {
@@ -32,7 +33,6 @@ export class Tables {
   }
 
   appendSection(sectionNodes) {
-    // untuk elemen custom seperti <h3>, atau grouping
     sectionNodes.forEach(n => this.container.append(n));
     return this;
   }
@@ -75,47 +75,19 @@ export class Cells {
 }
 
 export function Toggler(root) {
-    const checkbox = create("input", {type: "checkbox", id: "toggle-pips-vpips" });
-    
-    checkbox.addEventListener("change", () => {
-      $$(".pivot", root).forEach(e => {
-        e.classList.toggle("pips-mode");
-        e.classList.toggle("vpips-mode");
-      });
-      $$(".value", root).forEach(e => e.classList.toggle("hidden"));
-    });
-  
-    return create("div", { className: "toggle-wrapper" },
-      create("label", { className: "switch" },
-        checkbox,
-        create("span", { className: "slider" })
-      )
-    );
-  }
-
-export function ModeToggle(root) {
-  const checkbox = create("input", {
-    type: "checkbox",
-    className: "mode-toggle-checkbox"
-  });
-
-  const box = create("div", { className: "toggle-wrapper" },
-    create("label", { className: "switch" },
-      checkbox,
-      create("span", { className: "slider" })
-    )
-  );
-
+  const checkbox = create("input", {type: "checkbox", id: "toggle-pips-vpips" });
   checkbox.addEventListener("change", () => {
     $$(".pivot", root).forEach(e => {
       e.classList.toggle("pips-mode");
       e.classList.toggle("vpips-mode");
     });
-
-    $$(".value", root).forEach(e => {
-      e.classList.toggle("hidden");
-    });
+    $$(".value", root).forEach(e => e.classList.toggle("hidden"));
   });
 
-  return box;
+  return create("div", { className: "toggle-wrapper" },
+    create("label", { className: "switch" },
+      checkbox,
+      create("span", { className: "slider" })
+    )
+  );
 }

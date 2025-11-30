@@ -1,6 +1,6 @@
 import { $, $$, create } from "../helpers/template.js";
-import * as CR from "../helpers/chart_builder.js";
-import * as FM from "../helpers/converter.js";
+import * as FM           from "../helpers/converter.js";
+import * as CR           from "../helpers/chart_builder.js";
 import { Tables, Cells, Toggler } from "../helpers/table_builder.js";
 
 export class ViewStatistics {
@@ -16,16 +16,14 @@ export class ViewStatistics {
       this.renderMonthly(data.period.accum);
       this.renderProps(data.period.prop);
       this.renderDD(data.ddown);
-      log(data.streak);
+      this.renderStreak(data.streak);
+      logJson(data.streak);
 
       CR.renderPairsChart(data.symbols);
       CR.renderEquityChart(data.equity);
     });
   }
 
-  // ======================================================
-  // GENERAL TABLE
-  // ======================================================
   renderGeneral(stats) {
     const container = $("#general-container");
     const b = new Tables(container).setId("general-table");
@@ -47,6 +45,7 @@ export class ViewStatistics {
     b.header(header).rows(rows).build();
     container.prepend(Toggler(container));
   }
+
   renderMonthly(stats) {
     const MONTHS = ['01','02','03','04','05','06','07','08','09','10','11','12'];
     const HEADER = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Total"];
@@ -81,6 +80,7 @@ export class ViewStatistics {
     b.header(header).rows(rows).build();
     container.prepend(Toggler(container));
   }
+
   renderProps(stats) {
     const container = $("#prop-container");
     const b = new Tables(container).setId("props-table");
@@ -113,16 +113,13 @@ export class ViewStatistics {
     b.header(header).rows(rows).build();
     container.prepend(Toggler(container));
   }
+
   renderDD(stats) {
     const container = $("#drawdown-container");
     container.innerHTML = "";
   
     // --- SUMMARY TABLE ---
     const summ = new Tables(container).setId("dd-summary");
-    const headerSum = [
-      Cells.headCell("Metrics", "pivot pivot-xy pips-mode"),
-      Cells.headCell("Value", "pivot pivot-x pips-mode")
-    ];
     const rowSum = Object.keys(stats)
       .filter(key => key !== "events")
       .map(prop => ([
@@ -131,10 +128,9 @@ export class ViewStatistics {
       ]));
     summ.rows(rowSum).build();
   
+    // --- EVENTS TABLE ---
     const wrap = create("div", { className: "dd-events-group" });
     container.append(wrap);
-    
-    // --- EVENTS TABLE ---
     const evTable = new Tables(wrap).setId("dd-events");
     const headerEvents = [
       Cells.headCell("#", "pivot pivot-xy pips-mode"),
@@ -158,6 +154,11 @@ export class ViewStatistics {
     evTable.header(headerEvents).rows(rowEvents).build();
     container.prepend(Toggler(container));
   }
+  
+  renderStreak(stats) {
+    
+  }
+  
 
 }
 

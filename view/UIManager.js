@@ -10,8 +10,37 @@ export class UIManager {
 		
 		this.initSample();
 		this.initExport();
-		
 	}
+
+  initTab() {
+    const root = $('#app');
+    const groups = root.querySelectorAll('.tab-group');
+    groups.forEach(group => {
+      const safeQuery = (sel) => {
+        try { return group.querySelectorAll(sel); }
+        catch { return [...group.querySelectorAll(sel.replace(':scope > ', ''))]
+          .filter(el => el.closest('.tab-group') === group); }
+      };
+  
+      const btns = safeQuery(':scope > .tabs > .tab-button, :scope > .tab-button');
+      const contents = safeQuery(':scope > .tab-content');
+  
+      const show = (btn) => {
+        if (!btn) return;
+        const id = btn.dataset.tab;
+        btns.forEach(b => b.classList.toggle('active', b === btn));
+        contents.forEach(c => c.classList.toggle('active', c.id === id));
+      };
+  
+      group.addEventListener('click', e => {
+        const btn = e.target.closest('.tab-button');
+        if (btn && btn.closest('.tab-group') === group) show(btn);
+      });
+  
+      show([...btns].find(b => b.classList.contains('active')) || btns[0]);
+    });
+  }
+	
 	initAccordion() {
     $$('.accordion-header').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -128,36 +157,6 @@ export class UIManager {
 				.catch(() => this.notif.error('Copy failed'));
 		});
 	}
-	
-  initTab() {
-    const root = $('#app');
-    const groups = root.querySelectorAll('.tab-group');
-    groups.forEach(group => {
-      const safeQuery = (sel) => {
-        try { return group.querySelectorAll(sel); }
-        catch { return [...group.querySelectorAll(sel.replace(':scope > ', ''))]
-          .filter(el => el.closest('.tab-group') === group); }
-      };
-  
-      const btns = safeQuery(':scope > .tabs > .tab-button, :scope > .tab-button');
-      const contents = safeQuery(':scope > .tab-content');
-  
-      const show = (btn) => {
-        if (!btn) return;
-        const id = btn.dataset.tab;
-        btns.forEach(b => b.classList.toggle('active', b === btn));
-        contents.forEach(c => c.classList.toggle('active', c.id === id));
-      };
-  
-      group.addEventListener('click', e => {
-        const btn = e.target.closest('.tab-button');
-        if (btn && btn.closest('.tab-group') === group) show(btn);
-      });
-  
-      show([...btns].find(b => b.classList.contains('active')) || btns[0]);
-    });
-  }
-
 	
 }
 

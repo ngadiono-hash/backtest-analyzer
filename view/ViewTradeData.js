@@ -1,11 +1,10 @@
-// ~/view/TableData.js
+
 import { $, $$, create } from "../helpers/template.js";
-import * as FM from "../helpers/converter.js";
+import * as FM           from "../helpers/converter.js";
 const HEADERS = ['pair', 'type', 'dateEN', 'dateEX', 'priceEN', 'priceTP', 'priceSL', 'result'];
 
-export class ViewData {
-	constructor(data) {
-		this.data = data;
+export class ViewTradeData {
+	constructor() {
 		this.container = $('#trade-table-container');
 		this.editingCell = null;
 		this.renderSkeleton();

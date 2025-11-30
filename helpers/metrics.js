@@ -56,16 +56,16 @@ export function computePips(trade = {}, pair = '') {
   };
 }
 
-export function computeStreaks(trades, MIN_STREAK = 2) {
+export function computeStreaks(data, MIN_STREAK = 2) {
 
-  const consProfit = {}, consLoss = {}, exactProfit = {}, exactLoss = {}, details = [];
+  const consecutiveProfit = {}, consecutiveLoss = {}, exactProfit = {}, exactLoss = {}, details = [];
   let currentLength = 0, currentType = null
 
   const endStreak = (endIndex) => {
     if (currentLength < MIN_STREAK) return;
 
     const isWin = currentType === 'win';
-    const cons = isWin ? consProfit : consLoss;
+    const cons = isWin ? consecutiveProfit : consecutiveLoss;
     const exact = isWin ? exactProfit : exactLoss;
 
     for (let len = MIN_STREAK; len <= currentLength; len++) {
@@ -81,12 +81,12 @@ export function computeStreaks(trades, MIN_STREAK = 2) {
       length: currentLength,
       startIndex,
       endIndex,
-      trades: trades.slice(startIndex, endIndex + 1)
+      trades: data.slice(startIndex, endIndex + 1)
     });
   };
 
-  for (let i = 0; i < trades.length; i++) {
-    const t = trades[i];
+  for (let i = 0; i < data.length; i++) {
+    const t = data[i];
     const isWin = t.isWin;
 
     if (currentLength === 0) {
@@ -108,14 +108,14 @@ export function computeStreaks(trades, MIN_STREAK = 2) {
     }
   }
   // Akhiri streak terakhir (running streak)
-  if (currentLength >= MIN_STREAK) endStreak(trades.length - 1);
+  if (currentLength >= MIN_STREAK) endStreak(data.length - 1);
 
-  const longestWin = Math.max(0, ...Object.keys(consProfit).map(Number));
-  const longestLoss = Math.max(0, ...Object.keys(consLoss).map(Number));
+  const longestWin = Math.max(0, ...Object.keys(consecutiveProfit).map(Number));
+  const longestLoss = Math.max(0, ...Object.keys(consecutiveLoss).map(Number));
 
   return {
-    consProfit,
-    consLoss,
+    consecutiveProfit,
+    consecutiveLoss,
     exactProfit,
     exactLoss,
     details,
