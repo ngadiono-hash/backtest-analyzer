@@ -20,50 +20,6 @@ export class UIManager {
       });
     });
 	}
-	
-	nitSample() {
-		const selectEl = $('#sample-select');
-		const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-		let lastValue = null;
-		const processSelection = async () => {
-			const selected = Array.from(selectEl.selectedOptions).filter(opt => opt.value); // pastikan ada value
-			if (!selected.length) {
-				this.notif.info('No sample selected');
-				this.data.clear();
-				return;
-			}
-			
-			const names = selected.map(opt => opt.value);
-			const currentValue = names.join(',');
-			if (currentValue === lastValue) return;
-			lastValue = currentValue;
-			let mergedText = '';
-			try {
-				for (const name of names) {
-					const path = `./sample/${name}.csv`;
-					const res = await fetch(path);
-					if (!res.ok) {
-						return this.notif.error(`File not found: ${path}`);
-					} else {
-					  const text = await res.text();
-					  mergedText += text.trim() + '\n';
-				    this.data.renderFile(mergedText, names.join('-'));
-				    this.notif.success(`Sample ${names.join('-')} loaded`);
-					}
-				}
-				
-			} catch (err) {
-				this.notif.error(err.message);
-			}
-			const delay = isMobile ? 200 : 0;
-			setTimeout(() => {
-				selectEl.blur();
-			}, delay);
-		};
-		
-		_on(selectEl, 'change', processSelection);
-		if (selectEl.selectedOptions.length > 0) setTimeout(processSelection, 0);
-	}
 
   initSample() {
     const selectEl = $('#sample-select');

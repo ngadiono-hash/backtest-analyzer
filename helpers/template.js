@@ -4,10 +4,27 @@ export const $$ = (selector, context = document) => Array.from(context.querySele
 
 export const create = (tag, props = {}, ...children) => {
   const el = document.createElement(tag);
-  Object.assign(el, props);
+
+  for (const key in props) {
+    const val = props[key];
+
+    if (key === "dataset") {
+      // assign dataset satu per satu
+      for (const d in val) el.dataset[d] = val[d];
+    }
+    else if (key === "style" && typeof val === "object") {
+      // style object (optional)
+      Object.assign(el.style, val);
+    }
+    else {
+      // fallback property biasa
+      el[key] = val;
+    }
+  }
+
   el.append(...children);
   return el;
-}
+};
 
 export const _on = (el, event, handler, options) => {
   if (el instanceof NodeList || Array.isArray(el)) {

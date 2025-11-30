@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>BacktestTool</title>
+	<title>Backtest Analyzer</title>
 	<link rel="stylesheet" href="style.css">
 </head>
 
@@ -13,8 +13,8 @@
 		<div class="tab-group">
 			<div class="tabs">
 				<button class="tab-button" data-tab="list-trade">List Trades</button>
+				<button class="tab-button active" data-tab="stats-trade">Statistics</button>
 				<select id="sample-select" size="1" multiple>
-					<option value="">NONE</option>
 					<option value="EURJPY">EURJPY</option>
 					<option value="EURUSD">EURUSD</option>
 					<option value="GBPJPY">GBPJPY</option>
@@ -24,14 +24,10 @@
 					<!-- <option value="ERROR">ERROR</option> -->
 					<!-- <option value="UJISTAT" selected>STAT</option> -->
 				</select>
-				<button class="tab-button active" data-tab="stats-trade">Statistics</button>
 			</div>
 			
 			<div class="tab-content" id="list-trade">
-				<div class="controller">
-					<button id="export-btn" disabled>Copy</button>
-				</div>
-				
+				<button id="export-btn" disabled>Copy</button>
 				<div id="status-area"></div>
 				<div class="table-wrapper" id="trade-table-container"></div>
 			</div>
@@ -74,13 +70,13 @@
 					<div id="performance" class="tab-content">
 						<div class="accordion">
 							<div class="accordion-item">
-								<button class="accordion-header" data-target="#general-stats">General Statistics</button>
+								<button class="accordion-header" data-target="#general-stats">General</button>
 								<div class="accordion-content open" id="general-stats">
 									<div class="table-wrapper" id="general-container"></div>
 								</div>
 							</div>
 							<div class="accordion-item">
-								<button class="accordion-header" data-target="#streak-stats">Streak Statistics</button>
+								<button class="accordion-header" data-target="#streak-stats">Streaks</button>
 								<div class="accordion-content open" id="streak-stats">
 									<div class="table-wrapper" id="streak-container">
 									  <!-- DI SINI RENCANA AREA KERJANYA -->
@@ -88,7 +84,7 @@
 								</div>
 							</div>
 							<div class="accordion-item">
-								<button class="accordion-header" data-target="#drawdown-stats">Drawdown Statistics</button>
+								<button class="accordion-header" data-target="#drawdown-stats">Drawdown</button>
 								<div class="accordion-content open" id="drawdown-stats">
 									<div class="table-wrapper" id="drawdown-container"></div>
 								</div>
@@ -105,7 +101,7 @@
 								</div>
 							</div>
 						  <div class="accordion-item">
-								<button class="accordion-header" data-target="#prop-period">Properties</button>
+								<button class="accordion-header" data-target="#prop-period">Summaries</button>
 								<div class="accordion-content open" id="prop-period">
 									<div class="table-wrapper" id="prop-container"></div>
 								</div>
@@ -121,11 +117,10 @@
 	</main>
 	<div id="notify-area"></div>
 	<script src="/cdn/chart.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
-	<!-- <script src="/cdn/chartjs-plugin-crosshair.min.js"></script> -->
-	<script src="/cdn/eruda.min.js"></script>
+	<script src="/cdn/hammer.min.js"></script>
+	<script src="/cdn/chart-plugin-zoom.min.js"></script>
 	<script type="module" src="app.js"></script>
+	<script src="/cdn/eruda.min.js"></script>
 	<script src="debug.js"></script>
 </body>
 

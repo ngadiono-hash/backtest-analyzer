@@ -1,6 +1,6 @@
 // ~/helpers/chart_renderer.js
 import { $, $$ } from "../helpers/template.js";
-import * as FM from "../helpers/formatter.js";
+import * as FM from "../helpers/converter.js";
 
 window._charts = {};
 const equityContainer = $('#equity-chart-container');

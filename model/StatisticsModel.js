@@ -1,6 +1,6 @@
 // ~/model/StatisticsModel.js
 import * as HM from '../helpers/metrics.js';
-import * as HT from '../helpers/time.js';
+import * as FM from '../helpers/converter.js';
 
 export class StatisticsModel {
   constructor() {
@@ -8,7 +8,7 @@ export class StatisticsModel {
   }
   
   _setupEventListeners() {
-    window.addEventListener('tradedata-updated', e => {
+    window.addEventListener('data-updated', e => {
       if (e.detail.stats.total >= 50 && e.detail.stats.invalid === 0) {
         this.data = e.detail.trades;
         this.stats = this.build();
@@ -26,13 +26,13 @@ export class StatisticsModel {
       period: this._aggPeriod(rows),
       general: this._aggGeneral(rows),
       ddown: this._aggDrawdown(equity),
-      streaks: HM.computeStreaks(rows)
+      streak: HM.computeStreaks(rows)
     };
   }
 
   _normalizeTrade(t) {
     const { pair, type, result, dateEN, dateEX, priceEN, priceTP, priceSL } = t;
-    const [dEN, dEX] = [HT.dateISO(dateEN), HT.dateISO(dateEX)];
+    const [dEN, dEX] = [FM.dateISO(dateEN), FM.dateISO(dateEX)];
     const { pips, vpips } = HM.computePips(t, pair);
     const absP = Math.abs(pips), absV = Math.abs(vpips);
     const isWin = result === 'TP';
@@ -53,7 +53,7 @@ export class StatisticsModel {
       absV,
       netP: isWin ? absP : -absP,
       netV: isWin ? absV : -absV,
-      bars: HT.estimateBarsHeld(dEN, dEX),
+      bars: FM.estimateBarsHeld(dEN, dEX),
     };
   }
 
@@ -156,8 +156,6 @@ export class StatisticsModel {
   _aggDrawdown(curve) {
     const pips  = HM.computeDrawdown(curve.pips);
     const vpips = HM.computeDrawdown(curve.vpips);
-    log(pips.events.length)
-    log(vpips.events.length)
     const merged = {};
   
     const DRAW_TYPES = {

@@ -1,8 +1,7 @@
 import { $, $$, create } from "../helpers/template.js";
-
-import { Tables, Cells, Toggler, ModeToggle } from "../helpers/table_builder.js";
 import * as CR from "../helpers/chart_builder.js";
-import * as FM from "../helpers/formatter.js";
+import * as FM from "../helpers/converter.js";
+import { Tables, Cells, Toggler } from "../helpers/table_builder.js";
 
 export class ViewStatistics {
   constructor() {
@@ -17,8 +16,7 @@ export class ViewStatistics {
       this.renderMonthly(data.period.accum);
       this.renderProps(data.period.prop);
       this.renderDD(data.ddown);
-      //log(data.ddown);
-      //log(data.general)
+      log(data.streak);
 
       CR.renderPairsChart(data.symbols);
       CR.renderEquityChart(data.equity);
@@ -115,7 +113,6 @@ export class ViewStatistics {
     b.header(header).rows(rows).build();
     container.prepend(Toggler(container));
   }
-  
   renderDD(stats) {
     const container = $("#drawdown-container");
     container.innerHTML = "";
@@ -146,7 +143,6 @@ export class ViewStatistics {
       Cells.headCell("Trough", "pivot pivot-x pips-mode"),
       Cells.headCell("End", "pivot pivot-x pips-mode"),
       Cells.headCell("DD", "pivot pivot-x pips-mode"),
-      //Cells.headCell("%", "pivot pivot-x pips-mode"),
       Cells.headCell("Duration", "pivot pivot-x pips-mode"),
     ];
     const rowEvents = stats.events.map((e, i) => ([
@@ -156,7 +152,6 @@ export class ViewStatistics {
       Cells.pvCell(e.troughEquity),
       Cells.pvCell(e.recoveryDate),
       Cells.pvCell(e.absoluteDD),
-      //Cells.pvCell(e.percentageDD),
       Cells.pvCell(e.recoveryDuration),
     ]));
   

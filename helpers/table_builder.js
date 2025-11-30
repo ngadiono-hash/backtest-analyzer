@@ -1,5 +1,5 @@
 import { $, $$, create } from "./template.js";
-import * as FM from "./formatter.js";
+import * as FM from "./converter.js";
 
 export class Tables {
   constructor(container) {
