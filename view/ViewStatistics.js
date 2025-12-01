@@ -1,7 +1,8 @@
 import { $, $$, create } from "../helpers/template.js";
 import * as FM           from "../helpers/converter.js";
 import * as CR           from "../helpers/chart_builder.js";
-import { Tables, Cells, Toggler } from "../helpers/table_builder.js";
+// import { TB.Tables, TB.Cells, TB.Toggler } from "../helpers/table_builder.js";
+import * as TB from "../helpers/table_builder.js";
 
 export class ViewStatistics {
   constructor() {
@@ -17,7 +18,7 @@ export class ViewStatistics {
       this.renderProps(data.period.prop);
       this.renderDD(data.ddown);
       this.renderStreak(data.streak);
-      logJson(data.streak);
+      //log(data.streak);
 
       CR.renderPairsChart(data.symbols);
       CR.renderEquityChart(data.equity);
@@ -26,24 +27,24 @@ export class ViewStatistics {
 
   renderGeneral(stats) {
     const container = $("#general-container");
-    const b = new Tables(container).setId("general-table");
+    const b = new TB.Tables(container).setId("general-table");
 
     const header = [
       create("th", { className:"pivot pivot-xy pips-mode", textContent: "Metrics" }),
-      Cells.headCell("All", "pivot pivot-x pips-mode"),
-      Cells.headCell("Long", "pivot pivot-x pips-mode"),
-      Cells.headCell("Short", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("All", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("Long", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("Short", "pivot pivot-x pips-mode"),
     ];
 
     const rows = Object.keys(stats.a).map(m => ([
-      Cells.textCell(FM.toTitle(m), "pivot pivot-y pips-mode"),
-      Cells.pvCell(stats.a[m]),
-      Cells.pvCell(stats.l[m]),
-      Cells.pvCell(stats.s[m])
+      TB.Cells.textCell(FM.toTitle(m), "pivot pivot-y pips-mode"),
+      TB.Cells.pvCell(stats.a[m]),
+      TB.Cells.pvCell(stats.l[m]),
+      TB.Cells.pvCell(stats.s[m])
     ]));
 
     b.header(header).rows(rows).build();
-    container.prepend(Toggler(container));
+    container.prepend(TB.Toggler(container));
   }
 
   renderMonthly(stats) {
@@ -52,42 +53,42 @@ export class ViewStatistics {
 
     const years = [...new Set(Object.keys(stats.monthly).map(k => k.split("-")[0]))].sort();
     const container = $("#monthly-container");
-    const b = new Tables(container).setId("monthly-table");
+    const b = new TB.Tables(container).setId("monthly-table");
 
     const header = [
       create("th", { className:"pivot pivot-xy pips-mode", textContent: "Y/M" }),
-      ...HEADER.map(m => Cells.headCell(m, "pivot pivot-x pips-mode"))
+      ...HEADER.map(m => TB.Cells.headCell(m, "pivot pivot-x pips-mode"))
     ];
 
     const rows = years.map(year => {
       const monthCells = MONTHS.map(m => {
         const e = stats.monthly[`${year}-${m}`];
-        return Cells.pvCell(e, "N");
+        return TB.Cells.pvCell(e, "N");
       });
 
       return [
-        Cells.textCell(year, "pivot pivot-y pips-mode"),
+        TB.Cells.textCell(year, "pivot pivot-y pips-mode"),
         ...monthCells,
-        Cells.pvCell(stats.yearly[year], "N")
+        TB.Cells.pvCell(stats.yearly[year], "N")
       ];
     });
 
     rows.push([
       create("td", { colSpan: 13 }, "Grand Total"),
-      Cells.pvCell(stats.total, "N")
+      TB.Cells.pvCell(stats.total, "N")
     ]);
 
     b.header(header).rows(rows).build();
-    container.prepend(Toggler(container));
+    container.prepend(TB.Toggler(container));
   }
 
   renderProps(stats) {
     const container = $("#prop-container");
-    const b = new Tables(container).setId("props-table");
+    const b = new TB.Tables(container).setId("props-table");
 
     const header = [
-      Cells.headCell("Period", "pivot pivot-x pips-mode"),
-      Cells.headCell(stats.period, "pivot pivot-x pips-mode")
+      TB.Cells.headCell("Period", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell(stats.period, "pivot pivot-x pips-mode")
     ];
 
     const rows = [];
@@ -96,8 +97,8 @@ export class ViewStatistics {
 
     for (const [k,v] of Object.entries(stats.monthly)) {
       rows.push([
-        Cells.textCell(FM.toTitle(k), "pivot pivot-y pips-mode"),
-        Cells.pvCell(v)
+        TB.Cells.textCell(FM.toTitle(k), "pivot pivot-y pips-mode"),
+        TB.Cells.pvCell(v)
       ]);
     }
     rows.push([ create("td", { colSpan:2, className:"pivot sprt pips-mode" }, 
@@ -105,13 +106,13 @@ export class ViewStatistics {
 
     for (const [k,v] of Object.entries(stats.yearly)) {
       rows.push([
-        Cells.textCell(FM.toTitle(k), "pivot pivot-y pips-mode"),
-        Cells.pvCell(v)
+        TB.Cells.textCell(FM.toTitle(k), "pivot pivot-y pips-mode"),
+        TB.Cells.pvCell(v)
       ]);
     }
 
     b.header(header).rows(rows).build();
-    container.prepend(Toggler(container));
+    container.prepend(TB.Toggler(container));
   }
 
   renderDD(stats) {
@@ -119,47 +120,66 @@ export class ViewStatistics {
     container.innerHTML = "";
   
     // --- SUMMARY TABLE ---
-    const summ = new Tables(container).setId("dd-summary");
+    const summ = new TB.Tables(container).setId("dd-summary");
     const rowSum = Object.keys(stats)
       .filter(key => key !== "events")
       .map(prop => ([
-        Cells.textCell(FM.toTitle(prop), "pivot pivot-y pips-mode"),
-        Cells.pvCell(stats[prop]),
+        TB.Cells.textCell(FM.toTitle(prop), "pivot pivot-y pips-mode"),
+        TB.Cells.pvCell(stats[prop]),
       ]));
     summ.rows(rowSum).build();
   
     // --- EVENTS TABLE ---
     const wrap = create("div", { className: "dd-events-group" });
     container.append(wrap);
-    const evTable = new Tables(wrap).setId("dd-events");
+    const evTable = new TB.Tables(wrap).setId("dd-events");
     const headerEvents = [
-      Cells.headCell("#", "pivot pivot-xy pips-mode"),
-      Cells.headCell("Start", "pivot pivot-x pips-mode"),
-      Cells.headCell("Peak", "pivot pivot-x pips-mode"),
-      Cells.headCell("Trough", "pivot pivot-x pips-mode"),
-      Cells.headCell("End", "pivot pivot-x pips-mode"),
-      Cells.headCell("DD", "pivot pivot-x pips-mode"),
-      Cells.headCell("Duration", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("#", "pivot pivot-xy pips-mode"),
+      TB.Cells.headCell("Start", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("Peak", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("Trough", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("End", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("DD", "pivot pivot-x pips-mode"),
+      TB.Cells.headCell("Duration", "pivot pivot-x pips-mode"),
     ];
     const rowEvents = stats.events.map((e, i) => ([
-      Cells.textCell(String(i + 1), "pivot pivot-y pips-mode"),
-      Cells.pvCell(e.peakDate),
-      Cells.pvCell(e.peakEquity),
-      Cells.pvCell(e.troughEquity),
-      Cells.pvCell(e.recoveryDate),
-      Cells.pvCell(e.absoluteDD),
-      Cells.pvCell(e.recoveryDuration),
+      TB.Cells.textCell(String(i + 1), "pivot pivot-y pips-mode"),
+      TB.Cells.pvCell(e.peakDate),
+      TB.Cells.pvCell(e.peakEquity),
+      TB.Cells.pvCell(e.troughEquity),
+      TB.Cells.pvCell(e.recoveryDate),
+      TB.Cells.pvCell(e.absoluteDD),
+      TB.Cells.pvCell(e.recoveryDuration),
     ]));
   
     evTable.header(headerEvents).rows(rowEvents).build();
-    container.prepend(Toggler(container));
+    container.prepend(TB.Toggler(container));
   }
   
-  renderStreak(stats) {
-    
-  }
-  
+renderStreak(stats) {
+  const container = $("#streak-container");
+  container.innerHTML = "";
 
+  // Buat kontainer utama cards + detail sheet
+  const wrapper = create("div", { className: "streak-wrapper" });
+
+  // Build 2 cards
+  const profitCard = TB.buildCard("win", stats.win, "profit-card");
+  const lossCard   = TB.buildCard("lose", stats.lose, "loss-card");
+
+  // Build detail sheet container (kosong dulu)
+  const detailSheet = create("div", { className: `streak-detail-sheet hide` });
+
+  wrapper.append(profitCard, lossCard);
+  container.append(wrapper, detailSheet);
+
+  // Event listener tombol detail
+  wrapper.querySelectorAll(".streak-card button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const side = btn.dataset.side; // "profit" atau "loss"
+      TB.showDetailSheet(side, stats[side], detailSheet);
+    });
+  });
 }
 
-new ViewStatistics();
+}

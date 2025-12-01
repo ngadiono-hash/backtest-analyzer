@@ -10,6 +10,7 @@ export class App {
 		this.data = new TradeDataModel();
 		new ViewTradeData();
 		this.stat = new StatisticsModel();
+		new ViewStatistics();
 		new UIManager(this.data, this.stat);
 	}
 	

@@ -58,69 +58,73 @@ export function computePips(trade = {}, pair = '') {
 
 export function computeStreaks(data, MIN_STREAK = 2) {
 
-  const consecutiveProfit = {}, consecutiveLoss = {}, exactProfit = {}, exactLoss = {}, details = [];
-  let currentLength = 0, currentType = null
+  // Raw storage (internal)
+  const exactProfit = {};
+  const exactLoss = {};
 
+  const detailProfit = [];
+  const detailLoss  = [];
+
+  let currentLength = 0;
+  let currentType   = null; // "win" atau "loss"
+
+  // Akhiri streak
   const endStreak = (endIndex) => {
     if (currentLength < MIN_STREAK) return;
 
-    const isWin = currentType === 'win';
-    const cons = isWin ? consecutiveProfit : consecutiveLoss;
+    const isWin = currentType === "win";
     const exact = isWin ? exactProfit : exactLoss;
+    const dList = isWin ? detailProfit : detailLoss;
 
-    for (let len = MIN_STREAK; len <= currentLength; len++) {
-      cons[len] = (cons[len] || 0) + 1;
-    }
-
-    // Exact: hanya yang benar-benar berhenti di panjang ini
+    // Tambahkan ke exact count
     exact[currentLength] = (exact[currentLength] || 0) + 1;
 
+    // Catat detail
     const startIndex = endIndex - currentLength + 1;
-    details.push({
-      type: isWin ? 'Profit' : 'Loss',
+    const trades = data.slice(startIndex, endIndex + 1);
+
+    const totalPips = trades.reduce((sum, t) => sum + (t.pips || 0), 0);
+
+    dList.push({
       length: currentLength,
-      startIndex,
-      endIndex,
-      trades: data.slice(startIndex, endIndex + 1)
+      totalPips,
+      trades
     });
   };
 
+  // Loop utama
   for (let i = 0; i < data.length; i++) {
     const t = data[i];
     const isWin = t.isWin;
 
     if (currentLength === 0) {
-      // Mulai streak baru
-      currentType = isWin ? 'win' : 'loss';
+      currentType = isWin ? "win" : "loss";
       currentLength = 1;
-    } else if (
-      (currentType === 'win' && isWin) ||
-      (currentType === 'loss' && !isWin)
-    ) {
-      // Lanjutkan streak yang sama
+    } else if ((currentType === "win" && isWin) ||
+               (currentType === "loss" && !isWin)) {
       currentLength++;
     } else {
-      // Streak putus → akhiri yang lama
+      // streak putus
       endStreak(i - 1);
-      // Mulai streak baru dari trade ini
-      currentType = isWin ? 'win' : 'loss';
+
+      currentType = isWin ? "win" : "loss";
       currentLength = 1;
     }
   }
-  // Akhiri streak terakhir (running streak)
-  if (currentLength >= MIN_STREAK) endStreak(data.length - 1);
 
-  const longestWin = Math.max(0, ...Object.keys(consecutiveProfit).map(Number));
-  const longestLoss = Math.max(0, ...Object.keys(consecutiveLoss).map(Number));
+  // Akhiri streak terakhir
+  endStreak(data.length - 1);
 
+  // --- Return versi sederhana & sinkron untuk view ---
   return {
-    consecutiveProfit,
-    consecutiveLoss,
-    exactProfit,
-    exactLoss,
-    details,
-    longestWin,
-    longestLoss
+    win: {
+      exact:   exactProfit,   // Example: {2:4, 3:2, 6:1}
+      details: detailProfit   // Semua detail streak profit
+    },
+    lose: {
+      exact:   exactLoss,
+      details: detailLoss
+    }
   };
 }
 
