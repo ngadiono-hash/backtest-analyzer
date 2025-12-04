@@ -12,47 +12,63 @@ export class StatisticsModel {
       if (e.detail.stats.total >= 50 && e.detail.stats.invalid === 0) {
         this.data = e.detail.trades;
         this.stats = this.build();
+        //log(this.stats.monthly)
         this._dispatchUpdate();
       }
     });
   }
 
   build() {
-    const rows = this._scanTrades(this.data);
-    const equity = this._aggEquity(rows);
+    const trades = this._scanTrades(this.data);
+    const curve = this.getDataCurve(trades);
     return {
-      equity,
-      symbols: this._aggSymbols(rows),
-      period: this._aggPeriod(rows),
-      general: this._aggGeneral(rows),
-      ddown: this._aggDrawdown(equity),
-      streak: HM.computeStreaks(rows)
+      curve,
+      symbols: this.getDataSymbols(trades),
+      period: this.getDataPeriod(trades),
+      general: this.getDataGeneral(trades),
+      ddown: this.getDataDrawdown(curve),
+      monthly: this.getDataMonthly(trades),
+      yearly: this.getDataYearly(trades),
+      streak: HM.computeStreaks(trades)
     };
   }
 
   _normalizeTrade(t) {
     const { pair, type, result, dateEN, dateEX, priceEN, priceTP, priceSL } = t;
-    const [dEN, dEX] = [FM.dateISO(dateEN), FM.dateISO(dateEX)];
-    const { pips, vpips } = HM.computePips(t, pair);
-    const absP = Math.abs(pips), absV = Math.abs(vpips);
+  
+    const dEN = FM.dateISO(dateEN);
+    const dEX = FM.dateISO(dateEX);
+  
+    // compute absolute potentials (TP/SL) & their value equivalents
+    const { pTP, pSL, vTP, vSL } = HM.computePips(t, pair);
+  
     const isWin = result === 'TP';
+    const isLong = type === 'Buy';
+  
+    // --- realized results ---
+    const pips  = isWin ? pTP : pSL;
+    const vpips = isWin ? vTP : vSL;
   
     return {
       pair,
       isWin,
-      isLong: type === 'Buy',
+      isLong,
+  
       dateEN: dEN,
       dateEX: dEX,
-      month: `${dEN.getFullYear()}-${String(dEN.getMonth()+1).padStart(2,'0')}`,
+      month: `${dEN.getFullYear()}-${String(dEN.getMonth() + 1).padStart(2, '0')}`,
+  
       priceEN: +priceEN,
       priceTP: +priceTP,
       priceSL: +priceSL,
-      pips: +pips,
-      vpips: +vpips,
-      // absP,
-      // absV,
-      // netP: isWin ? absP : -absP,
-      // netV: isWin ? absV : -absV,
+      
+      pTP,
+      pSL,
+      vTP,
+      vSL,
+      pips,
+      vpips,
+  
       bars: FM.estimateBarsHeld(dEN, dEX),
     };
   }
@@ -63,10 +79,10 @@ export class StatisticsModel {
       .sort((a, b) => a.dateEX - b.dateEX);
   }
 
-  _aggSymbols(rows) {
+  getDataSymbols(trades) {
     const map = {};
 
-    for (const r of rows) {
+    for (const r of trades) {
       if (!map[r.pair]) {
         map[r.pair] = { pair: r.pair, pips: 0, vpips: 0 };
       }
@@ -77,7 +93,7 @@ export class StatisticsModel {
     return Object.values(map);
   }
 
-  _aggPeriod(trades) {
+  getDataPeriod(trades) {
     const monthly = {};
     const yearly = {};
     const total = { p: 0, v: 0 };
@@ -123,12 +139,12 @@ export class StatisticsModel {
     };
   }
 
-  _aggEquity(rows) {
+  getDataCurve(trades) {
     let cumP = 0, cumV = 0;
     const p = [];
     const v = [];
   
-    for (const { pair, isLong, dateEX, pips, vpips } of rows) {
+    for (const { pair, isLong, dateEX, pips, vpips } of trades) {
   
       cumP += pips;
       cumV += vpips;
@@ -153,7 +169,7 @@ export class StatisticsModel {
     return { p, v };
   }
 
-  _aggDrawdown(curve) {
+  getDataDrawdown(curve) {
     const pips  = HM.computeDrawdown(curve.p);
     const vpips = HM.computeDrawdown(curve.v);
     const merged = {};
@@ -215,14 +231,14 @@ export class StatisticsModel {
     return merged;
   }
 
-  _aggGeneral(rows) {
+  getDataGeneral(trades) {
     const cats = {
       a: { winP: [], winV: [], lossP: [], lossV: [], hold: [] },
       l: { winP: [], winV: [], lossP: [], lossV: [], hold: [] },
       s: { winP: [], winV: [], lossP: [], lossV: [], hold: [] }
     };
     
-    for (const r of rows) {
+    for (const r of trades) {
       const target = r.isLong ? cats.l : cats.s;
       const groups = [cats.a, target];
   
@@ -290,7 +306,114 @@ export class StatisticsModel {
       s: build(cats.s)
     };
   }
-  
+
+getDataYearly(trades) {
+  const yearMap = {};
+
+  for (const t of trades) {
+    if (!yearMap[t.year]) yearMap[t.year] = [];
+    yearMap[t.year].push(t);
+  }
+
+  const result = {};
+
+  for (const y in yearMap) {
+    const list = yearMap[y];
+
+    let totalTrades = list.length;
+    let netPips = 0;
+    let netVPips = 0;
+
+    for (const t of list) {
+      netPips += t.pips;
+      netVPips += t.vpips;
+    }
+
+    result[y] = {
+      totalTrades,
+      netPips,
+      netVPips,
+      avgPips: totalTrades ? (netPips / totalTrades) : 0,
+      avgVPips: totalTrades ? (netVPips / totalTrades) : 0
+    };
+  }
+
+  return result;
+}
+
+getDataMonthly(trades) {
+  const result = {};
+
+  const monthMap = {};
+  for (const t of trades) {
+    if (!monthMap[t.month]) monthMap[t.month] = [];
+    monthMap[t.month].push(t);
+  }
+
+  for (const month in monthMap) {
+    const list = monthMap[month];
+
+    const equity = this.getDataCurve(list);
+
+    const pairMap = {};
+    for (const t of list) {
+      if (!pairMap[t.pair]) pairMap[t.pair] = [];
+      pairMap[t.pair].push(t);
+    }
+
+    const byPair = {};
+    for (const p in pairMap) {
+      byPair[p] = this.getDataCurve(pairMap[p]);
+    }
+
+    let totalTrades = list.length;
+    let wins = 0;
+    let netPips = 0;
+    let netVPips = 0;
+
+    let bestPair = null, worstPair = null;
+    let bestVal = -Infinity, worstVal = Infinity;
+
+    for (const t of list) {
+      if (t.isWin) wins++;
+      netPips += t.pips;
+      netVPips += t.vpips;
+    }
+
+    for (const pair in byPair) {
+      const eq = byPair[pair].p.at(-1)?.equity ?? 0;
+
+      if (eq > bestVal) {
+        bestVal = eq;
+        bestPair = pair;
+      }
+      if (eq < worstVal) {
+        worstVal = eq;
+        worstPair = pair;
+      }
+    }
+
+    result[month] = {
+      equity,
+      pairs: Object.keys(pairMap),
+      byPair,
+
+      summary: {
+        totalTrades,
+        winRate: totalTrades ? (wins / totalTrades * 100).toFixed(1) : 0,
+        netPips,
+        netVPips,
+        avgPips: totalTrades ? netPips / totalTrades : 0,
+        avgVPips: totalTrades ? netVPips / totalTrades : 0,
+        bestPair,
+        worstPair,
+      }
+    };
+  }
+
+  return result;
+}
+
   _dispatchUpdate() {
     window.dispatchEvent(new CustomEvent('statistics-updated', {
       detail: { data: this.stats }

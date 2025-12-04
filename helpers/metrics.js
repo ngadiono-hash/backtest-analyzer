@@ -35,7 +35,7 @@ export function stDev(arr) {
   return Math.sqrt(variance);
 }
 
-export function computePips(trade = {}, pair = '') {
+export function omputePips(trade = {}, pair = '') {
   const { priceEN, priceTP, priceSL, result, type } = trade;
   
   const en = +priceEN;
@@ -51,8 +51,45 @@ export function computePips(trade = {}, pair = '') {
   const pips = diff * factor;
   
   return {
+    TP,
+    SL,
     pips,
     vpips: pips * pairsMap[pair].mul
+  };
+}
+
+export function computePips(trade = {}, pair = '') {
+  const { priceEN, priceTP, priceSL, type } = trade;
+  
+  const en = +priceEN;
+  const tp = +priceTP;
+  const sl = +priceSL;
+
+  const factor =
+    pair.endsWith('JPY') ? 100 :
+    pair === 'XAUUSD' ? 10 :
+    10000;
+
+  const mul = pairsMap[pair].mul;
+
+  // --- raw pips (pos/neg sesuai Buy/Sell)
+  const rawTP = type === 'Buy' ? (tp - en) * factor : (en - tp) * factor;
+  const rawSL = type === 'Buy' ? (sl - en) * factor : (en - sl) * factor;
+
+  // --- standarisasi:
+  // pTP selalu positif, pSL selalu negatif
+  const pTP = Math.abs(rawTP);
+  const pSL = -Math.abs(rawSL);
+
+  // --- nilai ter-multiply (value pips)
+  const vTP = pTP * mul;
+  const vSL = pSL * mul;
+
+  return {
+    pTP, // selalu positif
+    pSL, // selalu negatif
+    vTP,
+    vSL
   };
 }
 
@@ -84,10 +121,12 @@ export function computeStreaks(data, MIN_STREAK = 2) {
     const trades = data.slice(startIndex, endIndex + 1);
 
     const totalPips = trades.reduce((sum, t) => sum + (t.pips || 0), 0);
+    const totalVPips = trades.reduce((sum, t) => sum + (t.vpips || 0), 0);
 
     dList.push({
       length: currentLength,
       totalPips,
+      totalVPips,
       trades
     });
   };

@@ -59,23 +59,23 @@ export class Cells {
     const v = FM.metricFormat(obj.v, type);
 
     return create("td", {},
-      create("span", { className: `value ${p.css}` }, p.txt),
-      create("span", { className: `value hidden ${v.css}` }, v.txt)
+      create("span", { class: `value ${p.css}` }, p.txt),
+      create("span", { class: `value hidden ${v.css}` }, v.txt)
     );
   }
 
-  static textCell(txt, className = "") {
-    return create("td", { className }, txt);
+  static textCell(txt, cls = "") {
+    return create("td", { class: cls }, txt);
   }
 
-  static headCell(txt, className = "") {
-    return create("th", { className }, txt);
+  static headCell(txt, cls = "") {
+    return create("th", { class: cls }, txt);
   }
   
 }
 
 export function Toggler(root) {
-  const checkbox = create("input", {type: "checkbox", id: "toggle-pips-vpips" });
+  const checkbox = create("input", { type: "checkbox", id: "toggle-pips-vpips" });
   checkbox.addEventListener("change", () => {
     $$(".pivot", root).forEach(e => {
       e.classList.toggle("pips-mode");
@@ -84,44 +84,46 @@ export function Toggler(root) {
     $$(".value", root).forEach(e => e.classList.toggle("hidden"));
   });
 
-  return create("div", { className: "toggle-wrapper" },
-    create("label", { className: "switch" },
+  return create("div", { class: "toggle-wrapper" },
+    create("label", { class: "switch" },
       checkbox,
-      create("span", { className: "slider" })
+      create("span", { class: "slider" })
     )
   );
 }
 
 
 export function buildCard(side, data, className) {
-  log(side)
   const exactKeys = Object.keys(data.exact).map(Number);
   const longest = exactKeys.length ? Math.max(...exactKeys) : 0;
-
-  // Total pips hanya streak dengan panjang = longest
-  const totalPips = data.details
+  const totalP = data.details
     .filter(d => d.length === longest)
     .reduce((s, d) => s + d.totalPips, 0);
+  const totalV = data.details
+    .filter(d => d.length === longest)
+    .reduce((s, d) => s + d.totalVPips, 0);
 
-  return create("div", { className: `streak-card ${className}` },
+  return create("div", { className: `streak-card ${className}`, dataset: {side: `${side}`} },
 
     create("div", { className: "card-title" },
-      `${capitalize(side)} Streak`
+      `${FM.capitalize(side)} Streak`
     ),
 
     create("div", { className: "card-line" },
-      create("span", { textContent: "Longest Streak" }),
+      create("span", { textContent: "Longest" }),
       create("span", { textContent: `${longest}x` })
     ),
 
     create("div", { className: "card-line" },
-      create("span", { textContent: "Total Net" }),
-      create("span", { textContent: `${FM.num(totalPips)}` })
+      create("span", { textContent: "Pips" }),
+      create("span", { textContent: `${FM.num(totalP)}` })
+    ),
+    
+    create("div", { className: "card-line" },
+      create("span", { textContent: "Value Pips" }),
+      create("span", { textContent: `${FM.num(totalV)}` })
     ),
 
-    create("button", { className: "detail-btn", dataset: { side } },
-      "Show Detail"
-    )
   );
 }
 
@@ -140,27 +142,34 @@ export function showDetailSheet(side, data, container) {
     const list = data.details.filter(d => d.length === length);
     const totalPips = list.reduce((s, d) => s + d.totalPips, 0);
 
-    return buildAccordionSection(length, count, totalPips, list);
+    return buildAccordion(side, length, count, list);
   });
 
   container.append(...sections);
 }
 
-function buildAccordionSection(length, count, totalPips, streakList) {
+function buildAccordion(side, length, count, streakList) {
+  const getMaxNet = (streak, p = true) => {
+    return Math.max(...streak.map(s => p ? s.totalPips : s.totalVPips));
+  }
+  let pp = FM.metricFormat(getMaxNet(streakList), "R");
+  let pv = FM.metricFormat(getMaxNet(streakList, false), "R");
   const header = create("div", { className: "acc-header" },
-    create("span", {}, `#${length} Streak`),
-    create("span", {}, `${count}x`),
-    create("span", {}, FM.num(totalPips))
+    create("div", { className: "row" },
+    create("div", { className: "cell txt-l" }, `#${length} Streak`),
+    create("div", { className: "cell txt-c" }, `${count}x`),
+    create("div", { className: "cell txt-r" },
+      create("span", { className: `value ${pp.css}` }, pp.txt),
+      create("span", { className: `value hidden ${pv.css}` }, pv.txt),
+    ))
   );
-
   const body = create("div", { className: "acc-body hide" });
-
   streakList.forEach((streak, i) => {
     const box = create("div", { className: "streak-box" },
       create("div", { className: "streak-subtitle" },
-        `Detail #${i + 1}`
+        `Detail # ${i + 1}`
       ),
-      buildTradesTable(streak.trades)
+      buildTradesTable(side, streak.trades)
     );
     body.append(box);
   });
@@ -177,28 +186,42 @@ function buildAccordionSection(length, count, totalPips, streakList) {
   return section;
 }
 
-function buildTradesTable(trades) {
+
+function bildTradesTable(side, trades) {
   const table = create("table", { className: "streak-detail-table" });
+
+  const col = side === "win" ? "Limit" : "Target";
 
   const thead = create("thead", {},
     create("tr", {},
-      ...["#", "Pair", "Type", "Date EN", "Date EX", "Pips"].map(h =>
-        create("th", {}, h)
-      )
+      ...["#", "Pair", "Type", "EN Price", "EX Date", col, "Realized"]
+        .map(h => Cells.headCell(h))
     )
   );
 
   const tbody = create("tbody");
 
   trades.forEach((t, i) => {
+
+    // limit/target value pairs (pakai logika asli — tidak diubah)
+    const limitObj = side === "win"
+      ? { p: t.pSL, v: t.vSL, t: "" }
+      : { p: t.pTP, v: t.vTP, t: "" };
+
+    // realized pips
+    const realizedObj = { p: t.pips, v: t.vpips, t: "R" };
+
     const row = create("tr", {},
-      create("td", {}, i + 1),
-      create("td", {}, t.pair),
-      create("td", {}, t.isLong ? "Long" : "Short"),
-      create("td", {}, FM.dateDMY(t.dateEN)),
-      create("td", {}, FM.dateDMY(t.dateEX)),
-      create("td", {}, FM.num(t.pips, 1))
+      Cells.textCell(i + 1),
+      Cells.textCell(t.pair),
+      Cells.textCell(t.isLong ? "Long" : "Short"),
+      Cells.textCell(FM.formatPrice(t.pair, t.priceEN)),
+      Cells.textCell(FM.dateDMY(t.dateEX)),
+
+      Cells.pvCell(limitObj),    // <-- jauh lebih rapi
+      Cells.pvCell(realizedObj)  // <-- cukup sekali
     );
+
     tbody.append(row);
   });
 
@@ -206,6 +229,63 @@ function buildTradesTable(trades) {
   return table;
 }
 
-function capitalize(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+function buildTradesTable(side, trades) {
+  const table = create("table", { className: "streak-detail-table" });
+
+  const col = side === "win" ? "Limit" : "Target";
+
+  const thead = create("thead", {},
+    create("tr", {},
+      ...["#", "Pair", "Type", "EN Price", "EX Date", col, "Realized"]
+        .map(h => Cells.headCell(h))
+    )
+  );
+
+  const tbody = create("tbody");
+
+  // -------------------------
+  // MAIN ROWS
+  // -------------------------
+  trades.forEach((t, i) => {
+
+    const limitObj = side === "win"
+      ? { p: t.pSL, v: t.vSL, t: null }
+      : { p: t.pTP, v: t.vTP, t: null };
+
+    const realizedObj = { p: t.pips, v: t.vpips, t: "R" };
+
+    const row = create("tr", {},
+      Cells.textCell(i + 1),
+      Cells.textCell(t.pair),
+      Cells.textCell(t.isLong ? "Long" : "Short"),
+      Cells.textCell(FM.formatPrice(t.pair, t.priceEN)),
+      Cells.textCell(FM.dateDMY(t.dateEX)),
+      Cells.pvCell(limitObj),
+      Cells.pvCell(realizedObj)
+    );
+
+    tbody.append(row);
+  });
+
+  // -------------------------
+  // FOOTER TOTAL ROW
+  // -------------------------
+  const totalP = trades.reduce((a, t) => a + (t.pips ?? 0), 0);
+  const totalV = trades.reduce((a, t) => a + (t.vpips ?? 0), 0);
+  
+  const totalObj = { p: totalP, v: totalV, t: "R" };
+  
+  const totalRow = create("tr", { className: "total-row" },
+  
+    // kolom concatenated
+    create("td", { colSpan: 6, className: "no-border" }, "."),
+  
+    // kolom Realized
+    Cells.pvCell(totalObj)
+  );
+
+  tbody.append(totalRow);
+
+  table.append(thead, tbody);
+  return table;
 }

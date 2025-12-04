@@ -1,9 +1,23 @@
 // ~/helpers/chart_renderer.js
-import { $, $$ } from "../helpers/template.js";
+import { $, $$, create } from "../helpers/template.js";
 import * as FM from "../helpers/converter.js";
 
 window._charts = {};
+const overView = $("#overview");
+const c = create("div", { className: "chart-wrapper", id: "equity-chart-container" },
+    create("canvas", { id: `equity-chart` }),
+    create("div", { className: "resizer"}));
+const d = create("div", { className: "chart-container" },
+    create("canvas", { id: `pairs-chart` }));
+overView.append(c, d);
+
+const ctrT = create("label", {textContent: "Tooltip"},
+  create("input", { type: "checkbox", id: "toggleTooltip" }));
+const ctrZ = create("label", {textContent: "Zoom"},
+  create("input", { type: "checkbox", id: "toggleZoom" }));
+
 const equityContainer = $('#equity-chart-container');
+equityContainer.append(ctrT, ctrZ);
 const equityCanvas    = $('#equity-chart').getContext('2d');
 const pairsCanvas     = $('#pairs-chart').getContext('2d');
 const handleResizer   = equityContainer.querySelector('.resizer');
@@ -69,7 +83,6 @@ export function renderEquityChart(data, userOptions = {}) {
           position: "right",
           beginAtZero: true,
           grid: {
-            display: opts.grid,
             color: "rgba(255,255,255,0.08)",
             drawOnChartArea: false,
             drawTicks: true
@@ -77,7 +90,6 @@ export function renderEquityChart(data, userOptions = {}) {
           ticks: {
             display: true,
             color: "#aaa",
-            //padding: 8,
             callback: value => FM.num(value, 0)
           }
         }
@@ -90,16 +102,16 @@ export function renderEquityChart(data, userOptions = {}) {
           callbacks: {
             title: (items) => {
               const i = items?.[0]?.dataIndex ?? 0;
-              return `#${i + 1} | ${FM.dateLocal(data.pips[i].date)}`;
+              return `#${i + 1} | ${FM.dateLocal(data.p[i].date)}`;
             },
             label: (ctx) => {
               const i = ctx.dataIndex;
-              const src = ctx.datasetIndex === 0 ? data.pips[i] : data.vpips[i];
+              const src = ctx.datasetIndex === 0 ? data.p[i] : data.v[i];
               return `${FM.num(src.value)} | ${FM.num(src.equity)}`;
             },
             footer: (items) => {
               const i = items[0].dataIndex;
-              const p = data.pips[i];
+              const p = data.p[i];
               return `${p.pair} | ${p.isLong ? "Long" : "Short"} | ${p.value >= 0 ? "🟢" : "🔴"}`;
             }
           }

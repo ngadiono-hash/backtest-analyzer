@@ -5,8 +5,8 @@ export class UIManager {
 		this.data = data;
 		this.stat = stat;
 		this.notif = new Notify();
-    this.initTab();
-    this.initAccordion();
+    //this.initTab();
+    //this.initAccordion();
 		
 		this.initSample();
 		this.initExport();

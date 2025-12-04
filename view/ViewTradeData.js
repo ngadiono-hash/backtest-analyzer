@@ -5,7 +5,7 @@ const HEADERS = ['pair', 'type', 'dateEN', 'dateEX', 'priceEN', 'priceTP', 'pric
 
 export class ViewTradeData {
 	constructor() {
-		this.container = $('#trade-table-container');
+		this.container = $('#page-list');
 		this.editingCell = null;
 		this.renderSkeleton();
 		this.tbody = this.table.querySelector('tbody');
@@ -49,7 +49,10 @@ export class ViewTradeData {
   
     const thead = create("thead", {}, headerRow);
     const tbody = create("tbody", {});
+    const sta = create("div", { id: "status-area"});
+    const exp = create("button", { id: "export-btn" });
     table.append(thead, tbody);
+    table.prepend(sta, exp);
     this.table = table;
     this.tbody = tbody;
     this.container.append(table);

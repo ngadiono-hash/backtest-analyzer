@@ -16,4 +16,15 @@ export class App {
 	
 }
 
-window.addEventListener('DOMContentLoaded', e => new App());
+window.addEventListener('DOMContentLoaded', e => {
+  new App();
+  document.querySelectorAll("span").forEach(s => {
+    // s.childNodes.forEach(node => {
+      // if (node.nodeType === Node.TEXT_NODE) return;
+      const txt = s.innerText;
+      const cleaned = txt.replace(/[,\s]/g, "");
+      const isNum = /^[+-]?(?:\d+(?:\.\d+)?%?|\d+(?:\.\d+)?:\d+(?:\.\d+)?)$/.test(cleaned);
+      if (isNum) s.classList.add("m");
+    // });
+  });
+});

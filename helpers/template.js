@@ -5,17 +5,30 @@ export const $$ = (selector, context = document) => Array.from(context.querySele
 
 export const create = (tag, props = {}, ...children) => {
   const el = document.createElement(tag);
+  if (props == null || typeof props !== "object" || Array.isArray(props)) {
+    children.unshift(props);
+    props = {};
+  }
   for (const key in props) {
     const val = props[key];
-    if (key === "dataset") {
+    if (key === "dataset" && val && typeof val === "object") {
+      // dataset: { id: "10" } → data-id="10"
       for (const d in val) el.dataset[d] = val[d];
-    } else if (key === "style" && typeof val === "object") {
+    } else if (key === "style" && val && typeof val === "object") {
+      // style: { backgroundColor: "red" }
       Object.assign(el.style, val);
-    } else {
+    } else if (key in el) {
+      // DOM property: id, className, value, textContent, etc.
       el[key] = val;
+    } else {
+      // attribute HTML: for, class, tabindex, aria-*, dll
+      el.setAttribute(key, val);
     }
   }
-  el.append(...children);
+  // Tambahkan children (text, element, number)
+  for (const child of children)
+    el.append(child instanceof Node ? child : document.createTextNode(child));
+
   return el;
 };
 

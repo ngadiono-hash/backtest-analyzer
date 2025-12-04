@@ -1,127 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Backtest Analyzer</title>
-	<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Backtest Analyzer</title>
+  <link rel="stylesheet" href="./cdn/swiper.min.css"/>
+  <link rel="stylesheet" href="./styles.css"/>
 </head>
-
 <body id="app">
-	<main class="container">
-		<div class="tab-group">
-			<div class="tabs">
-				<button class="tab-button" data-tab="list-trade">List Trades</button>
-				<button class="tab-button active" data-tab="stats-trade">Statistics</button>
-				<select id="sample-select" size="1" multiple>
-					<option value="EURJPY">EURJPY</option>
-					<option value="EURUSD">EURUSD</option>
-					<option value="GBPJPY">GBPJPY</option>
-					<option value="GBPUSD">GBPUSD</option>
-					<option value="USDCHF">USDCHF</option>
-					<option value="XAUUSD">XAUUSD</option>
-					<!-- <option value="ERROR">ERROR</option> -->
-					<!-- <option value="UJISTAT" selected>STAT</option> -->
-				</select>
-			</div>
-			
-			<div class="tab-content" id="list-trade">
-				<button id="export-btn" disabled>Copy</button>
-				<div id="status-area"></div>
-				<div class="table-wrapper" id="trade-table-container"></div>
-			</div>
-			
-			<div class="tab-content active" id="stats-trade">
-				<div class="tab-group">
-					<div class="tabs">
-						<button class="tab-button active" data-tab="overview">Overview</button>
-						<button class="tab-button" data-tab="performance">Performance</button>
-						<button class="tab-button" data-tab="time-based">Distribution</button>
-					</div>
-					<div id="overview" class="tab-content active">
-						<div class="accordion">
-							<div class="accordion-item">
-								<button class="accordion-header" data-target="#acc-equity">Equity</button>
-								<div id="acc-equity" class="accordion-content open">
-								  <div class="chart-controls" style="margin-bottom: 12px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-                    <label><input type="checkbox" id="toggleTooltip"> Tooltip</label>
-                    <label><input type="checkbox" id="toggleZoom"> Zoom</label>
-										<button id="reset">Reset</button>
-                  </div>
-									<div class="chart-wrapper" id="equity-chart-container">
-										<canvas id="equity-chart"></canvas>
-										<div class="resizer"></div>
-									</div>
-								</div>
-							</div>
-							<div class="accordion-item">
-								<button class="accordion-header" data-target="#acc-pairs">Symbols</button>
-								<div id="acc-pairs" class="accordion-content open">
-									<div class="chart-wrapper" id="pairs-chart-container">
-										<canvas id="pairs-chart"></canvas>
-									</div>
-								</div>
-							</div>
+  <div id="nav-bar" class="nav-bar">
+    <button class="nav-btn" data-page="0">Dashboard</button>
+    <button class="nav-btn" data-page="1">List Trade</button>
+    <button class="nav-btn active" data-page="2">Statistics</button>
+    <select id="sample-select" size="1" multiple>
+	    <option value="EURJPY">EURJPY</option>
+	    <option value="EURUSD">EURUSD</option>
+	    <option value="GBPJPY">GBPJPY</option>
+	    <option value="GBPUSD">GBPUSD</option>
+	    <option value="USDCHF">USDCHF</option>
+	    <option value="XAUUSD">XAUUSD</option>
+    </select>
+    <div class="dropup-wrapper">
+      <button class="dropup-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.06A1.65 1.65 0 0 0 10.91 3V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.06a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.06a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <div class="dropup-panel">
+        <button id="toggle-swiper" class="item">Disable Slide</button>
+        <button class="item">Settings</button>
+        <button class="item">Logout</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="page-dash" class="primary-content none">Dashboard Content</div>
+  
+  <div id="page-list" class="primary-content none"></div>
 
-						</div>
-					</div>
-					
-					<div id="performance" class="tab-content">
-						<div class="accordion">
-							<div class="accordion-item">
-								<button class="accordion-header" data-target="#general-stats">General</button>
-								<div class="accordion-content open" id="general-stats">
-									<div class="table-wrapper" id="general-container"></div>
-								</div>
-							</div>
-							<div class="accordion-item">
-								<button class="accordion-header" data-target="#streak-stats">Streaks</button>
-								<div class="accordion-content open" id="streak-stats">
-									<div class="table-wrapper" id="streak-container">
-									  <!-- DI SINI RENCANA AREA KERJANYA -->
-									</div>
-								</div>
-							</div>
-							<div class="accordion-item">
-								<button class="accordion-header" data-target="#drawdown-stats">Drawdown</button>
-								<div class="accordion-content open" id="drawdown-stats">
-									<div class="table-wrapper" id="drawdown-container"></div>
-								</div>
-							</div>
-							
-						</div>
-					</div>
-					<div class="tab-content" id="time-based">
-						<div class="accordion">
-						  <div class="accordion-item">
-								<button class="accordion-header" data-target="#acc-monthly">Accumulation Net</button>
-								<div class="accordion-content open" id="acc-monthly">
-									<div class="table-wrapper" id="monthly-container"></div>
-								</div>
-							</div>
-						  <div class="accordion-item">
-								<button class="accordion-header" data-target="#prop-period">Summaries</button>
-								<div class="accordion-content open" id="prop-period">
-									<div class="table-wrapper" id="prop-container"></div>
-								</div>
-							</div>
-						</div>
-					</div>
-					
-				</div>
-			</div>
-			
-		</div>
-		
-	</main>
-	<div id="notify-area"></div>
+  <div id="page-stats" class="primary-content">
+    
+    <div class="tab-bar">
+      <button class="tab-btn" data-index="0">Overview</button>
+      <button class="tab-btn" data-index="1">General</button>
+      <button class="tab-btn" data-index="2">Streak</button>
+      <button class="tab-btn" data-index="3">Drawdown</button>
+      <button class="tab-btn" data-index="4">Accumulate</button>
+      <button class="tab-btn" data-index="5">Monthly</button>
+      <button class="tab-btn" data-index="6">Summary</button>
+    </div>
+  
+    <div class="swiper">
+      <div class="swiper-wrapper">
+        <div id="overview" class="swiper-slide"></div>
+        <div id="general" class="swiper-slide"></div>
+        <div id="streak" class="swiper-slide"></div>
+        <div id="drawdown" class="swiper-slide"></div>
+        <div id="accumulate" class="swiper-slide"></div>
+        <div id="monthly" class="swiper-slide"></div>
+        <div id="summary" class="swiper-slide"></div>
+      </div>
+    </div>
+  
+  </div>
+  <div id="notify-area"></div>
+  <script src="./cdn/swiper.min.js"></script>
 	<script src="./cdn/chart.min.js"></script>
-	<script src="./cdn/hammer.min.js"></script>
+	<script src="./cdn/chart-plugin-hammer.min.js"></script>
 	<script src="./cdn/chart-plugin-zoom.min.js"></script>
-	<script type="module" src="app.js"></script>
+	<script src="./cdn/chart-plugin-annotation.min.js"></script>
 	<script src="/cdn/eruda.min.js"></script>
 	<script src="./debug.js"></script>
-</body>
+	<script type="module" src="app.js"></script>
+	
+<script>
+const dropupBtn = document.querySelector(".dropup-btn");
+const dropupPanel = document.querySelector(".dropup-panel");
 
+// toggle
+dropupBtn.addEventListener("click", () => {
+  dropupPanel.classList.toggle("active");
+});
+
+// tutup saat klik di luar
+document.addEventListener("click", (e) => {
+  if (!dropupPanel.contains(e.target) && !dropupBtn.contains(e.target)) {
+    dropupPanel.classList.remove("active");
+  }
+});
+
+  const pageDash  = document.getElementById("page-dash");
+  const pageList  = document.getElementById("page-list");
+  const pageStats = document.getElementById("page-stats");
+  const tabBar    = document.querySelector(".tab-bar");
+  const navBtns   = document.querySelectorAll(".nav-btn");
+
+  const pages = [pageDash, pageList, pageStats];
+
+navBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const page = Number(btn.dataset.page);
+
+    // ganti halaman
+    pages.forEach((p, i) => {
+      p.classList.toggle("none", i !== page);
+    });
+
+    // SET ACTIVE NAV BUTTON
+    navBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    // TAB BAR CONTROL (khusus statistics)
+    if (page === 2) {
+      tabBar.classList.remove("none");
+      swiper.allowTouchMove = true;
+    } else {
+      tabBar.classList.add("none");
+      swiper.allowTouchMove = false;
+    }
+  });
+});
+
+  // INIT SWIPER
+  
+  const swiper = new Swiper(".swiper", {
+    resistanceRatio: 0.5,
+    speed: 250,
+    autoHeight: false,
+    touchStartPreventDefault: false,
+    on: {
+      slideChange: () => updateTabs(swiper.activeIndex)
+    }
+  });
+
+// STATE
+let swiperEnabled = true;
+
+// BUTTON
+const toggleBtn = document.getElementById("toggle-swiper");
+
+// EVENT
+toggleBtn.addEventListener("click", () => {
+  swiperEnabled = !swiperEnabled;
+
+  swiper.allowTouchMove = swiperEnabled;
+
+  toggleBtn.textContent = swiperEnabled ? "Disable Slide" : "Enable Slide";
+});
+
+const tabBtns = document.querySelectorAll(".tab-btn");
+
+function updateTabs(active) {
+  tabBtns.forEach((btn, i) => {
+    btn.classList.toggle("active", i === active);
+
+    if (i === active) {
+      btn.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest"
+      });
+    }
+  });
+}
+
+tabBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    swiper.slideTo(parseInt(btn.dataset.index));
+  });
+});
+
+// ketika swiper digeser
+swiper.on("slideChange", () => {
+  updateTabs(swiper.activeIndex);
+});
+
+updateTabs(0);
+</script>
+</body>
 </html>
