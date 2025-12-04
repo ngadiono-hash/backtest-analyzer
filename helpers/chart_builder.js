@@ -3,11 +3,12 @@ import { $, $$, create } from "../helpers/template.js";
 import * as FM from "../helpers/converter.js";
 
 window._charts = {};
+
 const overView = $("#overview");
-const c = create("div", { className: "chart-wrapper", id: "equity-chart-container" },
+const c = create("div", { class: "chart-wrapper", id: "equity-chart-container" },
     create("canvas", { id: `equity-chart` }),
-    create("div", { className: "resizer"}));
-const d = create("div", { className: "chart-container" },
+    create("div", { class: "resizer"}));
+const d = create("div", { class: "chart-container" },
     create("canvas", { id: `pairs-chart` }));
 overView.append(c, d);
 
@@ -33,7 +34,7 @@ const initChart = (key, canvas, config) => {
 
 const DEFAULT_OPTIONS = { tooltip: false, zoom: false };
 
-export function renderEquityChart(data, userOptions = {}) {
+export function chartEquity(data, userOptions = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...userOptions };
 
   // ── DATA PREPARATION ─────────────────────────────────────
@@ -179,7 +180,7 @@ export function renderEquityChart(data, userOptions = {}) {
   return chart;
 }
 
-export function renderPairsChart(data, sortBy = "vpips") {
+export function chartPairs(data, sortBy = "vpips") {
   if (sortBy === "pips") {
     data = [...data].sort((a, b) => b.pips - a.pips);
   } else if (sortBy === "vpips") {
@@ -222,13 +223,9 @@ export function renderPairsChart(data, sortBy = "vpips") {
 
 
 
-
-
-
 /* =======================================================
    R E S I Z E R   (Drag to Resize Chart Container)
    ======================================================= */
-// --- GANTI fungsi enableResize agar mengembalikan cleanup function ---
 function enableResize(container, handle, chart) {
   let startY = 0, startHeight = 0;
   const minHeight = 150;

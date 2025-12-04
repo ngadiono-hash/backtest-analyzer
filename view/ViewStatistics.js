@@ -1,8 +1,7 @@
 import { $, $$, create } from "../helpers/template.js";
 import * as FM           from "../helpers/converter.js";
-import * as CR           from "../helpers/chart_builder.js";
-// import { TB.Tables, TB.Cells, TB.Toggler } from "../helpers/table_builder.js";
-import * as TB from "../helpers/table_builder.js";
+import * as CB           from "../helpers/chart_builder.js";
+import * as TB           from "../helpers/table_builder.js";
 
 export class ViewStatistics {
   constructor() {
@@ -13,20 +12,18 @@ export class ViewStatistics {
     window.addEventListener("statistics-updated", e => {
       const { data } = e.detail;
 
-      this.renderGeneral(data.general);
-      this.renderAccumulation(data.period.accum);
-      this.renderProps(data.period.prop);
-      this.renderDD(data.ddown);
-      this.renderStreak(data.streak);
-      this.renderPerMonth(data.yearly, data.monthly);
-      //log(data.streak);
-
-      CR.renderPairsChart(data.symbols);
-      CR.renderEquityChart(data.curve);
+      this.tableGeneral(data.general);
+      this.tableAccumulation(data.period.accum);
+      this.tableSummaries(data.period.prop);
+      this.tableDrawdown(data.ddown);
+      this.tableStreak(data.streak);
+      this.monthlyPerformance(data.yearly, data.monthly);
+      CB.chartPairs(data.symbols);
+      CB.chartEquity(data.curve);
     });
   }
 
-  renderGeneral(stats) {
+  tableGeneral(stats) {
     const container = $("#general");
     const b = new TB.Tables(container).setId("general-table");
 
@@ -48,63 +45,64 @@ export class ViewStatistics {
     container.prepend(TB.Toggler(container));
   }
 
-renderAccumulation(stats) {
-  const container = $("#accumulate");
-  const b = new TB.Tables(container).setId("monthly-table");
-
-  // ===== HEADER: Y-axis = Month/Total, X-axis = Years =====
-  const years = [...new Set(
-    Object.keys(stats.monthly).map(k => k.split("-")[0])
-  )].sort();
-
-  const header = [
-    create("th", { className: "pivot pivot-xy pips-mode", textContent: "Month" }),
-    ...years.map(y => TB.Cells.headCell(y, "pivot pivot-x pips-mode"))
-  ];
-
-  // ===== ROWS: Each row = 1 month OR Total =====
-  const rows = FM.MONTH_NAMES.map(monthName => {
-    const idx = FM.MONTHS[monthName];
-    const mm = String(idx + 1).padStart(2, "0");
-
-    const cells = years.map(year => {
-      const entry = stats.monthly[`${year}-${mm}`];
-      return TB.Cells.pvCell(entry, "N");
-    });
-
-    return [
-      TB.Cells.textCell(monthName, "pivot pivot-y pips-mode"),
-      ...cells
+  tableAccumulation(stats) {
+    const container = $("#accumulate");
+    const b = new TB.Tables(container).setId("monthly-table");
+  
+    // ===== HEADER: Y-axis = Month/Total, X-axis = Years =====
+    const years = [...new Set(
+      Object.keys(stats.monthly).map(k => k.split("-")[0])
+    )].sort();
+  
+    const header = [
+      create("th", { className: "pivot pivot-xy pips-mode", textContent: "Month" }),
+      ...years.map(y => TB.Cells.headCell(y, "pivot pivot-x pips-mode"))
     ];
-  });
-
-  // ===== TOTAL row per year =====
-  const totalRow = [
-    TB.Cells.textCell("Total", "pivot pivot-y pips-mode"),
-    ...years.map(y => TB.Cells.pvCell(stats.yearly[y], "N"))
-  ];
-  rows.push(totalRow);
-
-  // ===== GRAND TOTAL ROW (1 merged cell, NO label) =====
-  const totalCell = TB.Cells.pvCell(stats.total, "N");
   
-  // bungkus ulang agar bisa memakai colSpan
-  const mergedCell = create("td", { 
-    colspan: years.length + 1,
-    class: "grand-total-row"
-  });
+    // ===== ROWS: Each row = 1 month OR Total =====
+    const rows = FM.MONTH_NAMES.map(monthName => {
+      const idx = FM.MONTHS[monthName];
+      const mm = String(idx + 1).padStart(2, "0");
   
-  // ambil isi pvCell (hanya anak-anaknya)
-  mergedCell.append(...totalCell.childNodes);
+      const cells = years.map(year => {
+        const entry = stats.monthly[`${year}-${mm}`];
+        return TB.Cells.pvCell(entry, "N");
+      });
   
-  // tambahkan baris grand total
-  rows.push([ mergedCell ]);
-
-  // ===== BUILD =====
-  b.header(header).rows(rows).build();
-  container.prepend(TB.Toggler(container));
-}
-  renderProps(stats) {
+      return [
+        TB.Cells.textCell(monthName, "pivot pivot-y pips-mode"),
+        ...cells
+      ];
+    });
+  
+    // ===== TOTAL row per year =====
+    const totalRow = [
+      TB.Cells.textCell("Total", "pivot pivot-y pips-mode"),
+      ...years.map(y => TB.Cells.pvCell(stats.yearly[y], "N"))
+    ];
+    rows.push(totalRow);
+  
+    // ===== GRAND TOTAL ROW (1 merged cell, NO label) =====
+    const totalCell = TB.Cells.pvCell(stats.total, "N");
+    
+    // bungkus ulang agar bisa memakai colSpan
+    const mergedCell = create("td", { 
+      colspan: years.length + 1,
+      class: "grand-total-row"
+    });
+    
+    // ambil isi pvCell (hanya anak-anaknya)
+    mergedCell.append(...totalCell.childNodes);
+    
+    // tambahkan baris grand total
+    rows.push([ mergedCell ]);
+  
+    // ===== BUILD =====
+    b.header(header).rows(rows).build();
+    container.prepend(TB.Toggler(container));
+  }
+  
+  tableSummaries(stats) {
     const container = $("#summary");
     const b = new TB.Tables(container).setId("props-table");
 
@@ -137,7 +135,7 @@ renderAccumulation(stats) {
     container.prepend(TB.Toggler(container));
   }
 
-  renderDD(stats) {
+  tableDrawdown(stats) {
     const container = $("#drawdown");
     container.innerHTML = "";
   
@@ -178,7 +176,7 @@ renderAccumulation(stats) {
     container.prepend(TB.Toggler(container));
   }
   
-  renderStreak(stats) {
+  tableStreak(stats) {
     const container = $("#streak");
     container.innerHTML = "";
     const wrapper = create("div", { className: "streak-wrapper" });
@@ -199,7 +197,7 @@ renderAccumulation(stats) {
     container.prepend(TB.Toggler(container));
   }
 //
-renderPerMonth(yearly, monthly) {
+monthlyPerformance(yearly, monthly) {
   const container = $("#monthly");
   container.innerHTML = "";
   if (!monthly || !Object.keys(monthly).length) {
@@ -404,20 +402,54 @@ _buildPairButtons(monthKey, data) {
 _renderMonthlyChart(monthKey, equity) {
   const canvas = document.getElementById(`chart_${monthKey}`);
   if (!canvas) return;
-
-  // cache basic month equity (ALL)
   window._monthlyData ??= {};
   window._monthlyData[monthKey] = window._monthlyData[monthKey] || {};
-  // keep original ALL curve under key `allCurve`
-  window._monthlyData[monthKey].allCurve = equity; // equity: { p:[], v:[] }
-
-  // initialize active sets if not exist
+  window._monthlyData[monthKey].allCurve = equity;
   window._monthlyActivePairs ??= {};
   window._monthlyActivePairs[monthKey] ??= new Set(["ALL"]);
 
-  const labels = equity.p.map((_, i) => i + 1);
-  const dataArr = equity.p.map(x => x.equity);
-
+  const labels = equity.p.map((_, i) => i );
+  const eq = equity.p.map(x => x.equity);
+  const dataArr = [0, ...eq];
+  const segmentedFill = {
+    id: 'segmentedFill',
+    beforeDatasetDraw(chart, args, pluginOptions) {
+      const { ctx, chartArea } = chart;
+      const dataset = chart.data.datasets[args.index];
+      const data = dataset.data;
+      const meta = args.meta;
+  
+      // hanya aktif kalau fill = true
+      if (!dataset.fill) return;
+  
+      ctx.save();
+  
+      for (let i = 0; i < data.length - 1; i++) {
+        const current = data[i];
+        const next = data[i + 1];
+        const color = current >= 0 ? '#F4FBFA' : '#FEF8F8';
+  
+        const x0 = meta.data[i].x;
+        const y0 = meta.data[i].y;
+        const x1 = meta.data[i + 1].x;
+        const y1 = meta.data[i + 1].y;
+        const yBase = chart.scales.y.getPixelForValue(0);
+  
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.lineTo(x1, yBase);
+        ctx.lineTo(x0, yBase);
+        ctx.closePath();
+  
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+  
+      ctx.restore();
+    }
+  };
+  Chart.register(segmentedFill);
   const config = {
     type: "line",
     data: {
@@ -434,31 +466,7 @@ _renderMonthlyChart(monthKey, equity) {
           }
         },
         fill: true,
-        backgroundColor: ctx => {
-          const chart = ctx.chart;
-          const { ctx: c, chartArea, scales } = chart;
-        
-          if (!chartArea) return;
-        
-          // ambil data equity
-          const data = chart.data.datasets[0].data;
-        
-          // cek apakah lebih banyak positive atau negative (opsional)
-          // atau cek nilai terakhir
-          const last = data[data.length - 1];
-        
-          const gradient = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-        
-          if (last >= 0) {
-            gradient.addColorStop(0, 'rgba(0,180,0,0.35)');
-            gradient.addColorStop(1, 'rgba(0,180,0,0)');
-          } else {
-            gradient.addColorStop(0, 'rgba(220,0,0,0.35)');
-            gradient.addColorStop(1, 'rgba(220,0,0,0)');
-          }
-        
-          return gradient;
-        },
+        backgroundColor: undefined,
         pointRadius: 0,
         pointBackgroundColor: ctx => {
           const v = ctx.raw;
@@ -484,6 +492,7 @@ _renderMonthlyChart(monthKey, equity) {
           grid: { display: false },
           ticks: { display: true },          
           beginAtZero: true,
+          // min: -1000,
         }
       },
       plugins: {
@@ -515,8 +524,8 @@ _renderMonthlyChart(monthKey, equity) {
               yMin: 0,
               yMax: 0,
               borderColor: 'gray',
-              borderWidth: 2,
-              borderDash: [5, 5], // opsional
+              borderWidth: 1,
+              borderDash: [5, 5],
             }
           }
         },
@@ -525,7 +534,6 @@ _renderMonthlyChart(monthKey, equity) {
   }
 
   window._monthlyCharts ??= {};
-  // create chart and store
   window._monthlyCharts[monthKey] = new Chart(canvas, config);
 }
 
@@ -640,4 +648,5 @@ _buildMergedCurveFromPairs(monthCache, selectedPairs) {
 
   return { p, v };
 }
+
 }
