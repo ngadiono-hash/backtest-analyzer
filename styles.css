@@ -120,11 +120,11 @@ select {
   display: flex;
   flex-direction: column;
   gap: 6px;
-
+  width: 120px;
   background: rgba(30,30,30,0.85);
   backdrop-filter: blur(6px);
-  border-radius: 14px;
-  padding: 12px;
+  /* border-radius: 14px; */
+  padding: 8px;
 
   opacity: 0;
   pointer-events: none;
@@ -142,7 +142,7 @@ select {
   background: #0003;
   color: white;
   border: none;
-  border-radius: 8px;
+  /* border-radius: 8px; */
   text-align: left;
 }
 
@@ -281,10 +281,10 @@ span.value.hidden {
 
 .resizer {
   position: absolute;
-  bottom: 0;
+  bottom: -10px;
   left: 0;
   width: 100%;
-  height: 8px;
+  height: 10px;
   cursor: ns-resize;
   background: transparent;
   display: flex;
@@ -296,7 +296,7 @@ span.value.hidden {
   width: 40%;
   height: 3px;
   border-radius: 2px;
-  background: #bcbcbc;
+  background: var(--pm-bg);
   opacity: 0.6;
   transition: opacity 0.2s ease, background 0.2s ease;
 }
@@ -311,12 +311,48 @@ span.value.hidden {
   background: #555;
   opacity: 1;
 }
+
+/* === CHART CONTAINER */
+
 .chart-wrapper {
-  margin-bottom: 10px;
+  border: 1px solid;
+  margin: 40px 5px;
   height: 40vh;
   min-height: 30vh;
   position: relative;
 }
+.chart-options {
+  position: absolute;
+  top: -25px;
+  left: 15px;
+}
+.chart-options label {
+  position: relative;
+  display: inline;     /* masing-masing satu row */
+  padding-left: 22px; /* space untuk checkbox */
+  margin-bottom: 6px;
+  margin-right: 5px;
+  line-height: 20px;
+}
+.chart-options input[type="checkbox"] {
+  position: absolute;
+  left: 0px;
+  top: 0;
+  margin: 0;
+}
+
+#reset {
+  position: absolute;
+  top: -32px;
+  right: 5px;
+  z-index: 10;
+  padding: 5px 10px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
 
 /* === ACCORDION */
 
@@ -373,6 +409,7 @@ span.value.hidden {
 .accordion-input:checked + .accordion-label::after {
   content: '-';
 }
+
 /* === TABLE LAYOUT */
 
 .table-wrapper {
@@ -576,31 +613,6 @@ td[data-tooltip]:hover::after {
 }
 #dd-events td:not(.pivot) {
   min-width: 60px;
-}
-
-/* === CHART CONTAINER */
-
-.chart-controls label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.chart-wrapper {
-  margin-bottom: 10px;
-  height: 40vh;
-  min-height: 30vh;
-  position: relative;
-}
-#reset {
-  position: absolute;
-  top: -32px;
-  right: 5px;
-  z-index: 10;
-  padding: 5px 10px;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  cursor: pointer;
 }
 
 /* 00000=== MOBILE ===00000 */

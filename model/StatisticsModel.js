@@ -39,7 +39,6 @@ export class StatisticsModel {
     const dEN = FM.dateISO(dateEN);
     const dEX = FM.dateISO(dateEX);
   
-    // compute absolute potentials (TP/SL) & their value equivalents
     const { pTP, pSL, vTP, vSL } = HM.computePips(t, pair);
   
     const isWin = result === 'TP';
@@ -56,7 +55,7 @@ export class StatisticsModel {
   
       dateEN: dEN,
       dateEX: dEX,
-      month: `${dEN.getFullYear()}-${String(dEN.getMonth() + 1).padStart(2, '0')}`,
+      month: `${dEX.getFullYear()}-${String(dEX.getMonth() + 1).padStart(2, '0')}`,
   
       priceEN: +priceEN,
       priceTP: +priceTP,
@@ -153,7 +152,7 @@ export class StatisticsModel {
         isLong,
         pair,
         equity: cumP,
-        date: dateEX,
+        date: FM.dateDMY(dateEX),
         value: pips
       });
   

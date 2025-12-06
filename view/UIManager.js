@@ -5,50 +5,103 @@ export class UIManager {
 		this.data = data;
 		this.stat = stat;
 		this.notif = new Notify();
-    //this.initTab();
-    //this.initAccordion();
 		
+    this.initSwiperPage();
 		this.initSample();
 		this.initExport();
 	}
 
-  initTab() {
-    const root = $('#app');
-    const groups = root.querySelectorAll('.tab-group');
-    groups.forEach(group => {
-      const safeQuery = (sel) => {
-        try { return group.querySelectorAll(sel); }
-        catch { return [...group.querySelectorAll(sel.replace(':scope > ', ''))]
-          .filter(el => el.closest('.tab-group') === group); }
-      };
+  initSwiperPage() {
+    const navBtns  = $$(".nav-btn");
+    const pages    = [$("#page-dash"), $("#page-list"), $("#page-stats")];
+    const tabBar   = $(".tab-bar");
+    const tabBtns  = $$(".tab-btn");
+    const toggleBtn = $("#toggle-swiper");
+    const dropupBtn = $(".dropup-btn");
+    const dropupPanel = $(".dropup-panel");
+    
+    let currentPage = 0;
+    
+    // NAV DROPUP
+    dropupBtn.addEventListener("click", () => {
+      dropupPanel.classList.toggle("active");
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!dropupPanel.contains(e.target) && !dropupBtn.contains(e.target)) {
+        dropupPanel.classList.remove("active");
+      }
+    });
   
-      const btns = safeQuery(':scope > .tabs > .tab-button, :scope > .tab-button');
-      const contents = safeQuery(':scope > .tab-content');
-  
-      const show = (btn) => {
-        if (!btn) return;
-        const id = btn.dataset.tab;
-        btns.forEach(b => b.classList.toggle('active', b === btn));
-        contents.forEach(c => c.classList.toggle('active', c.id === id));
-      };
-  
-      group.addEventListener('click', e => {
-        const btn = e.target.closest('.tab-button');
-        if (btn && btn.closest('.tab-group') === group) show(btn);
+    // TAB BUTTON HANDLING
+    const updateTabs = (active) => {
+      tabBtns.forEach((btn, i) => {
+        const isActive = i === active;
+        btn.classList.toggle("active", isActive);
+        //log(active)
+        if (isActive) {
+          btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
       });
+    };
   
-      show([...btns].find(b => b.classList.contains('active')) || btns[0]);
+    // INIT SWIPER
+    const swiper = new Swiper(".swiper", {
+      resistanceRatio: 0.5,
+      speed: 250,
+      autoHeight: false,
+      touchStartPreventDefault: false,
+      on: { slideChange: () => updateTabs(swiper.activeIndex) }
+    });
+  
+    updateTabs(0); // initial tab position
+    
+  
+    // TABS CLICK → SWIPER SLIDE
+    tabBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        swiper.slideTo(parseInt(btn.dataset.index));
+      });
+    });
+  
+    // SWIPER ENABLE/DISABLE MODE
+    let enabled = localStorage.swipe !== "false"; // default true
+  
+    const applySwiperState = () => {
+      swiper.allowTouchMove = enabled && currentPage === 2;
+      toggleBtn.textContent = enabled ? "Disable Slide" : "Enable Slide";
+      toggleBtn.classList.toggle("none", currentPage !== 2);
+    };
+  
+    toggleBtn.onclick = () => {
+      enabled = !enabled;
+      localStorage.swipe = enabled;
+      applySwiperState();
+    };
+  
+    applySwiperState();
+  
+  
+    // NAVIGATION BUTTONS (pages)
+    navBtns.forEach(btn => {
+      btn.onclick = () => {
+        const page = Number(btn.dataset.page);
+        currentPage = page;
+  
+        // page visibility
+        pages.forEach((p, i) => p.classList.toggle("none", i !== page));
+  
+        // nav active
+        navBtns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+  
+        // tab bar (only on stats page)
+        tabBar.classList.toggle("none", page !== 2);
+  
+        // always reapply swiper state
+        applySwiperState();
+      };
     });
   }
-	
-	initAccordion() {
-    $$('.accordion-header').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const content = $(btn.dataset.target);
-        content.classList.toggle('open');
-      });
-    });
-	}
 
   initSample() {
     const selectEl = $('#sample-select');
@@ -83,7 +136,7 @@ export class UIManager {
         const name = localStorage.getItem('bt_data_name');
         if (text && name) {
             this.data.renderFile(text, name);
-            this.notif.success(`Loaded from localStorage: ${name}`);
+            this.notif.success(`localStorage: ${name}`);
             return true;
         }
         return false;

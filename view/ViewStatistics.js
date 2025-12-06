@@ -6,21 +6,214 @@ import * as TB           from "../helpers/table_builder.js";
 export class ViewStatistics {
   constructor() {
     this._setupEvent();
+    
+    this.overView = $("#overview");
+
   }
 
   _setupEvent() {
     window.addEventListener("statistics-updated", e => {
       const { data } = e.detail;
 
+      this.chartGlobalEquity(data.curve);
       this.tableGeneral(data.general);
       this.tableAccumulation(data.period.accum);
       this.tableSummaries(data.period.prop);
       this.tableDrawdown(data.ddown);
       this.tableStreak(data.streak);
       this.monthlyPerformance(data.yearly, data.monthly);
-      CB.chartPairs(data.symbols);
-      CB.chartEquity(data.curve);
+      this.chartGlobalPairs(data.symbols);
     });
+  }
+  
+  chartGlobalEquity(data) {
+    const overview  = this.overView;
+    overview.innerHTML = "";
+    overview.append(create("div", { class: "chart-wrapper", id: "equity-chart-container" },
+        create("canvas", { id: `equity-chart` }),
+        create("div", { class: "resizer"}))
+    );
+    const container = $('#equity-chart-container');
+    const equityCanvas    = $('#equity-chart').getContext('2d');
+    const handleResizer   = container.querySelector('.resizer');
+    
+    const labels = data.p.map((_, i) => i + 1);
+    const pips   = data.p.map(p  => p.equity);
+    const vpips  = data.v.map(v => v.equity);
+  
+    // ── CHART CONFIG ─────────────────────────────────────────
+    const globalConfig = {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "pips",
+            data: pips,
+            borderWidth: 1,
+            pointRadius: 0,
+            hoverRadius: 1,
+            tension: 0,
+          },
+          {
+            label: "value pips",
+            data: vpips,
+            borderWidth: 1,
+            pointRadius: 0,
+            hoverRadius: 1,
+            tension: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          intersect: false
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { display: false },
+            ticks: { 
+              display: true,
+              callback: (v) => {
+                return FM.num(v, 1)
+              }
+            }
+          }
+        },
+        customCrosshair: {
+          enabled: true,
+          lineStyle: 'dashed'
+        },
+        plugins: {
+          legend: { display: true, position: "bottom" },
+          tooltip: {
+            enabled: false,
+            intersect: false,
+            callbacks: {
+              title: (ctx) => {
+                const i = ctx?.[0]?.dataIndex ?? 0;
+                return `#${i} | ${data.p[i].date}`;
+              },
+              label: (ctx) => {
+                const i = ctx.dataIndex;
+                const src = ctx.datasetIndex === 0 ? data.p[i] : data.v[i];
+                return `${FM.num(src.value)} | ${FM.num(src.equity)}`;
+              },
+              footer: (ctx) => {
+                const i = ctx[0].dataIndex;
+                const p = data.p[i];
+                return `${p.pair} | ${p.isLong ? "Long" : "Short"} | ${p.value >= 0 ? "🟢" : "🔴"}`;
+              }
+            }
+          },
+          annotation: {
+            annotations: {
+              zeroLine: {
+                type: 'line',
+                yMin: 0,
+                yMax: 0,
+                borderColor: 'gray',
+                borderWidth: 1,
+                borderDash: [5, 5],
+              }
+            }
+          },
+          zoom: {
+            pan: {
+              enabled: false,
+              mode: "xy",
+              threshold: 10
+            },
+            zoom: {
+              wheel:   { enabled: false, speed: 0.05 },
+              pinch:   { enabled: false },
+              mode: "xy"
+            }
+          }
+        }
+      }
+    }
+  
+    // ── CREATE / UPDATE CHART ───────────────────────────────
+    const chart = CB.initChart("globalEquity", equityCanvas, globalConfig);
+    CB.chartControl(container, chart);
+  
+    // ── CLEANUP PREVIOUS OBSERVERS ──────────────────────────
+    window.charts.equityObserver?.disconnect();
+    window.charts.equityResizeCleanup?.();
+  
+    // ── RESIZE HANDLING (throttled ───────────────────────
+    let raf = null;
+    const resizeObserver = new ResizeObserver(() => {
+      if (!chart?.canvas) return;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        chart.resize();
+        raf = null;
+      });
+    });
+  
+    resizeObserver.observe(container);
+    window.charts.equityObserver = resizeObserver;
+    window.charts.equityResizeCleanup = CB.enableResize(container, handleResizer, chart);
+  
+    return chart;
+  }
+
+  chartGlobalPairs(data, sortBy = "vpips") {
+    const d = create("div", { class: "chart-wrapper" },
+        create("canvas", { id: `pairs-chart` }));
+    this.overView.append(d);
+    const pairsCanvas     = $('#pairs-chart').getContext('2d');
+  
+    if (sortBy === "pips") {
+      data = [...data].sort((a, b) => b.pips - a.pips);
+    } else if (sortBy === "vpips") {
+      data = [...data].sort((a, b) => b.vpips - a.vpips);
+    }
+  
+    const labels = data.map(d => d.pair);
+  
+    const config = {
+      _height: data.length * 60,
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "Pips",  data: data.map(d => d.pips) },
+          { label: "VPips", data: data.map(d => d.vpips) }
+        ]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { display: false } }
+        },
+        customCrosshair: { enabled: false },
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${FM.num(ctx.raw)}`
+            }
+          },
+          
+        }
+      }
+    };
+  
+    return CB.initChart("globalPairs", pairsCanvas, config);
   }
 
   tableGeneral(stats) {
@@ -196,35 +389,35 @@ export class ViewStatistics {
     });
     container.prepend(TB.Toggler(container));
   }
-//
-monthlyPerformance(yearly, monthly) {
-  const container = $("#monthly");
-  container.innerHTML = "";
-  if (!monthly || !Object.keys(monthly).length) {
-    container.textContent = "No monthly data available.";
-    return;
-  }
 
-  // --- Group months by year ----------
-  const yearMap = {};
-  for (const monthKey in monthly) {
-    const [y] = monthKey.split("-");
-    if (!yearMap[y]) yearMap[y] = [];
-    yearMap[y].push(monthKey);
+  monthlyPerformance(yearly, monthly) {
+    const container = $("#monthly");
+    container.innerHTML = "";
+    if (!monthly || !Object.keys(monthly).length) {
+      container.textContent = "No monthly data available.";
+      return;
+    }
+  
+    // --- Group months by year ----------
+    const yearMap = {};
+    for (const monthKey in monthly) {
+      const [y] = monthKey.split("-");
+      if (!yearMap[y]) yearMap[y] = [];
+      yearMap[y].push(monthKey);
+    }
+  
+    // --- Build Accordion for each YEAR ---
+    for (const year in yearMap) {
+      const yearSection = this._buildYearSection(
+        year,
+        yearMap[year],
+        monthly,
+        yearly[year] ?? null   // ← tambahkan yearly summary agar bisa dipakai di header
+      );
+      container.append(yearSection);
+      container.prepend(TB.Toggler(container));
+    }
   }
-
-  // --- Build Accordion for each YEAR ---
-  for (const year in yearMap) {
-    const yearSection = this._buildYearSection(
-      year,
-      yearMap[year],
-      monthly,
-      yearly[year] ?? null   // ← tambahkan yearly summary agar bisa dipakai di header
-    );
-    container.append(yearSection);
-    container.prepend(TB.Toggler(container));
-  }
-}
 
 _buildYearSection(year, monthKeys, stats) {
   let totalTrades = 0, totalNetP = 0, totalNetV = 0;
@@ -339,7 +532,8 @@ _buildMonthSummary(s) {
 }
 
 _buildPairButtons(monthKey, data) {
-  const wrap = create("div", { className: "pair-filter", dataset: { month: monthKey } });
+  //log(data)
+  const wrap = create("div", { class: "pair-filter", dataset: { month: monthKey } });
 
   // Global caches
   window._monthlyActivePairs ??= {};
@@ -399,124 +593,80 @@ _buildPairButtons(monthKey, data) {
   return wrap;
 }
 
-_renderMonthlyChart(monthKey, equity) {
+_renderMonthlyChart(monthKey, data) {
+  
   const canvas = document.getElementById(`chart_${monthKey}`);
   if (!canvas) return;
   window._monthlyData ??= {};
   window._monthlyData[monthKey] = window._monthlyData[monthKey] || {};
-  window._monthlyData[monthKey].allCurve = equity;
+  window._monthlyData[monthKey].allCurve = data;
   window._monthlyActivePairs ??= {};
   window._monthlyActivePairs[monthKey] ??= new Set(["ALL"]);
 
-  const labels = equity.p.map((_, i) => i );
-  const eq = equity.p.map(x => x.equity);
-  const dataArr = [0, ...eq];
-  const segmentedFill = {
-    id: 'segmentedFill',
-    beforeDatasetDraw(chart, args, pluginOptions) {
-      const { ctx, chartArea } = chart;
-      const dataset = chart.data.datasets[args.index];
-      const data = dataset.data;
-      const meta = args.meta;
-  
-      // hanya aktif kalau fill = true
-      if (!dataset.fill) return;
-  
-      ctx.save();
-  
-      for (let i = 0; i < data.length - 1; i++) {
-        const current = data[i];
-        const next = data[i + 1];
-        const color = current >= 0 ? '#F4FBFA' : '#FEF8F8';
-  
-        const x0 = meta.data[i].x;
-        const y0 = meta.data[i].y;
-        const x1 = meta.data[i + 1].x;
-        const y1 = meta.data[i + 1].y;
-        const yBase = chart.scales.y.getPixelForValue(0);
-  
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.lineTo(x1, y1);
-        ctx.lineTo(x1, yBase);
-        ctx.lineTo(x0, yBase);
-        ctx.closePath();
-  
-        ctx.fillStyle = color;
-        ctx.fill();
-      }
-  
-      ctx.restore();
-    }
-  };
-  Chart.register(segmentedFill);
-  const config = {
+  const green = "#089981";
+  const red = "#f23645";
+  const realData = data.p.map(x => x.equity);
+  const zeroData = [0, ...realData];
+  const labels = zeroData.map((_, i) => i);
+  const monhlyConfig = {
     type: "line",
     data: {
       labels,
       datasets: [{
         label: "ALL",
-        data: dataArr,
-        borderWidth: 1.5,
+        data: zeroData,
         segment: {
-          borderColor: ctx => {
-            const i = ctx.p0DataIndex;
-            const value = ctx.chart.data.datasets[0].data[i];
-            return value >= 0 ? '#089981' : '#f23645';
-          }
+          borderColor: ctx => (ctx.p0.parsed.y >= 0 ? green : red)
         },
-        fill: true,
+        fill: false,
         backgroundColor: undefined,
+        borderWidth: 1,
+        tension: 0,
         pointRadius: 0,
-        pointBackgroundColor: ctx => {
-          const v = ctx.raw;
-          return v >= 0 ? '#089981' : '#f23645';
-        },
-        tension: 0
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { display: true },
-          beginAtZero: true
-        },
-        y: {
-          grid: { display: false },
-          ticks: { display: true },          
-          beginAtZero: true,
-          // min: -1000,
-        }
-      },
       plugins: {
-        legend: { display: false },
         tooltip: {
           enabled: true,
+          mode: "index",
           intersect: false,
           callbacks: {
-            title: (items) => {
-              const i = items?.[0]?.dataIndex ?? 0;
-              return `#${i + 1} | ${FM.dateLocal(equity.p[i].date)}`;
+            title: (ctx) => {
+              const i = ctx[0].dataIndex;
+  
+              if (i === 0) return "Begin at 0";
+  
+              const realIndex = i - 1;
+              return `#${realIndex + 1} | ${data.p[realIndex].date}`;
             },
             label: (ctx) => {
               const i = ctx.dataIndex;
-              const src = ctx.datasetIndex === 0 ? equity.p[i] : equity.v[i];
+  
+              if (i === 0) return "";
+  
+              const realIndex = i - 1;
+              const src = data.p[realIndex];
+  
               return `${FM.num(src.value)} | ${FM.num(src.equity)}`;
             },
-            footer: (items) => {
-              const i = items[0].dataIndex;
-              const p = equity.p[i];
+            footer: (ctx) => {
+              const i = ctx[0].dataIndex;
+  
+              if (i === 0) return "";
+  
+              const realIndex = i - 1;
+              const p = data.p[realIndex];
+  
               return `${p.pair} | ${p.isLong ? "Long" : "Short"} | ${p.value >= 0 ? "🟢" : "🔴"}`;
             }
           }
         },
+  
+        legend: { display: false },
+  
         annotation: {
           annotations: {
             zeroLine: {
@@ -528,13 +678,25 @@ _renderMonthlyChart(monthKey, equity) {
               borderDash: [5, 5],
             }
           }
+        }
+      },
+      scales: {
+        x: {
+          type: "linear",
+          grid: { display: false },
+          ticks: { display: true },
         },
+        y: {
+          grid: { display: false },
+          ticks: { display: true },
+          beginAtZero: true
+        }
       }
     }
-  }
+  };
 
   window._monthlyCharts ??= {};
-  window._monthlyCharts[monthKey] = new Chart(canvas, config);
+  window._monthlyCharts[monthKey] = new Chart(canvas, monhlyConfig);
 }
 
 _switchMonthlyDataset(monthKey, pair) {
@@ -582,12 +744,12 @@ _switchMonthlyDataset(monthKey, pair) {
   // write single dataset to chart
   const label = newSet.has("ALL") ? "ALL" : [...newSet].join(" + ");
   const labels = finalCurve.p.map((_, i) => i + 1);
-  const dataArr = finalCurve.p.map(x => x.equity);
+  const zeroData = finalCurve.p.map(x => x.equity);
 
   chart.data.labels = labels;
   chart.data.datasets = [{
     label,
-    data: dataArr,
+    data: zeroData,
     borderWidth: 1.5,
     pointRadius: 0,
     tension: 0

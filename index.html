@@ -9,9 +9,9 @@
 </head>
 <body id="app">
   <div id="nav-bar" class="nav-bar">
-    <button class="nav-btn" data-page="0">Dashboard</button>
+    <button class="nav-btn active" data-page="0">Dashboard</button>
     <button class="nav-btn" data-page="1">List Trade</button>
-    <button class="nav-btn active" data-page="2">Statistics</button>
+    <button class="nav-btn" data-page="2">Statistics</button>
     <select id="sample-select" size="1" multiple>
 	    <option value="EURJPY">EURJPY</option>
 	    <option value="EURUSD">EURUSD</option>
@@ -35,11 +35,11 @@
     </div>
   </div>
   
-  <div id="page-dash" class="primary-content none">Dashboard Content</div>
+  <div id="page-dash" class="primary-content">Dashboard Content</div>
   
   <div id="page-list" class="primary-content none"></div>
 
-  <div id="page-stats" class="primary-content">
+  <div id="page-stats" class="primary-content none">
     
     <div class="tab-bar">
       <button class="tab-btn" data-index="0">Overview</button>
@@ -67,116 +67,11 @@
   <div id="notify-area"></div>
   <script src="./cdn/swiper.min.js"></script>
 	<script src="./cdn/chart.min.js"></script>
-	<script src="./cdn/chart-plugin-hammer.min.js"></script>
+  <script src="./cdn/chart-plugin-hammer.min.js"></script>
 	<script src="./cdn/chart-plugin-zoom.min.js"></script>
 	<script src="./cdn/chart-plugin-annotation.min.js"></script>
 	<script src="/cdn/eruda.min.js"></script>
 	<script src="./debug.js"></script>
 	<script type="module" src="app.js"></script>
-	
-<script>
-const dropupBtn = document.querySelector(".dropup-btn");
-const dropupPanel = document.querySelector(".dropup-panel");
-
-// toggle
-dropupBtn.addEventListener("click", () => {
-  dropupPanel.classList.toggle("active");
-});
-
-// tutup saat klik di luar
-document.addEventListener("click", (e) => {
-  if (!dropupPanel.contains(e.target) && !dropupBtn.contains(e.target)) {
-    dropupPanel.classList.remove("active");
-  }
-});
-
-  const pageDash  = document.getElementById("page-dash");
-  const pageList  = document.getElementById("page-list");
-  const pageStats = document.getElementById("page-stats");
-  const tabBar    = document.querySelector(".tab-bar");
-  const navBtns   = document.querySelectorAll(".nav-btn");
-
-  const pages = [pageDash, pageList, pageStats];
-
-navBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    const page = Number(btn.dataset.page);
-
-    // ganti halaman
-    pages.forEach((p, i) => {
-      p.classList.toggle("none", i !== page);
-    });
-
-    // SET ACTIVE NAV BUTTON
-    navBtns.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    // TAB BAR CONTROL (khusus statistics)
-    if (page === 2) {
-      tabBar.classList.remove("none");
-      swiper.allowTouchMove = true;
-    } else {
-      tabBar.classList.add("none");
-      swiper.allowTouchMove = false;
-    }
-  });
-});
-
-  // INIT SWIPER
-  
-  const swiper = new Swiper(".swiper", {
-    resistanceRatio: 0.5,
-    speed: 250,
-    autoHeight: false,
-    touchStartPreventDefault: false,
-    on: {
-      slideChange: () => updateTabs(swiper.activeIndex)
-    }
-  });
-
-// STATE
-let swiperEnabled = true;
-
-// BUTTON
-const toggleBtn = document.getElementById("toggle-swiper");
-
-// EVENT
-toggleBtn.addEventListener("click", () => {
-  swiperEnabled = !swiperEnabled;
-
-  swiper.allowTouchMove = swiperEnabled;
-
-  toggleBtn.textContent = swiperEnabled ? "Disable Slide" : "Enable Slide";
-});
-
-const tabBtns = document.querySelectorAll(".tab-btn");
-
-function updateTabs(active) {
-  tabBtns.forEach((btn, i) => {
-    btn.classList.toggle("active", i === active);
-
-    if (i === active) {
-      btn.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest"
-      });
-    }
-  });
-}
-
-tabBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    swiper.slideTo(parseInt(btn.dataset.index));
-  });
-});
-
-// ketika swiper digeser
-swiper.on("slideChange", () => {
-  updateTabs(swiper.activeIndex);
-});
-
-updateTabs(0);
-</script>
 </body>
 </html>

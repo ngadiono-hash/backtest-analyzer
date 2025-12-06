@@ -48,7 +48,7 @@ export function dateISO(dateStr, defaultHour = "12:00") {
   const [d, m, y] = dateStr.split("-");
   const year = `20${y}`;
   const month = String(MONTHS[m] + 1).padStart(2, "0");
-  return new Date(`${year}-${month}-${d.padStart(2, "0")}T${defaultHour}:00`);
+  return new Date(`${year}-${month}-${d.padStart(2, "0")}T${defaultHour}:00+07:00`);
 }
 
 // =========================
@@ -151,29 +151,40 @@ export function estimateBarsHeld(entry, exit) {
   const x = safeDate(exit);
   if (!e || !x) return 1;
 
-  // Same day → always 1 bar
-  if (e.toDateString() === x.toDateString()) return 1;
+  // Same day can still be multiple bars → remove this rule
+  // if (e.toDateString() === x.toDateString()) return 1;
 
+  let hours = removeWeekendHours(e, x);
+
+  return Math.max(1, Math.round(hours / 4));
+}
+
+function removeWeekendHours(e, x) {
   let hours = (x - e) / 36e5;
 
-  // Remove weekend hours
-  const start = new Date(e.getFullYear(), e.getMonth(), e.getDate());
-  const end = new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  // Weekend start: Saturday 04:00
+  const ws = new Date(e);
+  ws.setHours(4, 0, 0, 0);
+  ws.setDate(ws.getDate() + ((6 - ws.getDay() + 7) % 7)); // next Saturday
 
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const day = d.getDay();
-    if (day === 0 || day === 6) {
-      const ws = new Date(d);
-      const we = new Date(d);
-      we.setDate(d.getDate() + 1);
+  // Weekend end: Monday 04:00
+  const we = new Date(ws);
+  we.setDate(ws.getDate() + 2); // Saturday → Monday
+  // Monday → 04:00 handled by ws hour = 04:00
 
-      const overlapStart = Math.max(ws, e);
-      const overlapEnd = Math.min(we, x);
-      if (overlapEnd > overlapStart) {
-        hours -= (overlapEnd - overlapStart) / 36e5;
-      }
+  // Loop through all weekends within the range
+  for (let wStart = ws, wEnd = we;
+       wStart < x;
+       wStart = new Date(wStart.getTime() + 7 * 86400e3),
+       wEnd = new Date(wEnd.getTime() + 7 * 86400e3)) {
+
+    const overlapStart = Math.max(wStart, e);
+    const overlapEnd   = Math.min(wEnd, x);
+
+    if (overlapEnd > overlapStart) {
+      hours -= (overlapEnd - overlapStart) / 36e5;
     }
   }
 
-  return Math.max(1, Math.round(hours / 4));
+  return hours;
 }
