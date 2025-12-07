@@ -109,9 +109,20 @@ select {
 .dropup-btn {
   color: var(--pm-bg);
   padding: 6px;
-  /* border-radius: 12px; */
   border: none;
-  font-size: 15px;
+  /* font-size: 15px; */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropup-btn::after {
+  content: url("/icons/basic-gear.svg");
+  display: inline-block;
+  /* width: 16px; */
+  color: inherit;
+  /* height: 16px; */
 }
 .dropup-panel {
   position: absolute;
@@ -242,16 +253,16 @@ select {
 /* === SWITCH TD VALUE */
 
 span.value {
-  /* background: #dfef; */
+  /* background: #00ffb3; */
   position: absolute;
   left: 0;
   top: 0;
   width: 100%;
-  height: 100%;            /* penting */
-  display: flex;           /* untuk centering */
+  height: 100%;
+  display: flex;
   flex-direction: column;
-  align-items: center;     /* vertical center */
-  justify-content: center; /* horizontal center */
+  align-items: center;
+  justify-content: center;
   backface-visibility: hidden;
   transition: transform .4s ease, opacity .4s ease;
   transform-origin: center;
@@ -263,20 +274,23 @@ span.value:not(.hidden) {
 span.value.hidden {
   transform: rotateX(90deg);
   opacity: 0;
-  pointer-events: none; /* aman */
+  pointer-events: none;
 }
 .value small {
-  /* text-align: right; */
   opacity: .85;
-  font-size: 0.85em;
+  font-size: 0.7em;
+  line-height: 1.5;
+  padding: 2px;
 }
-#gener .valu{
-  align-items: center;
-  justify-content: right !important;
-  width: 95%;
-  right: 8px !important;
+.value small::before {
+  content: "Avg ";
 }
-
+span.value.right {
+  left: auto;
+  right: 15px;
+  width: auto;
+  padding-right: 12px;
+}
 /* === RESIZER */
 
 .resizer {
@@ -315,7 +329,7 @@ span.value.hidden {
 /* === CHART CONTAINER */
 
 .chart-wrapper {
-  border: 1px solid;
+  border-bottom: 1px solid;
   margin: 40px 5px;
   height: 40vh;
   min-height: 30vh;
@@ -324,7 +338,13 @@ span.value.hidden {
 .chart-options {
   position: absolute;
   top: -25px;
-  left: 15px;
+  left: 0px;
+  width: 100%;
+  overflow: hidden;
+  padding: 2px;
+  background: var(--pm-bg);
+  box-sizing: border-box;
+  border: 1px solid var(--pm-bg);
 }
 .chart-options label {
   position: relative;
@@ -333,6 +353,8 @@ span.value.hidden {
   margin-bottom: 6px;
   margin-right: 5px;
   line-height: 20px;
+  font-size: .9em;
+  color: var(--sc-bg);
 }
 .chart-options input[type="checkbox"] {
   position: absolute;
@@ -341,12 +363,12 @@ span.value.hidden {
   margin: 0;
 }
 
-#reset {
+.reset {
   position: absolute;
-  top: -32px;
+  top: 0px;
   right: 5px;
   z-index: 10;
-  padding: 5px 10px;
+  /* padding: 5px 10px; */
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -396,6 +418,7 @@ span.value.hidden {
 .accordion-input:checked ~ .accordion-content {
   max-height: fit-content; /* Adjust max-height to fit content */
   padding: 1em;
+  border-top: 1px solid var(--pm-bg);
 }
 .accordion-label::after {
   content: '+';
@@ -774,86 +797,6 @@ td[data-tooltip]:hover::after {
   /* background: #f0f0f0; */
 }
 
-
-.accordion-label .row,
-.acc-header .row,
-.acc-year-header .row,
-.acc-month-header .row {
-  display: table;
-  table-layout: fixed;
-  width: 100%;
-}
-
-.accordion-label .cell,
-.acc-header .cell,
-.acc-year-header .cell,
-.acc-month-header .cell {
-  display: table-cell;
-  position: relative;
-  white-space: nowrap;
-}
-
-/* ========== ACCORDION — YEAR */
-.acc-year {
-  margin: 15px 3px;
-  /* border: 1px solid #333; */
-  /* border-radius: 6px; */
-  overflow: hidden;
-  /* border: 1px solid var(--pm-bg); */
-  /* background: #1b1b1b; */
-  box-shadow: 0 5px 5px rgba(0, 0, 0, 0.3);
-  background: #f2f2f2;
-}
-
-.acc-year-header {
-  margin: 5px;
-  padding: 8px 12px;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  user-select: none;
-  /* color: #eee; */
-  transition: background 0.2s;
-}
-.acc-year-body {
-  padding: 4px;
-  background: #fff;
-}
-.acc-year-body.hide {
-  display: none;
-}
-/* ========== ACCORDION — MONTH */
-.acc-month {
-  /* border-top: 1px solid #333; */
-  /* border: 1px solid var(--pm-bg); */
-  background: #f2f2f2;
-  box-shadow: 0 5px 5px rgba(0, 0, 0, 0.3);
-}
-
-.acc-month-header {
-  margin: 10px 5px;
-  padding: 5px;
-  /* font-size: 15px; */
-  font-weight: 500;
-  /* background: #202020; */
-  cursor: pointer;
-  user-select: none;
-  /* color: #ddd; */
-  transition: background 0.25s;
-}
-
-.acc-month-header:hover {
-  /* background: #2a2a2a; */
-}
-
-.acc-month-body {
-  padding: 16px 20px;
-  background: #fff;
-  /* background: #181818; */
-}
-.acc-month-body.hide {
-  display: none;
-}
 /* ============ MONTH BOX */
 .month-box {
   display: flex;
@@ -865,10 +808,8 @@ td[data-tooltip]:hover::after {
 .month-chart {
   width: 100%;
   height: 260px;
-  /* background: #111; */
   border: 1px solid #333;
-  /* border-radius: 6px; */
-  /* padding: 10px; */
+  background: var(--sc-bg);
 }
 
 /* ========== PAIR FILTER BUTTONS */

@@ -36,116 +36,137 @@ export class ViewStatistics {
     const container = $('#equity-chart-container');
     const equityCanvas    = $('#equity-chart').getContext('2d');
     const handleResizer   = container.querySelector('.resizer');
+    const opt = CB.chartControl(container);
     
     const labels = data.p.map((_, i) => i + 1);
-    const pips   = data.p.map(p  => p.equity);
+    const pips   = data.p.map(p => p.equity);
     const vpips  = data.v.map(v => v.equity);
-  
+
     // ── CHART CONFIG ─────────────────────────────────────────
-    const globalConfig = {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "pips",
-            data: pips,
-            borderWidth: 1,
-            pointRadius: 0,
-            hoverRadius: 1,
-            tension: 0,
-          },
-          {
-            label: "value pips",
-            data: vpips,
-            borderWidth: 1,
-            pointRadius: 0,
-            hoverRadius: 1,
-            tension: 0,
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: "index",
-          intersect: false
+    
+    const overviewCfg = buildChartConfig(opt)
+
+    function buildChartConfig(opt) {
+      const A1 = "#089981", B1 = "#f23645", A2 = "#36A2EB", B2 = "#FF4263";
+    
+      return {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "pips",
+              data: pips,
+              segmentColor: { enabled: true },
+              tension: 0,
+              pointRadius: 0,  
+              borderWidth: 1,
+              hoverRadius: 1.5,
+              fill: false,
+              backgroundColor: undefined,
+              // segment: {
+              //   borderColor: ctx => ctx.p0.parsed.y >= 0 ? A1 : B1
+              // }
+            },
+            {
+              label: "value",
+              data: vpips,
+              segmentColor: { enabled: true, above: A2, below: B2 },
+              tension: 0,
+              pointRadius: 0,  
+              borderWidth: 1,
+              hoverRadius: 1.5,
+              fill: false,
+              backgroundColor: undefined,
+              // segment: {
+              //   borderColor: ctx => ctx.p0.parsed.y >= 0 ? A2 : B2
+              // }
+            }
+          ]
         },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { display: false }
+        options: {
+          
+          responsive: true,
+          maintainAspectRatio: false,
+          crosshair: { enabled: opt.tooltip },
+          interaction: {
+            mode: "nearest",
+            intersect: false
           },
-          y: {
-            beginAtZero: true,
-            grid: { display: false },
-            ticks: { 
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { display: false },
+              ticks: { 
+                display: true,
+                callback: (v) => {
+                  return FM.num(v, 1)
+                }
+              }
+            }
+          },
+          plugins: {
+            title: {
               display: true,
-              callback: (v) => {
-                return FM.num(v, 1)
+              text: "Net Pips vs Value",
+              position: "top"
+            },
+            legend: { display: true, position: "bottom" },
+            tooltip: {
+              enabled: opt.tooltip,
+              cornerRadius: 0,
+              titleFont: { size: 10 },
+              bodyFont: { size: 10 },
+              intersect: false,
+              callbacks: {
+                title: (ctx) => {
+                  const i = ctx[0].dataIndex;
+                  const a = data.p[i]
+                  return `#${i} | ${a.date} | ${a.value >= 0 ? "🟢" : "🔴"}`;
+                },
+                label: (ctx) => {
+                  const i = ctx.dataIndex;
+                  const src = ctx.datasetIndex === 0 ? data.p[i] : data.v[i];
+                  return `${src.pair} | ${FM.num(src.value)}`;
+                }
               }
-            }
-          }
-        },
-        customCrosshair: {
-          enabled: true,
-          lineStyle: 'dashed'
-        },
-        plugins: {
-          legend: { display: true, position: "bottom" },
-          tooltip: {
-            enabled: false,
-            intersect: false,
-            callbacks: {
-              title: (ctx) => {
-                const i = ctx?.[0]?.dataIndex ?? 0;
-                return `#${i} | ${data.p[i].date}`;
-              },
-              label: (ctx) => {
-                const i = ctx.dataIndex;
-                const src = ctx.datasetIndex === 0 ? data.p[i] : data.v[i];
-                return `${FM.num(src.value)} | ${FM.num(src.equity)}`;
-              },
-              footer: (ctx) => {
-                const i = ctx[0].dataIndex;
-                const p = data.p[i];
-                return `${p.pair} | ${p.isLong ? "Long" : "Short"} | ${p.value >= 0 ? "🟢" : "🔴"}`;
+            },
+            annotation: {
+              annotations: {
+                zeroLine: {
+                  type: 'line',
+                  yMin: 0,
+                  yMax: 0,
+                  borderColor: 'gray',
+                  borderWidth: 1,
+                  borderDash: [5, 5],
+                }
               }
-            }
-          },
-          annotation: {
-            annotations: {
-              zeroLine: {
-                type: 'line',
-                yMin: 0,
-                yMax: 0,
-                borderColor: 'gray',
-                borderWidth: 1,
-                borderDash: [5, 5],
-              }
-            }
-          },
-          zoom: {
-            pan: {
-              enabled: false,
-              mode: "xy",
-              threshold: 10
             },
             zoom: {
-              wheel:   { enabled: false, speed: 0.05 },
-              pinch:   { enabled: false },
-              mode: "xy"
+              pan: {
+                enabled: opt.zoom,
+                mode: "x",
+                threshold: 10
+              },
+              zoom: {
+                wheel:   { enabled: opt.zoom, speed: 0.05 },
+                pinch:   { enabled: opt.zoom },
+                mode: "x"
+              }
             }
-          }
+          },
         }
       }
     }
   
     // ── CREATE / UPDATE CHART ───────────────────────────────
-    const chart = CB.initChart("globalEquity", equityCanvas, globalConfig);
-    CB.chartControl(container, chart);
-  
+    const chart = CB.initChart("globalEquity", equityCanvas, overviewCfg);
+    CB.bindChartControl(container, chart);
     // ── CLEANUP PREVIOUS OBSERVERS ──────────────────────────
     window.charts.equityObserver?.disconnect();
     window.charts.equityResizeCleanup?.();
@@ -172,7 +193,7 @@ export class ViewStatistics {
     const d = create("div", { class: "chart-wrapper" },
         create("canvas", { id: `pairs-chart` }));
     this.overView.append(d);
-    const pairsCanvas     = $('#pairs-chart').getContext('2d');
+    const pairsCanvas = $('#pairs-chart').getContext('2d');
   
     if (sortBy === "pips") {
       data = [...data].sort((a, b) => b.pips - a.pips);
@@ -182,14 +203,14 @@ export class ViewStatistics {
   
     const labels = data.map(d => d.pair);
   
-    const config = {
+    const pairsCfg = {
       _height: data.length * 60,
       type: "bar",
       data: {
         labels,
         datasets: [
-          { label: "Pips",  data: data.map(d => d.pips) },
-          { label: "VPips", data: data.map(d => d.vpips) }
+          { label: "pips",  data: data.map(d => d.pips) },
+          { label: "value", data: data.map(d => d.vpips) }
         ]
       },
       options: {
@@ -200,10 +221,18 @@ export class ViewStatistics {
           x: { grid: { display: false } },
           y: { grid: { display: false } }
         },
-        customCrosshair: { enabled: false },
+        crosshair: { enabled: false },
         plugins: {
           legend: { position: "bottom" },
+          title: {
+            display: true,
+            text: "Net by Pair",
+            position: "top"
+          },
           tooltip: {
+            cornerRadius: 0,
+            titleFont: { size: 10 },
+            bodyFont: { size: 10 },
             callbacks: {
               label: (ctx) => `${ctx.dataset.label}: ${FM.num(ctx.raw)}`
             }
@@ -213,7 +242,7 @@ export class ViewStatistics {
       }
     };
   
-    return CB.initChart("globalPairs", pairsCanvas, config);
+    return CB.initChart("globalPairs", pairsCanvas, pairsCfg);
   }
 
   tableGeneral(stats) {
@@ -429,8 +458,8 @@ _buildYearSection(year, monthKeys, stats) {
     totalNetV += s.netVPips;
   });
 
-  const avgP = FM.metricFormat(totalNetP / monthKeys.length ?? 0, "R");
-  const avgV = FM.metricFormat(totalNetV / monthKeys.length ?? 0, "R");
+  const avgP = FM.metricFormat(totalNetP / monthKeys.length, "R");
+  const avgV = FM.metricFormat(totalNetV / monthKeys.length, "R");
   const netP = FM.metricFormat(totalNetP ?? 0, "R");
   const netV = FM.metricFormat(totalNetV ?? 0, "R");
 
@@ -443,11 +472,11 @@ _buildYearSection(year, monthKeys, stats) {
           create("small", `${totalTrades} trades`)
         ),
         create("div", { class: "cell" },
-          create("span", { class: `value ${netP.css}` }, netP.txt,
+          create("span", { class: `value right` }, netP.txt,
             create("br"),
             create("small", { class: ``}, avgP.txt)
           ),
-          create("span", { class: `value hidden ${netV.css}` }, netV.txt,
+          create("span", { class: `value hidden right` }, netV.txt,
             create("br"),
             create("small", {class: ``}, avgV.txt)
           )
@@ -480,11 +509,11 @@ _buildMonthSection(monthKey, data) {
           create("small", `${s.totalTrades} trades`)
         ),
         create("div", { class: "cell" },
-          create("span", { class: `value ${netP.css}` }, netP.txt,
+          create("span", { class: `value right ${netP.css}` }, netP.txt,
             create("br"),
             create("small", { class: ``}, avgP.txt)
           ),
-          create("span", { class: `value hidden ${netV.css}` }, netV.txt,
+          create("span", { class: `value right hidden ${netV.css}` }, netV.txt,
             create("br"),
             create("small", { class: `` }, avgV.txt)
           )
@@ -492,14 +521,13 @@ _buildMonthSection(monthKey, data) {
       )
     )
   );
-  const body = create("div", { class: "accordion-content" });
+  const body = create("div", { class: "accordion-content pivot pips-mode" });
   const box = create("div", { class: "month-box" });
   const chartAllContainer = create("div", { class: "month-chart" },
     create("canvas", { id: `chart_${monthKey}` })
   );
 
   const pairBtns = this._buildPairButtons(monthKey, data);
-  //const summary = this._buildMonthSummary(data.summary);
 
   box.append(chartAllContainer, pairBtns);
 
@@ -594,8 +622,7 @@ _buildPairButtons(monthKey, data) {
 }
 
 _renderMonthlyChart(monthKey, data) {
-  
-  const canvas = document.getElementById(`chart_${monthKey}`);
+  const canvas = $(`#chart_${monthKey}`);
   if (!canvas) return;
   window._monthlyData ??= {};
   window._monthlyData[monthKey] = window._monthlyData[monthKey] || {};
@@ -603,21 +630,39 @@ _renderMonthlyChart(monthKey, data) {
   window._monthlyActivePairs ??= {};
   window._monthlyActivePairs[monthKey] ??= new Set(["ALL"]);
 
-  const green = "#089981";
-  const red = "#f23645";
+  const A1 = "#089981";
+  const B1 = "#f23645";
   const realData = data.p.map(x => x.equity);
   const zeroData = [0, ...realData];
   const labels = zeroData.map((_, i) => i);
-  const monhlyConfig = {
+  const monthlyCfg = {
     type: "line",
     data: {
       labels,
+      // datasets: [
+      //     {
+      //       label: "pips",
+      //       data: pips,
+      //       borderWidth: 1,
+      //       pointRadius: 0,
+      //       hoverRadius: 1,
+      //       tension: 0,
+      //     },
+      //     {
+      //       label: "value",
+      //       data: vpips,
+      //       borderWidth: 1,
+      //       pointRadius: 0,
+      //       hoverRadius: 1,
+      //       tension: 0,
+      //     }
+      //   ],
       datasets: [{
         label: "ALL",
         data: zeroData,
-        segment: {
-          borderColor: ctx => (ctx.p0.parsed.y >= 0 ? green : red)
-        },
+        // segment: {
+        //   borderColor: ctx => (ctx.p0.parsed.y >= 0 ? A1 : B1)
+        // },
         fill: false,
         backgroundColor: undefined,
         borderWidth: 1,
@@ -628,39 +673,33 @@ _renderMonthlyChart(monthKey, data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      crosshair: { enabled: true },
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
       plugins: {
         tooltip: {
           enabled: true,
-          mode: "index",
+          cornerRadius: 0,
+          titleFont: { size: 10 },
+          bodyFont: { size: 10 },
+          displayColors: false,
           intersect: false,
           callbacks: {
             title: (ctx) => {
               const i = ctx[0].dataIndex;
-  
               if (i === 0) return "Begin at 0";
-  
               const realIndex = i - 1;
-              return `#${realIndex + 1} | ${data.p[realIndex].date}`;
+              const a = data.p[realIndex]
+              return `#${realIndex + 1} | ${a.date} | ${a.value >= 0 ? "🟢" : "🔴"}`;
             },
             label: (ctx) => {
               const i = ctx.dataIndex;
-  
               if (i === 0) return "";
-  
               const realIndex = i - 1;
-              const src = data.p[realIndex];
-  
-              return `${FM.num(src.value)} | ${FM.num(src.equity)}`;
-            },
-            footer: (ctx) => {
-              const i = ctx[0].dataIndex;
-  
-              if (i === 0) return "";
-  
-              const realIndex = i - 1;
-              const p = data.p[realIndex];
-  
-              return `${p.pair} | ${p.isLong ? "Long" : "Short"} | ${p.value >= 0 ? "🟢" : "🔴"}`;
+              const a = data.p[realIndex];
+              return `${a.pair} | ${FM.num(a.value)}`;
             }
           }
         },
@@ -691,12 +730,14 @@ _renderMonthlyChart(monthKey, data) {
           ticks: { display: true },
           beginAtZero: true
         }
-      }
+      },
+      segmentColor: { enabled: true, above: A1, below: B1 },
+      
     }
   };
 
   window._monthlyCharts ??= {};
-  window._monthlyCharts[monthKey] = new Chart(canvas, monhlyConfig);
+  window._monthlyCharts[monthKey] = new Chart(canvas, monthlyCfg);
 }
 
 _switchMonthlyDataset(monthKey, pair) {
@@ -740,17 +781,17 @@ _switchMonthlyDataset(monthKey, pair) {
     // build merged curve from selected pairs using byPair curves
     finalCurve = this._buildMergedCurveFromPairs(monthCache, [...newSet]);
   }
-
+  
   // write single dataset to chart
   const label = newSet.has("ALL") ? "ALL" : [...newSet].join(" + ");
-  const labels = finalCurve.p.map((_, i) => i + 1);
-  const zeroData = finalCurve.p.map(x => x.equity);
-
+  const labels = finalCurve.p.map((_, i) => i);
+  const realData = finalCurve.p.map(x => x.equity);
+  const zeroData = [0, ...realData];
   chart.data.labels = labels;
   chart.data.datasets = [{
-    label,
+    labels,
     data: zeroData,
-    borderWidth: 1.5,
+    borderWidth: 1,
     pointRadius: 0,
     tension: 0
   }];
