@@ -25,3 +25,21 @@ window.addEventListener('DOMContentLoaded', e => {
     if (isNum) s.classList.add("m");
   });
 });
+
+function getLocalStorageUsage() {
+  let used = 0;
+  for (let key in localStorage) {
+    if (localStorage.hasOwnProperty(key)) {
+      used += (localStorage[key].length + key.length);
+    }
+  }
+  return used;
+}
+
+console.log("Used bytes:", getLocalStorageUsage());
+
+const total = 5 * 1024 * 1024; // approx 5MB
+const used = getLocalStorageUsage();
+const remaining = total - used;
+
+console.log("Remaining bytes:", remaining);

@@ -13,7 +13,7 @@ export class UIManager {
 
   initSwiperPage() {
     const navBtns  = $$(".nav-btn");
-    const pages    = [$("#page-dash"), $("#page-list"), $("#page-stats")];
+    const pages    = [$("#page-list"), $("#page-stats")];
     const tabBar   = $(".tab-bar");
     const tabBtns  = $$(".tab-btn");
     const toggleBtn = $("#toggle-swiper");
@@ -45,20 +45,24 @@ export class UIManager {
   
     // INIT SWIPER
     const swiper = new Swiper(".swiper", {
+      loop: true,
+      slidesPerView: 1,         // penting! untuk jamin loop aktif
       resistanceRatio: 0.5,
       speed: 250,
       autoHeight: false,
       touchStartPreventDefault: false,
-      on: { slideChange: () => updateTabs(swiper.activeIndex) }
+      on: {
+        realIndexChange(sw) {
+          updateTabs(sw.realIndex);
+        }
+      }
     });
-  
-    updateTabs(0); // initial tab position
     
-  
-    // TABS CLICK → SWIPER SLIDE
+    updateTabs(0);
+    
     tabBtns.forEach(btn => {
       btn.addEventListener("click", () => {
-        swiper.slideTo(parseInt(btn.dataset.index));
+        swiper.slideToLoop(parseInt(btn.dataset.index));
       });
     });
   
@@ -66,9 +70,9 @@ export class UIManager {
     let enabled = localStorage.swipe !== "false"; // default true
   
     const applySwiperState = () => {
-      swiper.allowTouchMove = enabled && currentPage === 2;
+      swiper.allowTouchMove = enabled && currentPage === 1;
       toggleBtn.textContent = enabled ? "Disable Slide" : "Enable Slide";
-      toggleBtn.classList.toggle("none", currentPage !== 2);
+      toggleBtn.classList.toggle("none", currentPage !== 1);
     };
   
     toggleBtn.onclick = () => {
@@ -94,7 +98,7 @@ export class UIManager {
         btn.classList.add("active");
   
         // tab bar (only on stats page)
-        tabBar.classList.toggle("none", page !== 2);
+        tabBar.classList.toggle("none", page !== 1);
   
         // always reapply swiper state
         applySwiperState();

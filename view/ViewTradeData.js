@@ -50,11 +50,11 @@ export class ViewTradeData {
     const thead = create("thead", {}, headerRow);
     const tbody = create("tbody", {});
     const sta = create("div", { id: "status-area"});
-    const exp = create("button", { id: "export-btn" });
+    const exp = create("button", { id: "export-btn" }, "Copy");
     table.append(thead, tbody);
-    table.prepend(sta, exp);
     this.table = table;
     this.tbody = tbody;
+    this.container.prepend(sta, exp);
     this.container.append(table);
   }
 	

@@ -57,12 +57,13 @@ body {
   overflow-y: auto;
 }
 .swiper-slide {
+  width: 100%;         /* penting! */
+  flex-shrink: 0;      /* jangan mengecil saat content kecil */
   height: calc(100vh - 140px);
   overflow-y: auto;
   overflow-x: auto;
   position: relative;
 }
-
 /* === NAVBAR */
 
 .nav-bar, .tab-bar {
@@ -492,13 +493,18 @@ span > small::before {
   overflow: auto;
   max-height: 80vh;
 }
+.nowrap {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* opsional */
+}
 table {
   width: 100%;
   position: relative;
   box-sizing: border-box;
   border-collapse: collapse;
 }
-table td {
+table th, table td {
   white-space: nowrap;
   position: relative;
 }

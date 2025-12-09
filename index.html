@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Backtest Analyzer</title>
   <link rel="stylesheet" href="./cdn/swiper.min.css"/>
+  <script src="./cdn/swiper.min.js"></script>
   <link rel="stylesheet" href="./styles.css"/>
 </head>
 <body id="app">
   <div id="nav-bar" class="nav-bar">
-    <button class="nav-btn active" data-page="0">Dashboard</button>
-    <button class="nav-btn" data-page="1">List Trade</button>
-    <button class="nav-btn" data-page="2">Statistics</button>
+    <button class="nav-btn active" data-page="0">List Trade</button>
+    <button class="nav-btn" data-page="1">Statistics</button>
     <select id="sample-select" size="1" multiple>
 	    <option value="EURJPY">EURJPY</option>
 	    <option value="EURUSD">EURUSD</option>
@@ -30,9 +30,7 @@
     </div>
   </div>
   
-  <div id="page-dash" class="primary-content">Dashboard Content</div>
-  
-  <div id="page-list" class="primary-content none"></div>
+  <div id="page-list" class="primary-content"></div>
 
   <div id="page-stats" class="primary-content none">
     
@@ -60,13 +58,14 @@
   
   </div>
   <div id="notify-area"></div>
-  <script src="./cdn/swiper.min.js"></script>
+  
 	<script src="./cdn/chart.min.js"></script>
   <script src="./cdn/chart-plugin-hammer.min.js"></script>
 	<script src="./cdn/chart-plugin-zoom.min.js"></script>
 	<script src="./cdn/chart-plugin-annotation.min.js"></script>
 	<script src="/cdn/eruda.min.js"></script>
 	<script src="./debug.js"></script>
-	<script type="module" src="app.js"></script>
+	<script type="module" src="app.js"></scrip
+	
 </body>
 </html>
