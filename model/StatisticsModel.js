@@ -125,14 +125,14 @@ export class StatisticsModel {
     const end   = trades.at(-1).dateEX.toLocaleDateString('id-ID', {day: 'numeric',month: 'short',year: 'numeric'})
     const countM = Object.keys(monthly).length;
     const countY = countM / 12
-    
+    const avgTrade = trades.length / countM;
     return {
       accum: { monthly, yearly, total },
       prop: {
         period: `${start} - ${end}`,
         months: `${countM} months`,
         years: `${countY.toFixed(1)} years`,
-        monthly: HM.callMonthlyFunc(monthlyArr),
+        monthly: HM.callMonthlyFunc(monthlyArr, avgTrade),
         yearly: HM.callYearlyFunc(yearlyArr),
       }
     };
@@ -143,13 +143,12 @@ export class StatisticsModel {
     const p = [];
     const v = [];
   
-    for (const { pair, isLong, dateEX, pips, vpips } of trades) {
+    for (const { pair, dateEX, pips, vpips } of trades) {
   
       cumP += pips;
       cumV += vpips;
   
       p.push({
-        isLong,
         pair,
         equity: cumP,
         date: FM.dateDMY(dateEX),
@@ -157,10 +156,9 @@ export class StatisticsModel {
       });
   
       v.push({
-        isLong,
         pair,
         equity: cumV,
-        date: dateEX,
+        date: FM.dateDMY(dateEX),
         value: vpips
       });
     }

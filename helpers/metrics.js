@@ -34,30 +34,6 @@ export function stDev(arr) {
   const variance = avg(arr.map(v => (v - mean) ** 2));
   return Math.sqrt(variance);
 }
-
-export function omputePips(trade = {}, pair = '') {
-  const { priceEN, priceTP, priceSL, result, type } = trade;
-  
-  const en = +priceEN;
-  const tp = +priceTP;
-  const sl = +priceSL;
-  
-  const diff =
-    result === 'TP' ?
-    (type === 'Buy' ? tp - en : en - tp) :
-    (type === 'Buy' ? sl - en : en - sl);
-  
-  const factor = pair.endsWith('JPY') ? 100 : pair === 'XAUUSD' ? 10 :10000;
-  const pips = diff * factor;
-  
-  return {
-    TP,
-    SL,
-    pips,
-    vpips: pips * pairsMap[pair].mul
-  };
-}
-
 export function computePips(trade = {}, pair = '') {
   const { priceEN, priceTP, priceSL, type } = trade;
   
@@ -261,7 +237,7 @@ export function computeDrawdown(curve = [], thresholdStart = 500, thresholdDD = 
 
     events.push({
       startIndex: peakIndex,
-      endIndex: curve.lenght - 1,
+      endIndex: curve.length - 1,
       peakDate,
       peakEquity,
       troughDate,
@@ -295,11 +271,12 @@ export function computeDrawdown(curve = [], thresholdStart = 500, thresholdDD = 
   };
 }
 
-export function callMonthlyFunc(monthlyArr, targetThreshold = 0) {
+export function callMonthlyFunc(monthlyArr, avgTrade, targetThreshold = 0) {
   const pArr = monthlyArr.map(m => m.p);
   const vArr = monthlyArr.map(m => m.v);
-
+  //log(monthlyArr)
   return {
+    averageTradePerMonth: { p: avgTrade, v: avgTrade, t: "float" },
     percentagePassTarget: {
       p: pArr.filter(x => x >= 600).length / pArr.length * 100,
       v: vArr.filter(x => x >= 300).length / vArr.length * 100,

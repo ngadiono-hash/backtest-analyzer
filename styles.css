@@ -18,8 +18,12 @@
   --lose-bg: #F5525E;
   --txt-cl: #989898;
 }
-.pos { color: #089981 !important; }
-.neg { color: #f23645 !important; }
+.p-mode.pos { color: #089981; }
+.p-mode.neg { color: #f23645; }
+.v-mode.pos { color: #36A2EB; }
+.v-mode.neg { color: #FFB60C; }
+.pos { color: #089981; }
+.neg { color: #f23645; }
 .zero { color: #dda333 !important; }
 .null { color: #ccc6de !important; }
 .pips-mode { background: var(--pips-bg) !important; }
@@ -38,7 +42,9 @@
 .cell {
   display: table-cell;
   position: relative;
+  white-space: nowrap;
 }
+
 body {
   background: var(--sc-bg);
   color: var(--txt-cl);
@@ -120,9 +126,9 @@ select {
 .dropup-btn::after {
   content: url("/icons/basic-gear.svg");
   display: inline-block;
-  /* width: 16px; */
+  width: 16px;
   color: inherit;
-  /* height: 16px; */
+  height: 16px;
 }
 .dropup-panel {
   position: absolute;
@@ -276,21 +282,16 @@ span.value.hidden {
   opacity: 0;
   pointer-events: none;
 }
-.value small {
+span > small {
   opacity: .85;
   font-size: 0.7em;
   line-height: 1.5;
   padding: 2px;
 }
-.value small::before {
+span > small::before {
   content: "Avg ";
 }
-span.value.right {
-  left: auto;
-  right: 15px;
-  width: auto;
-  padding-right: 12px;
-}
+
 /* === RESIZER */
 
 .resizer {
@@ -330,10 +331,53 @@ span.value.right {
 
 .chart-wrapper {
   border-bottom: 1px solid;
-  margin: 40px 5px;
-  height: 40vh;
-  min-height: 30vh;
+  margin: 40px 5px 20px;
+  height: 400px;
   position: relative;
+}
+.accordion-content .chart-wrapper {
+  margin: 10px 5px !important;
+  height: 300px;
+}
+.canvas {
+  /* min-height: 300px; */
+  /* border-left: 1px solid; */
+  /* border-right: 1px solid; */
+}
+.pair-filter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 5px;
+}
+.pair-btn {
+  font-family: "FiraSans", Sans-Serif;
+  padding: 6px 8px;
+  border: 1px solid var(--pm-bg);
+  background: var(--sc-bg);
+  color: var(--pm-bg);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pair-btn.active {
+  border: 1px solid var(--sc-bg);
+  background: var(--pm-bg);
+  color: var(--sc-bg);
+}
+.pair-btn small.pair-count {
+  background: rgba(0,0,0,0.15);
+  color: #0a0a0a;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.7em;
+  line-height: 1;
 }
 .chart-options {
   position: absolute;
@@ -362,7 +406,6 @@ span.value.right {
   top: 0;
   margin: 0;
 }
-
 .reset {
   position: absolute;
   top: 0px;
@@ -375,7 +418,6 @@ span.value.right {
   cursor: pointer;
 }
 
-
 /* === ACCORDION */
 
 .accordion {
@@ -386,7 +428,7 @@ span.value.right {
   box-shadow: 0 5px 5px rgba(0, 0, 0, 0.3);
 }
 .accordion-input {
-  display: none; /* Hide the checkbox visually */
+  display: none;
 }
 .accordion-label {
   position: relative;
@@ -432,6 +474,17 @@ span.value.right {
 .accordion-input:checked + .accordion-label::after {
   content: '-';
 }
+
+.acc-year {
+  
+}
+.acc-month {
+  
+}
+.accordion .row .cell:first-child {
+  width: 140px;
+}
+.accordion .cell.blank { width: 40px; }
 
 /* === TABLE LAYOUT */
 
@@ -604,87 +657,26 @@ td[data-tooltip]:hover::after {
 }
 
 /* === GENERAL | MONTHLY | PROPERTY | DRAWDOWN TABLE */
-
-#general-table td:not(.pivot) { min-width: 70px; }
+#dd-summary td:not(.pivot) { min-width: 100px; }
+#dd-events td:not(.pivot) { min-width: 60px; font-size: .9em; padding: 10px 8px; padding: 10px 8px;}
+#general-table td:not(.pivot) { min-width: 60px; font-size: 0.85em; }
 #props-table td:not(.pivot) { min-width: 88px; }
 #monthly-table .pivot-y { min-width: 45px; }
 #monthly-table td:not(.pivot) { min-width: 60px; }
-#monthly-table .grand-total-row {
-  font-weight: bold;
-  background: #fafafa;
-}
-#dd-summary td:not(.pivot),
-#dd-events td:not(.pivot) {
-  padding: 10px 8px;
-  font-size: .9em;
-  min-width: 90px;
-  border: 1px solid #eee;
-}
+#monthly-table .grand-total-row td { background: #fafafa; }
+
 .dd-events-group {
   overflow-x: auto;
-  height: 50vh;
+  height: 70vh;
 }
 .dd-events-group table {
   
 }
 #dd-summary {
-  /* overflow-x: visible; */
   width: 100%;
 }
-#dd-summary td:not(.pivot) {
-  min-width: 100px;
-}
-#dd-events td:not(.pivot) {
-  min-width: 60px;
-}
 
-/* 00000=== MOBILE ===00000 */
-
-@media (max-width: 430px) {
-  html,
-  body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    font-size: 0.9em;
-  }
-  #notify-area {
-    top: auto;
-    bottom: 70px;
-    left: 50%;
-    right: auto;
-    max-width: 90%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 8px;
-  }
-  .notify {
-    width: 100%;
-    max-width: 400px;
-    animation: slideIn 0.4s ease-out;
-  }
-  @keyframes slideIn {
-    from {
-      transform: translateY(100%);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-  @keyframes slideOut {
-    to {
-      transform: translateY(100%);
-      opacity: 0;
-    }
-  }
-}
-
-
+/* === STREAK  */
 
 .streak-wrapper {
   display: flex;
@@ -750,7 +742,6 @@ td[data-tooltip]:hover::after {
   background: #f1f1f1;
 }
 
-
 .acc-body {
   padding: 10px 0px;
   background: #fff;
@@ -797,67 +788,49 @@ td[data-tooltip]:hover::after {
   /* background: #f0f0f0; */
 }
 
-/* ============ MONTH BOX */
-.month-box {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+/* 00000=== MOBILE ===00000 */
+
+@media (max-width: 430px) {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 0.9em;
+  }
+  #notify-area {
+    top: auto;
+    bottom: 70px;
+    left: 50%;
+    right: auto;
+    max-width: 90%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .notify {
+    width: 100%;
+    max-width: 400px;
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slideOut {
+    to {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
 }
 
-/* ===== CHART AREA */
-.month-chart {
-  width: 100%;
-  height: 260px;
-  border: 1px solid #333;
-  background: var(--sc-bg);
-}
-
-/* ========== PAIR FILTER BUTTONS */
-.pair-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.pair-btn {
-  padding: 6px 12px;
-  border: 1px solid #444;
-  background: #222;
-  color: #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.pair-btn:hover {
-  background: #2e2e2e;
-  border-color: #666;
-}
-
-.pair-btn.active {
-  background: #008cff;
-  border-color: #008cff;
-  color: white;
-}
-
-/* ========== MONTH SUMMARY */
-.month-summary {
-  padding: 14px;
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 6px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  font-size: 14px;
-  color: #ccc;
-}
-
-.sum-line {
-  padding: 6px 8px;
-  /* background: #1f1f1f; */
-  border-radius: 4px;
-  /* border: 1px solid #2f2f2f; */
-}

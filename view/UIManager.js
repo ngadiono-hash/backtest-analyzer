@@ -37,7 +37,6 @@ export class UIManager {
       tabBtns.forEach((btn, i) => {
         const isActive = i === active;
         btn.classList.toggle("active", isActive);
-        //log(active)
         if (isActive) {
           btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
         }
@@ -161,25 +160,25 @@ export class UIManager {
         let mergedText = '';
 
         try {
-            for (const name of selected) {
-                const path = `./sample/${name}.csv`;
-                const res = await fetch(path);
-                if (!res.ok) return this.notif.error(`File not found: ${path}`);
+          for (const name of selected) {
+              const path = `./sample/${name}.csv`;
+              const res = await fetch(path);
+              if (!res.ok) return this.notif.error(`File not found: ${path}`);
 
-                const text = await res.text();
-                mergedText += text.trim() + '\n';
-            }
+              const text = await res.text();
+              mergedText += text.trim() + '\n';
+          }
 
-            const mergedName = selected.join('-');
-            this.data.renderFile(mergedText, mergedName);
+          const mergedName = selected.join('-');
+          this.data.renderFile(mergedText, mergedName);
 
-            // ===== Simpan ke localStorage =====
-            saveSelection(selected, mergedText);
+          // ===== Simpan ke localStorage =====
+          saveSelection(selected, mergedText);
 
-            this.notif.success(`Sample ${mergedName} loaded`);
+          this.notif.success(`Sample ${mergedName} loaded`);
 
         } catch (err) {
-            this.notif.error(err.message);
+          this.notif.error(err.message);
         }
 
         const delay = isMobile ? 200 : 0;

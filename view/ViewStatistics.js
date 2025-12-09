@@ -6,9 +6,7 @@ import * as TB           from "../helpers/table_builder.js";
 export class ViewStatistics {
   constructor() {
     this._setupEvent();
-    
     this.overView = $("#overview");
-
   }
 
   _setupEvent() {
@@ -26,172 +24,32 @@ export class ViewStatistics {
     });
   }
   
-  chartGlobalEquity(data) {
-    const overview  = this.overView;
+  chartGlobalEquity(stats) {
+    const overview = this.overView;
     overview.innerHTML = "";
-    overview.append(create("div", { class: "chart-wrapper", id: "equity-chart-container" },
-        create("canvas", { id: `equity-chart` }),
-        create("div", { class: "resizer"}))
-    );
-    const container = $('#equity-chart-container');
-    const equityCanvas    = $('#equity-chart').getContext('2d');
-    const handleResizer   = container.querySelector('.resizer');
-    const opt = CB.chartControl(container);
-    
-    const labels = data.p.map((_, i) => i + 1);
-    const pips   = data.p.map(p => p.equity);
-    const vpips  = data.v.map(v => v.equity);
+  
+    // 1. Layout
+    const { wrapper, canvas, controls } = this._buildChartLayout(stats);
+    overview.append(wrapper);
+    overview.append(controls);
+  
+    // 2. Chart
+    const userOpt = CB.lineChartControl(wrapper);
+    const config  = CB.lineChartConfig(stats, userOpt);
+    const chart   = CB.initChart("equity-global", canvas, config);
+  
+    CB.bindChartControl(wrapper, chart);
+    CB.resizeConfig(wrapper, chart);
+  
+    // 3. Event
+    CB.lineChartAllPairs(controls, stats, chart)
 
-    // ── CHART CONFIG ─────────────────────────────────────────
-    
-    const overviewCfg = buildChartConfig(opt)
-
-    function buildChartConfig(opt) {
-      const A1 = "#089981", B1 = "#f23645", A2 = "#36A2EB", B2 = "#FF4263";
-    
-      return {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "pips",
-              data: pips,
-              segmentColor: { enabled: true },
-              tension: 0,
-              pointRadius: 0,  
-              borderWidth: 1,
-              hoverRadius: 1.5,
-              fill: false,
-              backgroundColor: undefined,
-              // segment: {
-              //   borderColor: ctx => ctx.p0.parsed.y >= 0 ? A1 : B1
-              // }
-            },
-            {
-              label: "value",
-              data: vpips,
-              segmentColor: { enabled: true, above: A2, below: B2 },
-              tension: 0,
-              pointRadius: 0,  
-              borderWidth: 1,
-              hoverRadius: 1.5,
-              fill: false,
-              backgroundColor: undefined,
-              // segment: {
-              //   borderColor: ctx => ctx.p0.parsed.y >= 0 ? A2 : B2
-              // }
-            }
-          ]
-        },
-        options: {
-          
-          responsive: true,
-          maintainAspectRatio: false,
-          crosshair: { enabled: opt.tooltip },
-          interaction: {
-            mode: "nearest",
-            intersect: false
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { display: false }
-            },
-            y: {
-              beginAtZero: true,
-              grid: { display: false },
-              ticks: { 
-                display: true,
-                callback: (v) => {
-                  return FM.num(v, 1)
-                }
-              }
-            }
-          },
-          plugins: {
-            title: {
-              display: true,
-              text: "Net Pips vs Value",
-              position: "top"
-            },
-            legend: { display: true, position: "bottom" },
-            tooltip: {
-              enabled: opt.tooltip,
-              cornerRadius: 0,
-              titleFont: { size: 10 },
-              bodyFont: { size: 10 },
-              intersect: false,
-              callbacks: {
-                title: (ctx) => {
-                  const i = ctx[0].dataIndex;
-                  const a = data.p[i]
-                  return `#${i} | ${a.date} | ${a.value >= 0 ? "🟢" : "🔴"}`;
-                },
-                label: (ctx) => {
-                  const i = ctx.dataIndex;
-                  const src = ctx.datasetIndex === 0 ? data.p[i] : data.v[i];
-                  return `${src.pair} | ${FM.num(src.value)}`;
-                }
-              }
-            },
-            annotation: {
-              annotations: {
-                zeroLine: {
-                  type: 'line',
-                  yMin: 0,
-                  yMax: 0,
-                  borderColor: 'gray',
-                  borderWidth: 1,
-                  borderDash: [5, 5],
-                }
-              }
-            },
-            zoom: {
-              pan: {
-                enabled: opt.zoom,
-                mode: "x",
-                threshold: 10
-              },
-              zoom: {
-                wheel:   { enabled: opt.zoom, speed: 0.05 },
-                pinch:   { enabled: opt.zoom },
-                mode: "x"
-              }
-            }
-          },
-        }
-      }
-    }
-  
-    // ── CREATE / UPDATE CHART ───────────────────────────────
-    const chart = CB.initChart("globalEquity", equityCanvas, overviewCfg);
-    CB.bindChartControl(container, chart);
-    // ── CLEANUP PREVIOUS OBSERVERS ──────────────────────────
-    window.charts.equityObserver?.disconnect();
-    window.charts.equityResizeCleanup?.();
-  
-    // ── RESIZE HANDLING (throttled ───────────────────────
-    let raf = null;
-    const resizeObserver = new ResizeObserver(() => {
-      if (!chart?.canvas) return;
-      if (raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        chart.resize();
-        raf = null;
-      });
-    });
-  
-    resizeObserver.observe(container);
-    window.charts.equityObserver = resizeObserver;
-    window.charts.equityResizeCleanup = CB.enableResize(container, handleResizer, chart);
-  
     return chart;
   }
 
   chartGlobalPairs(data, sortBy = "vpips") {
     const d = create("div", { class: "chart-wrapper" },
-        create("canvas", { id: `pairs-chart` }));
+        create("canvas", { id: `pairs-chart`, class: "canvas" }));
     this.overView.append(d);
     const pairsCanvas = $('#pairs-chart').getContext('2d');
   
@@ -242,7 +100,7 @@ export class ViewStatistics {
       }
     };
   
-    return CB.initChart("globalPairs", pairsCanvas, pairsCfg);
+    return CB.initChart("pairs-global", pairsCanvas, pairsCfg);
   }
 
   tableGeneral(stats) {
@@ -304,20 +162,20 @@ export class ViewStatistics {
     ];
     rows.push(totalRow);
   
-    // ===== GRAND TOTAL ROW (1 merged cell, NO label) =====
-    const totalCell = TB.Cells.pvCell(stats.total, "N");
-    
-    // bungkus ulang agar bisa memakai colSpan
-    const mergedCell = create("td", { 
-      colspan: years.length + 1,
+    // ===== GRAND TOTAL ROW (1 merged cell) =====
+    const totalValueCell = TB.Cells.pvCell(stats.total, "N");
+    const pivotGrand = TB.Cells.textCell("Grand", "pivot pivot-y pips-mode");
+    // Value cell with colspan across all year columns
+    const mergedValueCell = create("td", { 
+      colspan: years.length,
       class: "grand-total-row"
     });
     
-    // ambil isi pvCell (hanya anak-anaknya)
-    mergedCell.append(...totalCell.childNodes);
+    // copy childNodes dari pvCell
+    mergedValueCell.append(...totalValueCell.childNodes);
     
-    // tambahkan baris grand total
-    rows.push([ mergedCell ]);
+    // push ke rows
+    rows.push([ pivotGrand, mergedValueCell ]);
   
     // ===== BUILD =====
     b.header(header).rows(rows).build();
@@ -444,412 +302,58 @@ export class ViewStatistics {
         yearly[year] ?? null   // ← tambahkan yearly summary agar bisa dipakai di header
       );
       container.append(yearSection);
-      container.prepend(TB.Toggler(container));
     }
   }
 
-_buildYearSection(year, monthKeys, stats) {
-  let totalTrades = 0, totalNetP = 0, totalNetV = 0;
-
-  monthKeys.forEach(mKey => {
-    const s = stats[mKey].summary;
-    totalTrades += s.totalTrades;
-    totalNetP += s.netPips;
-    totalNetV += s.netVPips;
-  });
-
-  const avgP = FM.metricFormat(totalNetP / monthKeys.length, "R");
-  const avgV = FM.metricFormat(totalNetV / monthKeys.length, "R");
-  const netP = FM.metricFormat(totalNetP ?? 0, "R");
-  const netV = FM.metricFormat(totalNetV ?? 0, "R");
-
-  const header = create("div", { class: "accordion" },
-    create("input", { type: "checkbox", id: `${year}`, class: "accordion-input" }),
-    create("label", { for: `${year}`, class: "accordion-label"},
-      create("div", { class: "row" },
-        create("div", { class: "cell" }, `Year ${year}`,
-          create("br"),
-          create("small", `${totalTrades} trades`)
-        ),
-        create("div", { class: "cell" },
-          create("span", { class: `value right` }, netP.txt,
-            create("br"),
-            create("small", { class: ``}, avgP.txt)
-          ),
-          create("span", { class: `value hidden right` }, netV.txt,
-            create("br"),
-            create("small", {class: ``}, avgV.txt)
-          )
-        )
-      )
-    )
-  );
-  
-  const body = create("div", { class: "accordion-content" });
-  monthKeys.sort().forEach(mk => body.append(this._buildMonthSection(mk, stats[mk])));
-  header.append(body);
-  return header;
-}
-
-_buildMonthSection(monthKey, data) {
-  const [y, m] = monthKey.split("-");
-  const name = FM.getMonthName(monthKey, true);
-  const s = data.summary;
-  const avgP = FM.metricFormat(s.avgPips ?? 0, "R");
-  const avgV = FM.metricFormat(s.avgVPips ?? 0, "R");
-  const netP = FM.metricFormat(s.netPips ?? 0, "R");
-  const netV = FM.metricFormat(s.netVPips ?? 0, "R");
-  
-  const header = create("div", { class: "accordion" },
-    create("input", { type: "checkbox", id: `${name}-${y}`, class: "accordion-input" }),
-    create("label", { for: `${name}-${y}`, class: "accordion-label"},
-      create("div", { class: "row" },
-        create("div", { class: "cell" }, `${name} ${y}`,
-          create("br"),
-          create("small", `${s.totalTrades} trades`)
-        ),
-        create("div", { class: "cell" },
-          create("span", { class: `value right ${netP.css}` }, netP.txt,
-            create("br"),
-            create("small", { class: ``}, avgP.txt)
-          ),
-          create("span", { class: `value right hidden ${netV.css}` }, netV.txt,
-            create("br"),
-            create("small", { class: `` }, avgV.txt)
-          )
-        )
-      )
-    )
-  );
-  const body = create("div", { class: "accordion-content pivot pips-mode" });
-  const box = create("div", { class: "month-box" });
-  const chartAllContainer = create("div", { class: "month-chart" },
-    create("canvas", { id: `chart_${monthKey}` })
-  );
-
-  const pairBtns = this._buildPairButtons(monthKey, data);
-
-  box.append(chartAllContainer, pairBtns);
-
-  setTimeout(() => this._renderMonthlyChart(monthKey, data.equity), 0);
-
-  body.append(box);
-  header.append(body);
-
-  return header;
-}
-
-_buildMonthSummary(s) {
-  return create("div", { className: "month-summary" },
-
-    // Winrate
-    create("div", { className: "sum-line" },
-      `Winrate: ${s.winRate}%`
-    ),
-
-    // Best Pair
-    create("div", { className: "sum-line" },
-      `Best Pair: ${s.bestPair ?? "-"}`
-    ),
-
-    // Worst Pair
-    create("div", { className: "sum-line" },
-      `Worst Pair: ${s.worstPair ?? "-"}`
-    )
-  );
-}
-
-_buildPairButtons(monthKey, data) {
-  //log(data)
-  const wrap = create("div", { class: "pair-filter", dataset: { month: monthKey } });
-
-  // Global caches
-  window._monthlyActivePairs ??= {};
-  window._monthlyData ??= {};
-
-  // Cache raw month data for merging later
-  window._monthlyData[monthKey] = data;
-
-  // Ensure active set exists
-  if (!window._monthlyActivePairs[monthKey]) {
-    window._monthlyActivePairs[monthKey] = new Set(["ALL"]);
+  _buildYearSection(year, monthKeys, stats) {
+    const header = CB.createHeaderYear(year, monthKeys, stats);
+    const body = create("div", { class: "accordion-content" });
+    monthKeys.sort().forEach(mk => body.append(this._buildMonthSection(mk, stats[mk])));
+    header.append(body);
+    return header;
   }
 
-  const activeSet = window._monthlyActivePairs[monthKey];
+  _buildMonthSection(monthKey, datas) {
+    const data = datas.equity
+    const header = CB.createHeaderMonth(monthKey, datas);
+    const body = create("div", { class: "accordion-content" });
+    const { wrapper, canvas, controls } = this._buildChartLayout(data);
+    body.append(wrapper);
+    body.append(controls);
+    const config  = CB.lineChartConfig(data);
+    $('input[type="checkbox"]', header).addEventListener("change", (e) => {
+      if (e.target.checked) {
+        const chart = CB.initChart(`equity-${monthKey}`, canvas, config);
+        CB.lineChartAllPairs(controls, data, chart);
+      }
+    });
+    header.append(body);
+    return header;
+  }
 
-  // ALL button
-  const btnAll = create("button", {
-    className: `pair-btn${activeSet.has("ALL") ? " active" : ""}`,
-    dataset: { pair: "ALL", month: monthKey }
-  }, "ALL");
-  wrap.append(btnAll);
-
-  // Pair buttons
-  data.pairs.forEach(pair => {
-    const b = create("button", {
-      className: `pair-btn${activeSet.has(pair) ? " active" : ""}`,
-      dataset: { pair, month: monthKey }
-    }, pair);
-    wrap.append(b);
-  });
-
-  // Click handler
-  wrap.addEventListener("click", (e) => {
-    const btn = e.target.closest(".pair-btn");
-    if (!btn) return;
-
-    const pair = btn.dataset.pair;
-    const month = btn.dataset.month;
-
-    // Update global active-set + rebuild chart
-    this._switchMonthlyDataset(month, pair);
-
-    const active = window._monthlyActivePairs[month];
-
-    // Update UI
-    if (active.has("ALL")) {
-      wrap.querySelectorAll(".pair-btn").forEach(b =>
-        b.classList.toggle("active", b.dataset.pair === "ALL")
-      );
-    } else {
-      wrap.querySelectorAll(".pair-btn").forEach(b => {
-        b.classList.toggle("active", active.has(b.dataset.pair));
+  _buildChartLayout(data) {
+    const canvas  = create("canvas", { class: "canvas" });
+    const wrapper = create("div", { class: "chart-wrapper" }, canvas);
+  
+    const controls = create("div", { class: "pair-filter" });
+    const pairs = ["ALL", ...FM.getUniquePairs(data)];
+    const counts = data.p.reduce((acc, t) => {
+      acc[t.pair] = (acc[t.pair] || 0) + 1;
+      return acc;
+    }, {});
+    pairs.forEach(pair => {
+      const count = pair === "ALL" ? data.p.length : (counts[pair] ?? 0);
+      const btn = create("button", { 
+        class: `pair-btn ${pair === "ALL" ? "active" : ""}`, 
+        "data-pair": pair 
       });
-    }
-  });
-
-  return wrap;
-}
-
-_renderMonthlyChart(monthKey, data) {
-  const canvas = $(`#chart_${monthKey}`);
-  if (!canvas) return;
-  window._monthlyData ??= {};
-  window._monthlyData[monthKey] = window._monthlyData[monthKey] || {};
-  window._monthlyData[monthKey].allCurve = data;
-  window._monthlyActivePairs ??= {};
-  window._monthlyActivePairs[monthKey] ??= new Set(["ALL"]);
-
-  const A1 = "#089981";
-  const B1 = "#f23645";
-  const realData = data.p.map(x => x.equity);
-  const zeroData = [0, ...realData];
-  const labels = zeroData.map((_, i) => i);
-  const monthlyCfg = {
-    type: "line",
-    data: {
-      labels,
-      // datasets: [
-      //     {
-      //       label: "pips",
-      //       data: pips,
-      //       borderWidth: 1,
-      //       pointRadius: 0,
-      //       hoverRadius: 1,
-      //       tension: 0,
-      //     },
-      //     {
-      //       label: "value",
-      //       data: vpips,
-      //       borderWidth: 1,
-      //       pointRadius: 0,
-      //       hoverRadius: 1,
-      //       tension: 0,
-      //     }
-      //   ],
-      datasets: [{
-        label: "ALL",
-        data: zeroData,
-        // segment: {
-        //   borderColor: ctx => (ctx.p0.parsed.y >= 0 ? A1 : B1)
-        // },
-        fill: false,
-        backgroundColor: undefined,
-        borderWidth: 1,
-        tension: 0,
-        pointRadius: 0,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      crosshair: { enabled: true },
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      plugins: {
-        tooltip: {
-          enabled: true,
-          cornerRadius: 0,
-          titleFont: { size: 10 },
-          bodyFont: { size: 10 },
-          displayColors: false,
-          intersect: false,
-          callbacks: {
-            title: (ctx) => {
-              const i = ctx[0].dataIndex;
-              if (i === 0) return "Begin at 0";
-              const realIndex = i - 1;
-              const a = data.p[realIndex]
-              return `#${realIndex + 1} | ${a.date} | ${a.value >= 0 ? "🟢" : "🔴"}`;
-            },
-            label: (ctx) => {
-              const i = ctx.dataIndex;
-              if (i === 0) return "";
-              const realIndex = i - 1;
-              const a = data.p[realIndex];
-              return `${a.pair} | ${FM.num(a.value)}`;
-            }
-          }
-        },
-  
-        legend: { display: false },
-  
-        annotation: {
-          annotations: {
-            zeroLine: {
-              type: 'line',
-              yMin: 0,
-              yMax: 0,
-              borderColor: 'gray',
-              borderWidth: 1,
-              borderDash: [5, 5],
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          type: "linear",
-          grid: { display: false },
-          ticks: { display: true },
-        },
-        y: {
-          grid: { display: false },
-          ticks: { display: true },
-          beginAtZero: true
-        }
-      },
-      segmentColor: { enabled: true, above: A1, below: B1 },
-      
-    }
-  };
-
-  window._monthlyCharts ??= {};
-  window._monthlyCharts[monthKey] = new Chart(canvas, monthlyCfg);
-}
-
-_switchMonthlyDataset(monthKey, pair) {
-  const chart = window._monthlyCharts?.[monthKey];
-  const monthCache = window._monthlyData?.[monthKey];
-  if (!chart || !monthCache) return;
-
-  window._monthlyActivePairs ??= {};
-  const activeSet = window._monthlyActivePairs[monthKey] ?? new Set(["ALL"]);
-
-  if (pair === "ALL") {
-    window._monthlyActivePairs[monthKey] = new Set(["ALL"]);
-  } else {
-    // ensure set exists and remove ALL fallback
-    if (!window._monthlyActivePairs[monthKey] || window._monthlyActivePairs[monthKey].has("ALL")) {
-      window._monthlyActivePairs[monthKey] = new Set();
-    }
-
-    const set = window._monthlyActivePairs[monthKey];
-    if (set.has(pair)) set.delete(pair);
-    else set.add(pair);
-
-    if (set.size === 0) {
-      window._monthlyActivePairs[monthKey] = new Set(["ALL"]);
-    } else {
-      // optimization: if selected equals all available pairs -> collapse to ALL
-      const available = (monthCache.pairs ?? []).slice().sort();
-      const selected = [...window._monthlyActivePairs[monthKey]].slice().sort();
-      if (selected.length === available.length && selected.every((v,i) => v === available[i])) {
-        window._monthlyActivePairs[monthKey] = new Set(["ALL"]);
-      }
-    }
-  }
-
-  const newSet = window._monthlyActivePairs[monthKey];
-
-  let finalCurve;
-  if (newSet.has("ALL")) {
-    finalCurve = monthCache.allCurve; // { p:[], v:[] }
-  } else {
-    // build merged curve from selected pairs using byPair curves
-    finalCurve = this._buildMergedCurveFromPairs(monthCache, [...newSet]);
-  }
-  
-  // write single dataset to chart
-  const label = newSet.has("ALL") ? "ALL" : [...newSet].join(" + ");
-  const labels = finalCurve.p.map((_, i) => i);
-  const realData = finalCurve.p.map(x => x.equity);
-  const zeroData = [0, ...realData];
-  chart.data.labels = labels;
-  chart.data.datasets = [{
-    labels,
-    data: zeroData,
-    borderWidth: 1,
-    pointRadius: 0,
-    tension: 0
-  }];
-
-  chart.update();
-}
-
-_buildMergedCurveFromPairs(monthCache, selectedPairs) {
-  const pairCurves = selectedPairs
-    .map(p => monthCache.byPair?.[p])
-    .filter(Boolean);
-
-  if (!pairCurves.length) return monthCache.allCurve;
-  
-  const maxLen = Math.max(...pairCurves.map(c => c.p.length));
-
-  let cum = 0;
-  const p = [];
-  const v = [];
-
-  for (let i = 0; i < maxLen; i++) {
-    let sumIncP = 0;
-    let sumIncV = 0;
-    let dateAtIndex = null;
-
-    for (const c of pairCurves) {
-      const curP = c.p[i];
-      const prevP = c.p[i - 1];
-      if (curP) {
-        const inc = curP.equity - (prevP ? prevP.equity : 0);
-        sumIncP += inc;
-        if (!dateAtIndex && curP.date) dateAtIndex = curP.date;
-      }
-
-      const curV = c.v[i];
-      const prevV = c.v[i - 1];
-      if (curV) {
-        const incV = curV.equity - (prevV ? prevV.equity : 0);
-        sumIncV += incV;
-      }
-    }
-
-    cum += sumIncP;
-
-    p.push({
-      equity: cum,
-      date: dateAtIndex,
-      value: sumIncP
+      btn.append(document.createTextNode(pair + " "));
+      const badge = create("small", { class: "pair-count" }, count);
+      btn.append(badge);
+      controls.append(btn);
     });
-
-    v.push({
-      equity: cum, // keep same equity for v axis if you want, or compute separately
-      date: dateAtIndex,
-      value: sumIncV
-    });
+  
+    return { wrapper, canvas, controls };
   }
-
-  return { p, v };
-}
 
 }

@@ -12,6 +12,11 @@ export const MONTH_FULL_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
+export function getUniquePairs(stats) {
+  const s = new Set();
+  stats.p.forEach(x => s.add(x.pair));
+  return Array.from(s);
+}
 // =========================
 //  DATE HELPERS
 // =========================
@@ -135,6 +140,7 @@ export function metricFormat(value, type = "float", unit = "") {
       else if (n < 0) css = "neg";
       else txt = "--";
       break;
+    
     case "unit": txt = `${num(value)} ${unit}`.trim(); break;
     case "int": txt = String(Math.round(value)); break;
     default: txt = num(value);
