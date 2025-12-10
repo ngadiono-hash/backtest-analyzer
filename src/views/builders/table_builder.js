@@ -1,6 +1,6 @@
 // ~/helpers/table_builder.js
-import { $, $$, create } from "./template.js";
-import * as FM from "./converter.js";
+import { $, $$, create } from "utils/template.js";
+import * as FM from "utils/converter.js";
 
 export class Tables {
   constructor(container) {

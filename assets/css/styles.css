@@ -1,10 +1,10 @@
 @font-face {
   font-family: "RobotoMono";
-  src: url("/cdn/RobotoMono-Light.ttf") format("truetype");
+  src: url("/assets/cdn/RobotoMono-Light.ttf") format("truetype");
 }
 @font-face {
   font-family: "FiraSans";
-  src: url("/cdn/FiraSansCondensed-Light.ttf") format("truetype");
+  src: url("/assets/cdn/FiraSansCondensed-Light.ttf") format("truetype");
 }
 
 /* === GENERAL LAYOUT */
@@ -117,7 +117,7 @@ select {
   color: var(--pm-bg);
   padding: 6px;
   border: none;
-  /* font-size: 15px; */
+  font-size: 15px;
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -125,11 +125,11 @@ select {
 }
 
 .dropup-btn::after {
-  content: url("/icons/basic-gear.svg");
-  display: inline-block;
+  content: url("/assets/icons/basic-gear.svg");
+  /* display: inline-bloc; */
   width: 16px;
-  color: inherit;
   height: 16px;
+  color: inherit;
 }
 .dropup-panel {
   position: absolute;

@@ -1,6 +1,6 @@
 
-import { $, $$, create } from "../helpers/template.js";
-import * as FM           from "../helpers/converter.js";
+import { $, $$, create } from "utils/template.js";
+import * as FM           from "utils/converter.js";
 const HEADERS = ['pair', 'type', 'dateEN', 'dateEX', 'priceEN', 'priceTP', 'priceSL', 'result'];
 
 export class ViewTradeData {

@@ -1,7 +1,7 @@
-import { $, $$, create } from "../helpers/template.js";
-import * as FM           from "../helpers/converter.js";
-import * as CB           from "../helpers/chart_builder.js";
-import * as TB           from "../helpers/table_builder.js";
+import { $, $$, create } from "utils/template.js";
+import * as FM           from "utils/converter.js";
+import * as CB           from "builders/chart_builder.js";
+import * as TB           from "builders/table_builder.js";
 
 export class ViewStatistics {
   constructor() {

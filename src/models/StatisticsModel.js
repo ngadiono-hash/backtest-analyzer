@@ -1,6 +1,6 @@
 // ~/model/StatisticsModel.js
-import * as FM from '../helpers/converter.js';
-import * as HM from '../helpers/metrics.js';
+import * as FM from 'utils/converter.js';
+import * as HM from 'components/metrics.js';
 
 export class StatisticsModel {
   constructor() {

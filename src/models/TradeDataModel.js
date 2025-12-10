@@ -1,5 +1,5 @@
 
-import * as DB from '../helpers/data_builder.js'
+import * as DB from 'components/data_builder.js'
 
 export class TradeDataModel {
 	constructor() {

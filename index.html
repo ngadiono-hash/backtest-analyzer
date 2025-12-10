@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Backtest Analyzer</title>
-  <link rel="stylesheet" href="./cdn/swiper.min.css"/>
-  <script src="./cdn/swiper.min.js"></script>
-  <link rel="stylesheet" href="./styles.css"/>
+  <link rel="stylesheet" href="./assets/cdn/swiper.min.css"/>
+  <script src="./assets/cdn/swiper.min.js"></script>
+  <link rel="stylesheet" href="/css/styles.css"/
 </head>
 <body id="app">
   <div id="nav-bar" class="nav-bar">
@@ -59,13 +59,28 @@
   </div>
   <div id="notify-area"></div>
   
-	<script src="./cdn/chart.min.js"></script>
-  <script src="./cdn/chart-plugin-hammer.min.js"></script>
-	<script src="./cdn/chart-plugin-zoom.min.js"></script>
-	<script src="./cdn/chart-plugin-annotation.min.js"></script>
-	<script src="/cdn/eruda.min.js"></script>
-	<script src="./debug.js"></script>
-	<script type="module" src="app.js"></scrip
-	
+	<script src="./assets/cdn/chart.min.js"></script>
+  <script src="./assets/cdn/chart-plugin-hammer.min.js"></script>
+	<script src="./assets/cdn/chart-plugin-zoom.min.js"></script>
+	<script src="./assets/cdn/chart-plugin-annotation.min.js"></script>
+	<script src="./assets/cdn/eruda.min.js"></script>
+	<script src="./src/debug.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "models/": "/src/models/",
+      "components/": "/src/models/components/",
+      "views/": "/src/views/",
+      "builders/": "/src/views/builders/",
+      "db/": "/src/db/",
+      "sample/": "/src/db/sample/",
+      "utils/": "/utils/",
+      "ui/": "/ui/"
+    }
+  }
+  </script>
+  
+  <script type="module" src="./src/app.js"></script>
+
 </body>
 </html>

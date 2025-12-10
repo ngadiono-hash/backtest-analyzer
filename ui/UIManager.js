@@ -1,4 +1,4 @@
-import { $, $$, _on, _ready } from "../helpers/template.js";
+import { $, $$, _on, _ready } from "utils/template.js";
 
 export class UIManager {
 	constructor(data, stat) {
