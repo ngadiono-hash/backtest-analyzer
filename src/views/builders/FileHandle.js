@@ -1,0 +1,154 @@
+// src/views/components/FileHandle.js
+import { create } from "util/template.js";
+
+export class FileHandle {
+  constructor({ onProcess } = {}) {
+    this.onProcess = onProcess;          // callback → controller
+    this.pendingFiles = [];
+    this.root = create("main", { class: "page-init" });
+
+    this._renderLanding();
+  }
+
+  render() {
+    return this.root;
+  }
+
+  _renderLanding() {
+    this.root.innerHTML = "";
+
+    const container = create("div", { class: "drop-container"},
+      create("span", { class: "drop-title"}, "Drop files here"),
+      create("span", "or"),
+    );
+
+    const input = create("input", { 
+      type: "file",
+      accept: ".csv",
+      multiple: true,
+      class: "hidden-file-input"
+    });
+
+    const browseBtn = create("button", { class: "browse-btn" }, "Choose Files");
+    browseBtn.addEventListener("click", () => input.click());
+
+    input.addEventListener("change", (e) => {
+      this._handleIncomingFiles(e.target.files);
+      input.value = "";
+    });
+
+    container.append(browseBtn, input);
+    this.root.append(container);
+
+    // drag & drop
+    container.addEventListener("dragover", e => e.preventDefault());
+    container.addEventListener("dragenter", () => container.classList.add("drag-active"));
+    container.addEventListener("dragleave", () => container.classList.remove("drag-active"));
+    container.addEventListener("drop", e => {
+      e.preventDefault();
+      container.classList.remove("drag-active");
+      this._handleIncomingFiles(e.dataTransfer.files);
+    });
+  }
+
+  _handleIncomingFiles(files) {
+    if (!files?.length) return;
+
+    [...files].forEach(f => {
+      if (f.name.endsWith(".csv")) this.pendingFiles.push(f);
+    });
+
+    this._renderPendingFilesList();
+  }
+
+  _renderPendingFilesList() {
+    // init container if first time
+    if (!this.pendingListContainer) {
+      this.pendingListContainer = create("div", { class: "pending-file-list" });
+      this.root.append(this.pendingListContainer);
+    }
+
+    const root = this.pendingListContainer;
+    root.innerHTML = "";
+
+    if (!this.pendingFiles.length) {
+      return root.append(
+        create("div", { class: "no-files" }, "No files selected yet.")
+      );
+    }
+
+    root.append(create("h3", { class: "pending-title" }, "Files ready to process"));
+
+    const list = create("ul", { class: "pending-list" });
+
+    this.pendingFiles.forEach((file, i) => {
+      list.append(
+        create("li", { class: "pending-item" },
+          create("span", { class: "file-name" }, file.name),
+          create("button", {
+            class: "btn-remove",
+            onclick: () => this._removeFile(i)
+          }, "Remove")
+        )
+      );
+    });
+
+    root.append(list);
+
+    root.append(
+      create("button", {
+        class: "btn-process",
+        onclick: () => this._processFiles()
+      }, `Process ${this.pendingFiles.length} file(s)`)
+    );
+  }
+
+  _removeFile(i) {
+    this.pendingFiles.splice(i, 1);
+    this._renderPendingFilesList();
+  }
+
+  async _processFiles() {
+    if (!this.pendingFiles.length) return;
+  
+    // Selalu ubah menjadi File
+    const files = await Promise.all(
+      this.pendingFiles.map(f => this._toFile(f))
+    );
+  
+  
+    // Baca konten
+    const contents = await Promise.all(
+      files.map(async file => {
+        const text = await file.text();
+        return text;
+      })
+    );
+  
+    const mergedText = contents.map(t => t.trim()).join("\n");
+    const mergedName = files
+      .map(f => f.name.replace(/\.csv$/i, ""))
+      .join("-");  
+  
+    // Emit hasil raw
+    this.onProcess?.({
+      raw: mergedText,
+      fileName: mergedName
+    });
+  
+    // Clear
+    this.pendingFiles = [];
+    this._renderPendingFilesList();
+  }
+  
+  async _toFile(f) {
+    // Jika sudah File, langsung kembalikan
+    if (f instanceof File) return f;
+  
+    // Jika FileSystemFileHandle
+    if (f.getFile) return await f.getFile();
+  
+    throw new Error("Unknown file object");
+  }
+
+}

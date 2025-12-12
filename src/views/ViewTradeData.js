@@ -1,14 +1,17 @@
 
 import { $, $$, create } from "utils/template.js";
 import * as FM           from "utils/converter.js";
+import { Notify } from "ui/UIManager.js"
 const HEADERS = ['pair', 'type', 'dateEN', 'dateEX', 'priceEN', 'priceTP', 'priceSL', 'result'];
 
 export class ViewTradeData {
-	constructor() {
+	constructor(data) {
+	  this.notif = new Notify();
+	  this.data = data;
 		this.container = $('#page-list');
 		this.editingCell = null;
-		this.renderSkeleton();
-		this.tbody = this.table.querySelector('tbody');
+		this.render(this.data);
+		this.tbody = $('tbody', this.table);
 		this.bindEvents();
 	}
 	
@@ -25,118 +28,105 @@ export class ViewTradeData {
 		});
 	}
 	
-  renderSkeleton() {
-    this.container.innerHTML = '';
-    const table = create('table', {
-      className: "trade-table",
-      id: "trade-table"
-    });
-    const headerRow = create("tr", {});
+render(trades) {
+  if (!trades.length) return;
+
+  this.container.innerHTML = "";
+
+  const table = create("table", { id: "trade-table" });
+  const thead = create("thead");
+  const tbody = create("tbody");
+
+  // === HEADER ========================================================
+  const headerRow = create("tr");
+  headerRow.append(create("th", { class: "pivot pivot-xy" }, "#"));
+
+  HEADERS.forEach(h => {
     headerRow.append(
-      create("th", {
-        className: "pivot pivot-xy",
-        textContent: "#"
-      })
+      create("th", { class: "pivot pivot-x" }, FM.toTitle(h))
     );
-    HEADERS.forEach(h => {
-      headerRow.append(
-        create("th", {
-          className: "pivot pivot-x",
-          textContent: FM.toTitle(h)
-        })
-      );
-    });
-  
-    const thead = create("thead", {}, headerRow);
-    const tbody = create("tbody", {});
-    const sta = create("div", { id: "status-area"});
-    const exp = create("button", { id: "export-btn" }, "Copy");
-    table.append(thead, tbody);
-    this.table = table;
-    this.tbody = tbody;
-    this.container.prepend(sta, exp);
-    this.container.append(table);
-  }
-	
-  render(trades) {
-    this.tbody.innerHTML = '';
-  
-    if (!trades.length) return;
-  
-    const frag = document.createDocumentFragment();
-  
-    trades.forEach((trade, idxInAll) => {
-      const { row, rawRow } = this.createRow(trade, idxInAll);
-      frag.append(row, rawRow);
-    });
-  
-    this.tbody.appendChild(frag);
-  }
-	
-  createRow(trade, idx) {
-    const row = create("tr", {
-      dataset: { row: idx },
-      className: trade.valid ? "" : "invalid"
-    });
-  
-    // === # Column (toggle raw row) ===================================
-    const tdToggle = create(
+  });
+
+  thead.append(headerRow);
+  table.append(thead, tbody);
+
+  // === BODY ==========================================================
+  trades.forEach((trade, idx) => {
+    const row = this._createTableRow(trade, idx);
+    tbody.append(row);
+  });
+
+  const sta = create("div", { id: "status-area"});
+  const exp = create("button", { id: "export-btn" }, "Copy");
+  this.container.append(sta, exp, table);
+}
+_createTableRow(trade, idx) {
+  const row = create("tr", {
+    class: trade.valid ? "" : "invalid",
+    dataset: { row: idx }
+  });
+
+  // === TOGGLE COLUMN ================================================
+  const tdToggle = create("td",
+    { class: "toggle-raw pivot pivot-y", dataset: { row: idx } },
+    idx + 1
+  );
+  row.append(tdToggle);
+
+  // === DATA CELLS ====================================================
+  HEADERS.forEach((key, colIdx) => {
+    const hasError = !trade.valid && trade.issues?.[key];
+    const td = create(
       "td",
       {
-        textContent: idx + 1,
-        className: "toggle-raw pivot pivot-y",
-        style: "cursor:pointer",
-        dataset: { row: idx }
-      }
-    );
-    row.append(tdToggle);
-  
-    // === Data Columns =================================================
-    const dataCells = HEADERS.map((key, colIdx) => {
-      const hasError = !trade.valid && trade.issues?.[key];
-  
-      const td = create(
-        "td",
-        {
-          textContent: trade[key] ?? "",
-          className: hasError ? "data-cell cell-error" : "data-cell",
-          dataset: { col: colIdx, row: idx, ...(hasError && { tooltip: trade.issues[key] }) }
+        class: hasError ? "data-cell cell-error" : "data-cell",
+        dataset: {
+          col: colIdx,
+          row: idx,
+          ...(hasError && { tooltip: trade.issues[key] })
         }
-      );
-  
+      },
+      trade[key] ?? ""
+    );
+
+    // double-click editing (validasi error)
+    if (hasError) {
       td.addEventListener("dblclick", () => {
-        if (hasError) this.startCellEdit(td, idx, key);
+        this.startCellEdit(td, idx, key);
       });
-  
-      row.append(td);
-      return td;
-    });
-  
-    // === RAW Row ======================================================
-    const rawRow = create("tr", { className: "raw-line-row", style: "display:none" });
-  
-    const rawTd = create("td", { colSpan: HEADERS.length + 1 });
-    rawTd.innerHTML = `<code class="raw-line">${trade.origin}</code>`;
-    rawRow.append(rawTd);
-  
-    // === Toggle Logic =================================================
-    tdToggle.addEventListener("click", e => {
-      e.stopPropagation();
-      const hidden = rawRow.style.display === "none";
-  
-      rawRow.style.display = hidden ? "table-row" : "none";
-      tdToggle.style.fontWeight = hidden ? "bold" : "";
-      tdToggle.style.color = hidden ? "#007bff" : "";
-    });
-  
-    // === Return compact package ======================================
-    return {
-      row,
-      rawRow,
-      dataCells
-    };
-  }
-	
+    }
+
+    row.append(td);
+  });
+
+  // === RAW ROW ======================================================
+  const rawRow = create("tr", {
+    class: "raw-line-row",
+    style: "display:none"
+  });
+
+  const rawTd = create("td", {
+    colSpan: HEADERS.length + 1
+  });
+
+  rawTd.innerHTML = `<code class="raw-line">${trade.origin}</code>`;
+  rawRow.append(rawTd);
+
+  // === TOGGLE LOGIC =================================================
+  tdToggle.addEventListener("click", e => {
+    e.stopPropagation();
+
+    const isHidden = rawRow.style.display === "none";
+    rawRow.style.display = isHidden ? "table-row" : "none";
+
+    // UI feedback
+    tdToggle.style.fontWeight = isHidden ? "bold" : "";
+    tdToggle.style.color = isHidden ? "#007bff" : "";
+  });
+
+  return row;
+}
+
 	startCellEdit(td, rowIdx, key) {
 		this.finishCellEdit();
 		this.editingCell = { td, rowIdx, key };
@@ -163,8 +153,7 @@ export class ViewTradeData {
 		const updated = { ...this.data.getTrades()[rowIdx], [key]: val };
 		this.data.saveRow(rowIdx, updated);
 		this.editingCell = null;
-		this.render(this.data.getTrades());
-		this.ui?.notify?.show?.('success', 'Cell saved!');
+		this.notif.success(`Row ${rowIdx} updated`);
 	}
 	
 	updateStatus({ fileName = '—', total = 0, valid = 0, invalid = 0 } = {}) {
@@ -176,9 +165,8 @@ export class ViewTradeData {
 		const hasError = invalid > 0 && total > 0;
 		statusEl.innerHTML = `
       <span>File: <strong>${fileName}</strong></span></br>
-      <span>Total: <strong>${total}</strong> | </span>
-      <span>Valid: <strong class="valid">${valid}</strong> | </span>
-      <span>Invalid: <strong class="invalid">${invalid}</strong></span>
+      <span>Total: <strong>${total}</strong> rows | </span>
+      <span>Invalid: <strong class="invalid">${invalid}</strong> rows</span>
     `;
 		
 		if (exportBtn) exportBtn.disabled = hasError;
@@ -188,4 +176,5 @@ export class ViewTradeData {
 	mapIssuesToKeys(issues) {
 		return typeof issues === 'object' ? issues : {};
 	}
+	
 }

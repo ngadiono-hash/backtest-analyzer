@@ -1,7 +1,7 @@
 // ~/helpers/chart_renderer.js
-import { $, $$, create } from "utils/template.js";
-import * as FM           from "utils/converter.js";
-import { plugins }       from "builders/chart_plugins.js";
+import { $, $$, create } from "util/template.js";
+import * as FM           from "util/converter.js";
+import { plugins }       from "builder/chart_plugins.js";
 
 
 Chart.register(...plugins);

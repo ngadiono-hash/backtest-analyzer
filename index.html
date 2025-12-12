@@ -6,58 +6,50 @@
   <title>Backtest Analyzer</title>
   <link rel="stylesheet" href="./assets/cdn/swiper.min.css"/>
   <script src="./assets/cdn/swiper.min.js"></script>
-  <link rel="stylesheet" href="/css/styles.css"/
+  <link rel="stylesheet" href="./assets/css/styles.css"/>
 </head>
 <body id="app">
-  <div id="nav-bar" class="nav-bar">
-    <button class="nav-btn active" data-page="0">List Trade</button>
-    <button class="nav-btn" data-page="1">Statistics</button>
-    <select id="sample-select" size="1" multiple>
-	    <option value="EURJPY">EURJPY</option>
-	    <option value="EURUSD">EURUSD</option>
-	    <option value="GBPJPY">GBPJPY</option>
-	    <option value="GBPUSD">GBPUSD</option>
-	    <option value="USDCHF">USDCHF</option>
-	    <option value="XAUUSD">XAUUSD</option>
-    </select>
-    <div class="dropup-wrapper">
-      <button class="dropup-btn"></button>
-      <div class="dropup-panel">
-        <button id="toggle-swiper" class="item">Disable Slide</button>
-        <button class="item">Settings</button>
-        <button class="item">Logout</button>
-      </div>
-    </div>
-  </div>
-  
-  <div id="page-list" class="primary-content"></div>
 
-  <div id="page-stats" class="primary-content none">
-    
-    <div class="tab-bar">
-      <button class="tab-btn" data-index="0">Overview</button>
-      <button class="tab-btn" data-index="1">General</button>
-      <button class="tab-btn" data-index="2">Monthly</button>
-      <button class="tab-btn" data-index="3">Streak</button>
-      <button class="tab-btn" data-index="4">Drawdown</button>
-      <button class="tab-btn" data-index="5">Accumulate</button>
-      <button class="tab-btn" data-index="6">Summary</button>
-    </div>
   
-    <div class="swiper">
-      <div class="swiper-wrapper">
-        <div id="overview" class="swiper-slide"></div>
-        <div id="general" class="swiper-slide"></div>
-        <div id="monthly" class="swiper-slide"></div>
-        <div id="streak" class="swiper-slide"></div>
-        <div id="drawdown" class="swiper-slide"></div>
-        <div id="accumulate" class="swiper-slide"></div>
-        <div id="summary" class="swiper-slide"></div>
-      </div>
+<!--   
+<div id="nav-bar" class="nav-bar none">
+  <button class="nav-btn active" data-page="0">List Trade</button>
+  <button class="nav-btn" data-page="1">Statistics</button>
+  <div class="dropup-wrapper">
+    <button class="dropup-btn"></button>
+    <div class="dropup-panel">
+      <button id="toggle-swiper" class="item">Disable Slide</button>
+      <button class="item">Settings</button>
+      <button class="item">Logout</button>
     </div>
-  
   </div>
-  <div id="notify-area"></div>
+</div>
+<div id="page-list" class="primary-content"></div>
+
+<div id="page-stats" class="primary-content none">
+  <div class="tab-bar">
+    <button class="tab-btn" data-index="0">Overview</button>
+    <button class="tab-btn" data-index="1">General</button>
+    <button class="tab-btn" data-index="2">Monthly</button>
+    <button class="tab-btn" data-index="3">Streak</button>
+    <button class="tab-btn" data-index="4">Drawdown</button>
+    <button class="tab-btn" data-index="5">Accumulate</button>
+    <button class="tab-btn" data-index="6">Summary</button>
+  </div>
+  <div class="swiper">
+    <div class="swiper-wrapper">
+      <div id="overview" class="swiper-slide"></div>
+      <div id="general" class="swiper-slide"></div>
+      <div id="monthly" class="swiper-slide"></div>
+      <div id="streak" class="swiper-slide"></div>
+      <div id="drawdown" class="swiper-slide"></div>
+      <div id="accumulate" class="swiper-slide"></div>
+      <div id="summary" class="swiper-slide"></div>
+    </div>
+  </div>  
+</div>
+<div id="notify-area"></div> 
+-->
   
 	<script src="./assets/cdn/chart.min.js"></script>
   <script src="./assets/cdn/chart-plugin-hammer.min.js"></script>
@@ -66,21 +58,19 @@
 	<script src="./assets/cdn/eruda.min.js"></script>
 	<script src="./src/debug.js"></script>
   <script type="importmap">
-  {
-    "imports": {
-      "models/": "/src/models/",
-      "components/": "/src/models/components/",
-      "views/": "/src/views/",
-      "builders/": "/src/views/builders/",
-      "db/": "/src/db/",
-      "sample/": "/src/db/sample/",
-      "utils/": "/utils/",
-      "ui/": "/ui/"
+    {
+      "imports": {
+        "core/": "./src/core/",
+        "db/": "./src/db/",
+        "model/": "./src/models/",
+        "view/": "./src/views/",
+        "controller/": "./src/controllers/",
+        "component/": "./src/models/components/",
+        "builder/": "./src/views/builders/",
+        "util/": "./utils/"
+      }
     }
-  }
   </script>
-  
-  <script type="module" src="./src/app.js"></script>
-
+  <script type="module" src="./src/index.js"></script>
 </body>
 </html>
