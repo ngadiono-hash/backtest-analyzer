@@ -1,14 +1,15 @@
 // src/db/DataStore.js
 import { IndexedDB } from "db/IndexedDB.js";
 
-export async function open() {
+
+export async function openDB() {
   await IndexedDB.open();
 }
 
-export const trades = {
+export const TradeStore = {
 
   async insert(row) {
-    await open();
+    await openDB();
 
     return new Promise((resolve, reject) => {
       const { tx, store } = IndexedDB.tx("trades", "readwrite");
@@ -22,7 +23,7 @@ export const trades = {
   },
 
   async update(id, row) {
-    await open();
+    await openDB();
 
     return new Promise((resolve, reject) => {
       const { tx, store } = IndexedDB.tx("trades", "readwrite");
@@ -35,7 +36,7 @@ export const trades = {
   },
 
   async delete(id) {
-    await open();
+    await openDB();
 
     return new Promise((resolve, reject) => {
       const { tx, store } = IndexedDB.tx("trades", "readwrite");
@@ -48,7 +49,7 @@ export const trades = {
   },
 
   async getAll() {
-    await open();
+    await openDB();
 
     return new Promise((resolve, reject) => {
       const { tx, store } = IndexedDB.tx("trades");
@@ -61,7 +62,7 @@ export const trades = {
   },
 
   async count() {
-    await open();
+    await openDB();
 
     return new Promise((resolve, reject) => {
       const { tx, store } = IndexedDB.tx("trades");
@@ -71,6 +72,21 @@ export const trades = {
       const req = store.count();
       req.onsuccess = () => resolve(req.result);
     });
+  },
+  
+  async clear() {
+    await openDB();
+  
+    return new Promise((resolve, reject) => {
+      const { tx, store } = IndexedDB.tx("trades", "readwrite");
+  
+      tx.onerror = (e) => reject(tx.error || e.target.error);
+      tx.oncomplete = () => resolve(true);
+  
+      store.clear();
+    });
   }
+  
+  
 
 };

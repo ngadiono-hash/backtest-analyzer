@@ -1,5 +1,5 @@
 // src/views/components/FileHandle.js
-import { create } from "util/template.js";
+import { $, create } from "util/template.js";
 
 export class FileHandle {
   constructor({ onProcess } = {}) {
@@ -11,6 +11,7 @@ export class FileHandle {
   }
 
   render() {
+    $(".fab-wrapper")?.remove();
     return this.root;
   }
 
@@ -18,6 +19,7 @@ export class FileHandle {
     this.root.innerHTML = "";
 
     const container = create("div", { class: "drop-container"},
+      create("span", { class: "browse"}),
       create("span", { class: "drop-title"}, "Drop files here"),
       create("span", "or"),
     );
@@ -26,10 +28,10 @@ export class FileHandle {
       type: "file",
       accept: ".csv",
       multiple: true,
-      class: "hidden-file-input"
+      class: "none"
     });
 
-    const browseBtn = create("button", { class: "browse-btn" }, "Choose Files");
+    const browseBtn = create("button", { class: "btn btn-info" }, "Choose Files");
     browseBtn.addEventListener("click", () => input.click());
 
     input.addEventListener("change", (e) => {
@@ -62,7 +64,6 @@ export class FileHandle {
   }
 
   _renderPendingFilesList() {
-    // init container if first time
     if (!this.pendingListContainer) {
       this.pendingListContainer = create("div", { class: "pending-file-list" });
       this.root.append(this.pendingListContainer);
@@ -84,11 +85,11 @@ export class FileHandle {
     this.pendingFiles.forEach((file, i) => {
       list.append(
         create("li", { class: "pending-item" },
-          create("span", { class: "file-name" }, file.name),
+          create("span", { class: "file-name" }, `${i+1}. ${file.name}`),
           create("button", {
-            class: "btn-remove",
+            class: "btn",
             onclick: () => this._removeFile(i)
-          }, "Remove")
+          }, "❌")
         )
       );
     });
@@ -97,7 +98,7 @@ export class FileHandle {
 
     root.append(
       create("button", {
-        class: "btn-process",
+        class: "btn btn-success",
         onclick: () => this._processFiles()
       }, `Process ${this.pendingFiles.length} file(s)`)
     );
@@ -142,10 +143,7 @@ export class FileHandle {
   }
   
   async _toFile(f) {
-    // Jika sudah File, langsung kembalikan
     if (f instanceof File) return f;
-  
-    // Jika FileSystemFileHandle
     if (f.getFile) return await f.getFile();
   
     throw new Error("Unknown file object");

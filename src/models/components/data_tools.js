@@ -1,6 +1,48 @@
-
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export function parseText(raw) {
+
+export function buildTrade(raw) {
+  const parsed = _parseText(raw).map(_normalize);
+  return _validate(parsed).map((t, i) => ({
+    id: `tmp_${i}`,
+    ...t
+  }));
+}
+
+export function updateTrade(trades, id, changes) {
+  const idx = trades.findIndex(t => t.id === id);
+  if (idx === -1) return null;
+
+  const merged = { ...trades[idx], ...changes };
+  const validated = _validate([merged])[0];
+
+  const next = trades.slice();
+  next[idx] = validated;
+
+  return { idx, row: validated, trades: next };
+}
+
+export function deleteTrade(trades, id) {
+  const idx = trades.findIndex(t => t.id === id);
+  if (idx === -1) return null;
+
+  const next = trades.slice();
+  next.splice(idx, 1);
+
+  return { idx, trades: next };
+}
+
+export function calculateStats(trades) {
+  const total = trades.length;
+  const valid = trades.filter(t => t.valid).length;
+
+  return {
+    total,
+    valid,
+    invalid: total - valid
+  };
+}
+
+export function _parseText(raw) {
 	let txt = String(raw ?? '')
 		.split('\n').filter(line => !line.trim().startsWith('#')).join('\n')
 		.replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2')
@@ -19,7 +61,7 @@ export function parseText(raw) {
 	});
 }
 
-export function normalize(trade) {
+export function _normalize(trade) {
 	const normalizeType = s => (typeof s === 'string' ? (s.trim().toUpperCase() === 'BUY' ? 'Buy' : s.trim().toUpperCase() === 'SELL' ? 'Sell' : s) : s);
 	const normalizePrice = s => {
 		if (!trade.pair) return trade;
@@ -50,7 +92,7 @@ export function normalize(trade) {
 	};
 }
 
-export function validate(trades) {
+export function _validate(trades) {
 	const pairs = ['XAUUSD', 'GBPJPY', 'EURJPY', 'GBPUSD', 'EURUSD', 'USDCHF'];
 	const vPair = p => !p?.trim() ? 'Missing value' : !/^[A-Z]{6}$/.test(p) ? `Invalid format (${p})` : !pairs.includes(p) ? `Not available symbol (${p})` : null;
 	const vType = t => !t?.trim() ? 'Missing value' : !['Buy', 'Sell'].includes(t) ? `Invalid value (${t})` : null;
@@ -65,7 +107,7 @@ export function validate(trades) {
 	const vPrice = (p, pair) => !String(p)?.trim() ? 'Missing value' :
 		!(pair === 'XAUUSD' ? /^\d{4}\.\d{2}$/ : pair.includes('JPY') ? /^\d{3}\.\d{3}$/ : /^\d{1}\.\d{5}$/).test(p) ?
 		`Format mismatch for ${pair} → ${p}` : null;
-	const vResult = r => !r?.trim() ? 'Missing value' : !['TP', 'SL'].includes(r.toUpperCase()) ? `Invalid value (${r})` : null;
+	const vResult = r => !r?.trim() ? 'Missing value' : !['TP', 'SL'].includes(r) ? `Invalid value (${r})` : null;
 
 	return trades.map(t => {
 		const issues = {

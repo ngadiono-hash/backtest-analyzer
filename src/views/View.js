@@ -1,111 +1,118 @@
 import { APP_STATE, EVENTS } from "core/Constants.js";
 import { EventBus } from "core/EventBus.js";
-import { FileHandle } from "builder/FileHandle.js";
-import { FAB } from "builder/FAB.js";
+import { FileHandle } from "ui/FileHandle.js";
+import { FAB } from "ui/FAB.js";
 import { PreviewTable } from "builder/PreviewTable.js";
+import { Modal } from "ui/Modal.js";
 
 export class View {
   constructor() {
     this.app = document.getElementById("app");
-    this.currentPreview = null;  
+    this.currentView = null;
   }
 
-  // ============================================================
-  // ENTRY POINT
-  // ============================================================
   renderState(state, payload = null) {
     this.app.innerHTML = "";
 
     switch (state) {
-      case APP_STATE.EMPTY:
-        this.renderUpload();
+      case "EMPTY":
+        this.renderLANDING();
         break;
 
-      case APP_STATE.PREVIEW:
-        this.renderPreview(payload);
-        this._injectPreviewFAB();
+      case "PREVIEW":
+        this.renderPREVIEW(payload);
+        this._injectFAB([
+          { icon: "❓", label: "Info",   onClick: () => this._showSnapShoot(this.status) },
+          { icon: "📊", label: "Process",onClick: () => EventBus.emit("ui:save-db") },
+          { icon: "🗑️", label: "Delete", onClick: () => this._confirmDelete(false)  },
+          { icon: "📝", label: "Add",    onClick: () => EventBus.emit("ui:add-record") }
+        ]);
         break;
 
-      case APP_STATE.READY:
-        this.renderDashboard(payload);
+      case "READY":
+        this.renderDASHBOARD(payload);
+        this._injectFAB([
+          { icon: "🗑️", label: "Delete", onClick: () => this._confirmDelete(false) },
+          { icon: "📥", label: "Export", onClick: () => EventBus.emit("ui:export-data") },
+          { icon: "📝", label: "Add",    onClick: () => EventBus.emit("ui:add-record") }
+        ]);
         break;
     }
   }
 
-  // ============================================================
-  // FILE UPLOAD VIEW
-  // ============================================================
-  renderUpload() {
+  renderLANDING() {
     const view = new FileHandle({
       onProcess: ({ raw, fileName }) => {
-        EventBus.emit(EVENTS.UI_UPLOAD_FILE, { raw, fileName });
+        EventBus.emit("ui:upload-file", { raw, fileName });
       }
     });
 
     this._renderView(view);
   }
 
-  // ============================================================
-  // PREVIEW TABLE VIEW
-  // ============================================================
-  renderPreview(data) {
-    this.currentPreview = new PreviewTable({
+  renderPREVIEW(data) {
+    this.currentView = new PreviewTable({
       data,
-      onEdit: (id, field) => EventBus.emit(EVENTS.UI_EDIT_ROW, { id, data: field }),
-      onDelete: id => EventBus.emit(EVENTS.UI_DELETE_ROW, { id }),
-      onSave: () => EventBus.emit(EVENTS.UI_COMMIT_DB)
+      onEdit: (data) => EventBus.emit("ui:edit-row", { data }),
+      onDelete: (data) => this._confirmDelete(true, data),
     });
 
-    this._renderView(this.currentPreview);
+    this._renderView(this.currentView);
   }
 
-  // Called by Controller when model updates the preview
-  updatePreview({ trades, stats, fileName }) {
-    if (!this.currentPreview) return;
-    this.currentPreview.updateData({ trades, stats, fileName });
+  updateRow({ trades, stats, fileName }) {
+    if (!this.currentView) return;
+    this.currentView.rowUpdated({ trades, stats, fileName });
   }
-
-  // ============================================================
-  // DASHBOARD VIEW
-  // ============================================================
-  renderDashboard(data) {
-    // TODO: Implement real dashboard
-    const div = document.createElement("div");
-    div.textContent = "Dashboard placeholder";
-    this.app.append(div);
+  
+  deleteRow({ id, trades, stats }) {
+    if (!this.currentView) return;
+    this.currentView.rowDeleted({ id, trades, stats });
   }
+  
 
-  // ============================================================
-  // GLOBAL UI COMPONENTS
-  // ============================================================
-  _injectPreviewFAB() {
-    const fab = new FAB({
-      onAdd: () => EventBus.emit(EVENTS.UI_ADD_ROW),
-      onSave: () => EventBus.emit(EVENTS.UI_COMMIT_DB),
-      onDelete: () => EventBus.emit(EVENTS.UI_DELETE_ALL),
-      onCopy: () => EventBus.emit(EVENTS.UI_COPY_DATA)
+  renderDASHBOARD(data) {
+    
+  }
+  
+  _showSnapShoot() {
+    const modal = new Modal({
+      title: "Preview Status",
+      content: this.currentView.getSnapShoots()
     });
-
-    this.app.append(fab.render());
+    modal.render();
+  }
+  
+  _confirmDelete(single = true, data = null) {
+    const strT = single ? `Delete row ${data.idx}` : `Delete all record`;
+    const strC = `Are you sure to delete ${ single ? "this row?" : "this record?"}`;
+    const emt = single ? "ui:delete-row" : "ui:delete-all";
+    
+    const modal = new Modal({
+      title: strT,
+      content: strC,
+      actions: [
+        {
+          label: "Cancel",
+          class: "btn btn-warning",
+          onClick: () => {}
+        },
+        {
+          label: "Delete",
+          class: "btn btn-danger",
+          onClick: () => EventBus.emit(emt, { data })
+        }
+      ]
+    });
+    modal.render();
+  }
+  
+  _injectFAB(actions) {
+    this.fab?.remove();
+    this.fab = new FAB(actions).render();
+    document.body.append(this.fab);
   }
 
-  // ============================================================
-  // FEEDBACK FROM MODEL → UI
-  // ============================================================
-  showNotification(type, message) {
-    // Basic minimal UI (temporary)
-    const box = document.createElement("div");
-    box.className = `notif notif-${type}`;
-    box.textContent = message;
-
-    document.body.append(box);
-
-    setTimeout(() => box.remove(), 1500);
-  }
-
-  // ============================================================
-  // INTERNAL
-  // ============================================================
   _renderView(viewInstance) {
     this.app.innerHTML = "";
     this.app.append(viewInstance.render());
