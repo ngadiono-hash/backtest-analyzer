@@ -1,14 +1,12 @@
+// src/controllers/Controller.js
+import { EventBus } from "core/EventBus.js";
 import { Model } from "model/Model.js";
 import { View } from "view/View.js";
-import { EventBus } from "core/EventBus.js";
-import { EVENTS, APP_STATE } from "core/Constants.js";
-import { Notify } from "ui/Notify.js";
 
 export class Controller {
   constructor() {
     this.model = new Model();
     this.view = new View();
-    this.notif = new Notify();
   }
 
   bootstrap() {
@@ -17,9 +15,6 @@ export class Controller {
     this.model.initialize();
   }
 
-  // ============================================================
-  // VIEW → CONTROLLER → MODEL
-  // ============================================================
   _bindViewEvents() {
     EventBus.on("ui:upload-file", (e) => {
       const { raw, fileName } = e.detail;
@@ -36,14 +31,11 @@ export class Controller {
     EventBus.on("ui:delete-all", () => {
       this.model.deleteAll();
     });
-    EventBus.on("ui:save-db", () => {
+    EventBus.on("ui:save-db", (e) => {
       this.model.commitToDB();
     });
   }
 
-  // ============================================================
-  // MODEL → CONTROLLER → VIEW
-  // ============================================================
   _bindModelEvents() {
     EventBus.on("model:state-change", (e) => {
       const { state, payload } = e.detail;
@@ -53,11 +45,10 @@ export class Controller {
       const { action, payload } = e.detail;
       switch (action) {
         case "edit-row":
-          this.view.updateRow(payload);
+          this.view.previewUpdateRow(payload);
           break;
-    
         case "delete-row":
-          this.view.deleteRow(payload);
+          this.view.previewDeleteRow(payload);
           break;
       }
     });
@@ -66,7 +57,7 @@ export class Controller {
     });
     EventBus.on("model:feedback", (e) => {
       const { type, message } = e.detail;
-      this.notif.show(type, message);
+      this.view.notify(type, message);
     });
   }
 }

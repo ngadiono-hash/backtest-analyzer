@@ -1,235 +1,308 @@
-/* ========================
-   Base & Reset
-======================== */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-html {
-  scroll-behavior: smooth;
-}
-body {
-  font-family: 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.6;
-  color: #333;
-  background: #f9f9f9;
+/* Modern mobile-first landing styles for backtest-analyzer
+   Focus: compact header, non-stacked hero on narrow screens (430px)
+   Author: GitHub Copilot (suggested)
+*/
+
+/* Theme variables */
+:root{
+  --bg: #0f1724; /* subtle dark background base like modern landing pages */
+  --surface: #0b1220;
+  --panel: #0f1726;
+  --text: #e6eef6;
+  --muted: #9aa6b2;
+  --brand: #2384ff;
+  --brand-600: #1a6ee0;
+  --accent: #06b6d4;
+  --border: rgba(255,255,255,0.04);
+  --radius: 14px;
+  --container-padding: 18px;
+  --max-width: 1100px;
+  --shadow-sm: 0 6px 20px rgba(2,6,23,0.45);
+  --focus-ring: 3px solid rgba(35,132,255,0.14);
 }
 
-/* ========================
-   Container
-======================== */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
-/* ========================
-   Header
-======================== */
-.site-header {
-  background: #1a1a1a;
-  color: #fff;
-  padding: 1rem 0;
+/* Reset & base */
+*{ box-sizing: border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: linear-gradient(180deg,#071026 0%, #071524 100%);
+  color: var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-size:16px;
+  line-height:1.45;
+  -webkit-text-size-adjust:100%;
+}
+
+/* Page container */
+.container{
+  width:100%;
+  max-width:var(--max-width);
+  margin:0 auto;
+  padding: 16px var(--container-padding);
+}
+
+/* Sticky compact header (inline brand + nav) */
+.site-header{
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 60;
+  backdrop-filter: blur(6px);
+  background: linear-gradient(180deg, rgba(2,8,23,0.6), rgba(2,8,23,0.4));
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(2,6,23,0.35);
 }
-.site-header .brand {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.site-header .brand h1 {
-  font-size: 1.5rem;
-}
-.site-header .brand .tagline {
-  font-size: 0.9rem;
-  color: #ccc;
-}
-.site-header .logo {
-  height: 40px;
-}
-.top-nav {
-  margin-top: 0.5rem;
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-.top-nav a {
-  color: #fff;
-  text-decoration: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-.top-nav a:hover {
-  background: #333;
-}
-.top-nav .cta {
-  background: #ff6600;
-  color: #fff;
-}
-.top-nav .cta:hover {
-  background: #e55b00;
+.site-header .container{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding-top:10px;
+  padding-bottom:10px;
+  min-height:56px;
+  flex-wrap:nowrap; /* prevent wrapping that causes stacking */
+  overflow:hidden;
 }
 
-/* ========================
-   Hero
-======================== */
-.hero {
-  padding: 4rem 0;
-  background: linear-gradient(to right, #ffffff, #f0f0f0);
+/* Brand: keep inline and prevent wrapping of title */
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
 }
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  align-items: center;
+.brand .logo{
+  width:40px;
+  height:40px;
+  flex:0 0 40px;
+  object-fit:contain;
+  border-radius:10px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  padding:6px;
 }
-.hero-text h2 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  color: #1a1a1a;
+.brand h1{
+  margin:0;
+  font-size:1rem;
+  line-height:1;
+  font-weight:700;
+  color:var(--text);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width: calc(100vw - 220px); /* ensure title truncates instead of wrapping on very narrow screens */
 }
-.hero-text p {
-  margin-bottom: 1rem;
-}
-.hero-text .buttons {
-  margin-top: 1.5rem;
-}
-.hero-text .btn {
-  margin-right: 1rem;
-}
-.hero-preview .preview-box {
-  text-align: center;
-}
-.hero-preview .screenshot {
-  max-width: 100%;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-.preview-caption {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: #555;
+.brand .tagline{
+  margin:0;
+  font-size:0.78rem;
+  color:var(--muted);
+  display:none; /* keep hidden on narrow screens to reduce stacked height */
 }
 
-/* ========================
-   Buttons
-======================== */
-.btn {
-  display: inline-block;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.2s;
+/* Compact top navigation: keep CTA visible; hide less-important links on very small widths */
+.top-nav{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-shrink:0;
+  overflow:visible;
 }
-.btn-primary {
-  background: #ff6600;
-  color: #fff;
+.top-nav a{
+  text-decoration:none;
+  color:var(--text);
+  padding:8px 10px;
+  border-radius:10px;
+  font-weight:600;
+  font-size:0.92rem;
+  white-space:nowrap;
+  background: transparent;
+  border: 1px solid transparent;
 }
-.btn-primary:hover {
-  background: #e55b00;
+.top-nav a:hover{ background: rgba(255,255,255,0.03); color:var(--brand-600); transform: translateY(-1px); transition: transform .12s ease; }
+.top-nav a.cta{
+  background: linear-gradient(180deg, var(--brand), var(--brand-600));
+  color:#fff;
+  box-shadow: 0 8px 26px rgba(35,132,255,0.12);
+  padding:8px 12px;
 }
-.btn-outline {
-  border: 1px solid #ff6600;
-  color: #ff6600;
-}
-.btn-outline:hover {
-  background: #ff6600;
-  color: #fff;
-}
-.btn.large {
-  font-size: 1.1rem;
-  padding: 0.8rem 1.6rem;
+.top-nav a.cta:hover{ filter:brightness(.98); }
+
+/* Hide non-essential nav links on very narrow screens (keeps Open App + GitHub visible) */
+@media (max-width: 480px){
+  .top-nav a{ display:none; }
+  .top-nav a.cta, .top-nav a[href*="github.com"]{ display:inline-flex; }
 }
 
-/* ========================
-   Features
-======================== */
-.features {
-  padding: 4rem 0;
-  background: #fff;
+/* Main spacing */
+main{ padding: 18px 0 36px; }
+
+/* Hero: centered modern card look */
+.hero{
+  padding: 20px 0;
+  display:flex;
+  justify-content:center;
 }
-.features h3 {
-  text-align: center;
-  margin-bottom: 2rem;
-  font-size: 1.8rem;
-}
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 2rem;
-}
-.feature {
-  background: #f5f5f5;
-  padding: 1.5rem;
-  border-radius: 8px;
-  text-align: center;
-}
-.feature h4 {
-  margin-bottom: 1rem;
-  color: #1a1a1a;
-}
-.feature p {
-  font-size: 0.95rem;
-  color: #555;
+.hero-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:18px;
+  align-items:center;
+  width:100%;
+  align-items: start;
 }
 
-/* ========================
-   Demo Section
-======================== */
-.demo {
-  padding: 4rem 0;
-  text-align: center;
-}
-.demo h3 {
-  font-size: 1.8rem;
-  margin-bottom: 1rem;
-}
-.demo p {
-  margin-bottom: 1rem;
-}
-.demo .note {
-  font-size: 0.85rem;
-  color: #666;
+/* Hero card */
+.hero-card{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
 }
 
-/* ========================
-   Footer
-======================== */
-.site-footer {
-  background: #1a1a1a;
-  color: #ccc;
-  padding: 2rem 0;
-  font-size: 0.9rem;
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
+/* Hero text */
+.hero-text h2{
+  margin:0 0 6px 0;
+  font-size:1.25rem;
+  line-height:1.12;
+  font-weight:800;
+  color:var(--text);
 }
-.site-footer a {
-  color: #ff6600;
-  text-decoration: none;
-}
-.site-footer a:hover {
-  text-decoration: underline;
+.hero-text p{
+  margin:0 0 12px 0;
+  color:var(--muted);
+  font-size:0.98rem;
 }
 
-/* ========================
-   Responsive
-======================== */
-@media (max-width: 900px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-  .hero-text, .hero-preview {
-    justify-content: center;
-  }
-  .top-nav {
-    justify-content: center;
-  }
+/* Buttons */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px 16px;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:700;
+  font-size:0.95rem;
+  cursor:pointer;
+  border: 1px solid transparent;
+}
+.btn:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.btn-primary{ background: linear-gradient(180deg,var(--brand),var(--brand-600)); color:#fff; }
+.btn-outline{ background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.04); }
+.btn.large{ padding:14px 20px; font-size:1rem; border-radius:14px; }
+
+/* Hero preview card (screenshot) */
+.hero-preview{
+  display:flex;
+  justify-content:center;
+}
+.preview-box{
+  width:100%;
+  max-width:520px;
+  border-radius:12px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(255,255,255,0.02));
+  box-shadow: 0 18px 50px rgba(2,8,23,0.6);
+  padding:10px;
+}
+.preview-box img.screenshot{
+  width:100%;
+  height:auto;
+  display:block;
+  border-radius:8px;
+  object-fit:cover;
+  background: linear-gradient(180deg,#081426,#06102a);
+}
+
+/* Features grid */
+.features{
+  margin-top:6px;
+  padding-top:8px;
+}
+.feature-grid{
+  display:grid;
+  gap:12px;
+  grid-template-columns: 1fr;
+}
+.feature{
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:12px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,0.03);
+  color:var(--text);
+}
+
+/* Demo & footer */
+.demo{ margin-top:8px; padding-top:8px; }
+.site-footer{
+  margin-top:18px;
+  border-top:1px solid rgba(255,255,255,0.03);
+  padding: 14px 0;
+  color:var(--muted);
+}
+.site-footer .container{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+
+/* Accessibility helpers */
+a:focus-visible{ box-shadow:var(--focus-ring); border-radius:8px; }
+
+/* Utilities */
+.center{text-align:center;}
+.small{ font-size:0.86rem; color:var(--muted); }
+
+/* Tablet+ breakpoints: expand layout and restore more nav links */
+@media (min-width:700px){
+  body{ background: linear-gradient(180deg,#041022 0%, #071026 100%); }
+  .brand .tagline{ display:block; color:var(--muted); font-size:0.9rem; }
+  .hero-grid{ grid-template-columns: 1fr 420px; align-items:center; gap:22px; }
+  .feature-grid{ grid-template-columns: repeat(2,1fr); }
+  .top-nav a{ display:inline-flex; }
+}
+
+/* Wide screens */
+@media (min-width:1000px){
+  .brand .logo{ width:56px; height:56px; flex:0 0 56px; }
+  .hero-text h2{ font-size:1.9rem; }
+  .feature-grid{ grid-template-columns: repeat(4, 1fr); }
+  .preview-box{ max-width:640px; padding:14px; }
+}
+
+/* Fixes specifically for very narrow phones (~430px) to avoid stacking */
+@media (max-width: 430px){
+  .site-header .container{ padding-left:12px; padding-right:12px; min-height:52px; }
+  .brand .logo{ width:36px; height:36px; flex:0 0 36px; padding:4px; border-radius:10px; }
+  .brand h1{ font-size:0.98rem; max-width: calc(100vw - 140px); } /* ensures header title truncates, not wrap */
+  .brand .tagline{ display:none; }
+  .top-nav{ gap:6px; }
+  .preview-box{ max-width:100%; padding:8px; border-radius:12px; }
+  .preview-box img.screenshot{ max-height:220px; object-fit:cover; }
+  .hero-card{ padding:14px; gap:12px; border-radius:12px; }
+  .hero-text h2{ font-size:1.15rem; }
+  .hero-text p{ font-size:0.95rem; color:var(--muted); }
+  /* Place preview above or beside the text depending on available height:
+     keep preview visually prominent but not pushing title off screen. */
+  .hero-grid{ grid-template-columns: 1fr; }
+  .hero-preview{ order: -1; } /* show image first for a modern look */
+}
+
+/* Print */
+@media print{
+  .site-header, .site-footer, .top-nav, .btn{ display:none !important; }
+  body{ background:#fff; color:#000; }
 }

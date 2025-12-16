@@ -7,7 +7,7 @@ class IndexedDBWrapper {
   }
 
   async open() {
-    if (this.db) return this.db; // guard
+    if (this.db) return this.db;
 
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -21,29 +21,27 @@ class IndexedDBWrapper {
 
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
-        const trx = e.target.transaction;
 
-        Object.entries(SCHEMA).forEach(([storeName, cfg]) => {
-          let store;
-
-          if (!db.objectStoreNames.contains(storeName)) {
-            store = db.createObjectStore(storeName, {
-              keyPath: cfg.keyPath,
-              autoIncrement: cfg.autoIncrement
-            });
-          } else {
-            store = trx.objectStore(storeName);
+        // 🔥 HARD RESET strategy (sesuai kesepakatan)
+        Object.keys(SCHEMA).forEach(storeName => {
+          if (db.objectStoreNames.contains(storeName)) {
+            db.deleteObjectStore(storeName);
           }
+        });
 
-          // Create indexes
-          (cfg.indexes || []).forEach(index => {
-            if (!store.indexNames.contains(index.name)) {
-              store.createIndex(
-                index.name,
-                index.keyPath,
-                index.options ?? {}
-              );
-            }
+        // 🔨 Recreate strictly from schema
+        Object.entries(SCHEMA).forEach(([storeName, cfg]) => {
+          const store = db.createObjectStore(storeName, {
+            keyPath: cfg.keyPath,
+            autoIncrement: cfg.autoIncrement
+          });
+
+          (cfg.indexes || []).forEach(idx => {
+            store.createIndex(
+              idx.name,
+              idx.keyPath,
+              idx.options ?? {}
+            );
           });
         });
       };
@@ -51,12 +49,15 @@ class IndexedDBWrapper {
   }
 
   tx(storeName, mode = "readonly") {
-    if (!this.db) throw new Error("Database not opened. Call open() first.");
+    if (!this.db) {
+      throw new Error("IndexedDB not opened. Call open() first.");
+    }
 
     const tx = this.db.transaction(storeName, mode);
-    const store = tx.objectStore(storeName);
-
-    return { tx, store };
+    return {
+      tx,
+      store: tx.objectStore(storeName)
+    };
   }
 }
 

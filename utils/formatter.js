@@ -45,12 +45,20 @@ export function dateDMY(dateISO) {
 
 export function dateISO(dateStr, defaultHour = "12:00") {
   if (!dateStr) return null;
-  const [d, m, y] = dateStr.split("-");
-  const year = `20${y}`;
-  const month = String(MONTHS[m] + 1).padStart(2, "0");
-  return new Date(`${year}-${month}-${d.padStart(2, "0")}T${defaultHour}:00+07:00`);
-}
 
+  const [d, m, y] = dateStr.split("-");
+  if (!d || !m || !y) return null;
+
+  const yy = +y;
+  const nowYY = new Date().getFullYear() % 100;
+  const fullYear = y.length === 2
+    ? yy <= nowYY + 1 ? 2000 + yy : 1900 + yy
+    : +y;
+
+  const month = String(MONTHS[m] + 1).padStart(2, "0");
+
+  return new Date(`${fullYear}-${month}-${d.padStart(2, "0")}T${defaultHour}:00+07:00`);
+}
 // =========================
 //  NUMBER HELPERS
 // =========================
@@ -144,16 +152,10 @@ export function metricFormat(value, type = "float", unit = "") {
   return { txt, css };
 }
 
-// =========================
-//  TRADING BAR ESTIMATOR
-// =========================
 export function estimateBarsHeld(entry, exit) {
   const e = safeDate(entry);
   const x = safeDate(exit);
   if (!e || !x) return 1;
-
-  // Same day can still be multiple bars → remove this rule
-  // if (e.toDateString() === x.toDateString()) return 1;
 
   let hours = removeWeekendHours(e, x);
 

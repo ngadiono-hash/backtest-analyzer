@@ -1,92 +1,46 @@
 // src/db/DataStore.js
 import { IndexedDB } from "db/IndexedDB.js";
 
-
-export async function openDB() {
+const withStore = async (mode, fn) => {
   await IndexedDB.open();
-}
+  return new Promise((resolve, reject) => {
+    const { tx, store } = IndexedDB.tx("trades", mode);
+    tx.onerror = () => reject(tx.error);
+    fn(store, resolve, reject);
+  });
+};
 
 export const TradeStore = {
 
-  async insert(row) {
-    await openDB();
+  insert: row =>
+    withStore("readwrite", (store, resolve) =>
+      store.add(row).onsuccess = e => resolve(e.target.result)
+    ),
 
-    return new Promise((resolve, reject) => {
-      const { tx, store } = IndexedDB.tx("trades", "readwrite");
+  update: (id, row) =>
+    withStore("readwrite", (store, resolve) =>
+      store.put({ ...row, id }).onsuccess = () => resolve(true)
+    ),
 
-      tx.onerror = (e) => reject(tx.error || e.target.error);
-      tx.oncomplete = () => {};
+  delete: id =>
+    withStore("readwrite", (store, resolve) =>
+      store.delete(id).onsuccess = () => resolve(true)
+    ),
 
-      const req = store.add(row);
-      req.onsuccess = () => resolve(req.result);
-    });
-  },
+  getAll: () =>
+    withStore("readonly", (store, resolve) =>
+      store.getAll().onsuccess = e => resolve(e.target.result)
+    ),
 
-  async update(id, row) {
-    await openDB();
+  count: () =>
+    withStore("readonly", (store, resolve) =>
+      store.count().onsuccess = e => resolve(e.target.result)
+    ),
 
-    return new Promise((resolve, reject) => {
-      const { tx, store } = IndexedDB.tx("trades", "readwrite");
-
-      tx.onerror = (e) => reject(tx.error || e.target.error);
-
-      const req = store.put({ ...row, id });
-      req.onsuccess = () => resolve(true);
-    });
-  },
-
-  async delete(id) {
-    await openDB();
-
-    return new Promise((resolve, reject) => {
-      const { tx, store } = IndexedDB.tx("trades", "readwrite");
-
-      tx.onerror = (e) => reject(tx.error || e.target.error);
-
-      const req = store.delete(id);
-      req.onsuccess = () => resolve(true);
-    });
-  },
-
-  async getAll() {
-    await openDB();
-
-    return new Promise((resolve, reject) => {
-      const { tx, store } = IndexedDB.tx("trades");
-
-      tx.onerror = (e) => reject(tx.error || e.target.error);
-
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result);
-    });
-  },
-
-  async count() {
-    await openDB();
-
-    return new Promise((resolve, reject) => {
-      const { tx, store } = IndexedDB.tx("trades");
-
-      tx.onerror = (e) => reject(tx.error || e.target.error);
-
-      const req = store.count();
-      req.onsuccess = () => resolve(req.result);
-    });
-  },
-  
-  async clear() {
-    await openDB();
-  
-    return new Promise((resolve, reject) => {
-      const { tx, store } = IndexedDB.tx("trades", "readwrite");
-  
-      tx.onerror = (e) => reject(tx.error || e.target.error);
-      tx.oncomplete = () => resolve(true);
-  
+  clear: () =>
+    withStore("readwrite", (store, resolve) => {
       store.clear();
-    });
-  }
-  
-  
+      resolve(true);
+    })
 
 };

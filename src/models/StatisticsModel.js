@@ -1,6 +1,6 @@
 // ~/model/StatisticsModel.js
 import * as FM from 'utils/converter.js';
-import * as HM from 'components/metrics.js';
+import * as MT from 'components/metrics.js';
 
 export class StatisticsModel {
   constructor() {
@@ -29,7 +29,7 @@ export class StatisticsModel {
       ddown: this.getDataDrawdown(curve),
       monthly: this.getDataMonthly(trades),
       yearly: this.getDataYearly(trades),
-      streak: HM.computeStreaks(trades)
+      streak: MT.computeStreaks(trades)
     };
   }
 
@@ -38,37 +38,31 @@ export class StatisticsModel {
   
     const dEN = FM.dateISO(dateEN);
     const dEX = FM.dateISO(dateEX);
+    const strMonth = `${dEX.getFullYear()}-${String(dEX.getMonth() + 1).padStart(2, '0')}`;
   
-    const { pTP, pSL, vTP, vSL } = HM.computePips(t, pair);
-  
+    const { pTP, pSL, vTP, vSL } = MT.computePips(t, pair);
     const isWin = result === 'TP';
     const isLong = type === 'Buy';
-  
-    // --- realized results ---
     const pips  = isWin ? pTP : pSL;
     const vpips = isWin ? vTP : vSL;
   
     return {
-      pair,
-      isWin,
-      isLong,
-  
-      dateEN: dEN,
-      dateEX: dEX,
-      month: `${dEX.getFullYear()}-${String(dEX.getMonth() + 1).padStart(2, '0')}`,
-  
-      priceEN: +priceEN,
-      priceTP: +priceTP,
-      priceSL: +priceSL,
-      
-      pTP,
-      pSL,
-      vTP,
-      vSL,
-      pips,
-      vpips,
-  
-      bars: FM.estimateBarsHeld(dEN, dEX),
+      pair, // string
+      isWin, // boolean
+      isLong, // boolean
+      dateEN: dEN, // date ISO
+      dateEX: dEX, // date ISO
+      month: strMonth, // string
+      priceEN: +priceEN, // number
+      priceTP: +priceTP, // number
+      priceSL: +priceSL, // number
+      pTP, // number
+      pSL, // number
+      vTP, // number
+      vSL, // number
+      pips, // number
+      vpips, // number
+      bars: FM.estimateBarsHeld(dEN, dEX), // number
     };
   }
 
@@ -132,8 +126,8 @@ export class StatisticsModel {
         period: `${start} - ${end}`,
         months: `${countM} months`,
         years: `${countY.toFixed(1)} years`,
-        monthly: HM.callMonthlyFunc(monthlyArr, avgTrade),
-        yearly: HM.callYearlyFunc(yearlyArr),
+        monthly: MT.callMonthlyFunc(monthlyArr, avgTrade),
+        yearly: MT.callYearlyFunc(yearlyArr),
       }
     };
   }
@@ -167,8 +161,8 @@ export class StatisticsModel {
   }
 
   getDataDrawdown(curve) {
-    const pips  = HM.computeDrawdown(curve.p);
-    const vpips = HM.computeDrawdown(curve.v);
+    const pips  = MT.computeDrawdown(curve.p);
+    const vpips = MT.computeDrawdown(curve.v);
     const merged = {};
   
     const DRAW_TYPES = {
@@ -260,16 +254,16 @@ export class StatisticsModel {
       const tradeCount = winCount + lossCount;
     
       // --- SUMS (loss should already be negative) ---
-      const sumWinP = HM.sum(g.winP);
-      const sumLossP = HM.sum(g.lossP);    // <== loss negative
-      const sumWinV = HM.sum(g.winV);
-      const sumLossV = HM.sum(g.lossV);
+      const sumWinP = MT.sum(g.winP);
+      const sumLossP = MT.sum(g.lossP);    // <== loss negative
+      const sumWinV = MT.sum(g.winV);
+      const sumLossV = MT.sum(g.lossV);
     
       // --- AVGs ---
-      const avgWinP = HM.avg(g.winP);
-      const avgLossP = HM.avg(g.lossP);    // negative
-      const avgWinV = HM.avg(g.winV);
-      const avgLossV = HM.avg(g.lossV);
+      const avgWinP = MT.avg(g.winP);
+      const avgLossP = MT.avg(g.lossP);    // negative
+      const avgWinV = MT.avg(g.winV);
+      const avgLossV = MT.avg(g.lossV);
     
       // --- RR / EXPECTED R ---
       const avgRRP = avgWinP / Math.abs(avgLossP || 1);
@@ -283,17 +277,17 @@ export class StatisticsModel {
         grossProfit: { p: sumWinP, v: sumWinV, t: "" },
         grossLoss: { p: Math.abs(sumLossP), v: Math.abs(sumLossV), t: "" },
         netReturn: { p: sumWinP + sumLossP, v: sumWinV + sumLossV, t: "R" },
-        avgReturn: { p: HM.avg([...g.winP, ...g.lossP]), v: HM.avg([...g.winV, ...g.lossV]), t: "R" },
-        medianReturn: { p: HM.median([...g.winP, ...g.lossP]), v: HM.median([...g.winV, ...g.lossV]), t: "R" },
-        stdDeviation: { p: HM.stDev([...g.winP, ...g.lossP]), v: HM.stDev([...g.winV, ...g.lossV]), t: "R"},
+        avgReturn: { p: MT.avg([...g.winP, ...g.lossP]), v: MT.avg([...g.winV, ...g.lossV]), t: "R" },
+        medianReturn: { p: MT.median([...g.winP, ...g.lossP]), v: MT.median([...g.winV, ...g.lossV]), t: "R" },
+        stdDeviation: { p: MT.stDev([...g.winP, ...g.lossP]), v: MT.stDev([...g.winV, ...g.lossV]), t: "R"},
         avgProfit: { p: avgWinP, v: avgWinV, t: "" },
         avgLoss:   { p: avgLossP, v: avgLossV, t: ""},
-        maxProfit: { p: HM.max(g.winP), v: HM.max(g.winV), t: "" },
-        maxLoss:   { p: HM.min(g.lossP), v: HM.min(g.lossV), t: ""},
+        maxProfit: { p: MT.max(g.winP), v: MT.max(g.winV), t: "" },
+        maxLoss:   { p: MT.min(g.lossP), v: MT.min(g.lossV), t: ""},
         profitFactor: { p: sumWinP / Math.abs(sumLossP), v: sumWinV / Math.abs(sumLossV), t: ""},
         avgRiskReward: { p: avgWinP / Math.abs(avgLossP || 1), v: avgWinV / Math.abs(avgLossV || 1), t: "1:"},
-        avgHold: { p: HM.avg(g.hold), v: HM.avg(g.hold), t: "time" },
-        maxHold: { p: HM.max(g.hold), v: HM.max(g.hold), t: "time" },
+        avgHold: { p: MT.avg(g.hold), v: MT.avg(g.hold), t: "time" },
+        maxHold: { p: MT.max(g.hold), v: MT.max(g.hold), t: "time" },
       };
   };
   
@@ -416,4 +410,5 @@ getDataMonthly(trades) {
       detail: { data: this.stats }
     }));
   }
+}}
 }

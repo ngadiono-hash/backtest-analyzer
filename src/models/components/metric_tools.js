@@ -1,22 +1,56 @@
-// /helpers/metrics.js
-const pairsMap = {
-  XAUUSD: { mul: 0.5, max: 500, min: 360 },
-  GBPJPY: { mul: 1.0, max: 400, min: 180 },
-  EURNZD: { mul: 1.0, max: 400, min: 180 },
-  EURJPY: { mul: 1.0, max: 400, min: 180 },
-  USDJPY: { mul: 1.0, max: 400, min: 180 },
-  CHFJPY: { mul: 1.0, max: 400, min: 180 },
-  AUDJPY: { mul: 1.5, max: 300, min: 120 },
-  CADJPY: { mul: 1.5, max: 300, min: 120 },
-  NZDJPY: { mul: 1.5, max: 300, min: 120 },
-  GBPUSD: { mul: 1.5, max: 300, min: 120 },
-  EURUSD: { mul: 1.5, max: 300, min: 120 },
-  USDCAD: { mul: 1.5, max: 300, min: 120 },
-  USDCHF: { mul: 2.0, max: 200, min: 90 },
-  AUDUSD: { mul: 2.0, max: 200, min: 90 },
-  NZDUSD: { mul: 2.0, max: 200, min: 90 },
-  EURGBP: { mul: 2.0, max: 200, min: 90 },
+// src/models/components/metric_tools.js
+import * as FM from 'util/formatter.js';
+
+const PAIRS = {
+  XAUUSD: { value: 0.5 },
+  GBPJPY: { value: 1.0 }, EURNZD: { value: 1.0 }, EURJPY: { value: 1.0 }, USDJPY: { value: 1.0 }, CHFJPY: { value: 1.0 },
+  AUDJPY: { value: 1.5 }, CADJPY: { value: 1.5 }, NZDJPY: { value: 1.5 }, GBPUSD: { value: 1.5 }, EURUSD: { value: 1.5 }, USDCAD: { value: 1.5 },
+  USDCHF: { value: 2.0 }, AUDUSD: { value: 2.0 }, NZDUSD: { value: 2.0 }, EURGBP: { value: 2.0 },
 };
+
+export function finalizeTrade(t) {
+    const dEN = new Date(t.dateEN);
+    const dEX = new Date(t.dateEX);
+  
+    return {
+      ...t,
+      dateEN: dEN,
+      dateEX: dEX,
+      pips:  t.isWin ? t.pTP : t.pSL,
+      vpips: t.isWin ? t.vTP : t.vSL,
+      bars: FM.estimateBarsHeld(dEN, dEX)
+    };
+  }
+
+export function mapToDB(t) {
+    const dEN = FM.dateISO(t.dateEN);
+    const dEX = FM.dateISO(t.dateEX);
+  
+    const { pTP, pSL, vTP, vSL } = computePips(t, t.pair);
+    const isWin  = t.result === 'TP';
+    const isLong = t.type === 'Buy';
+  
+    return {
+      pair: t.pair,
+      isWin,
+      isLong,
+  
+      dateEN: dEN.getTime(),
+      dateEX: dEX.getTime(),
+  
+      month: `${dEX.getFullYear()}-${String(dEX.getMonth() + 1).padStart(2, '0')}`,
+  
+      priceEN: +t.priceEN,
+      priceTP: +t.priceTP,
+      priceSL: +t.priceSL,
+  
+      pTP,
+      pSL,
+      vTP,
+      vSL,
+  
+    };
+  }
 
 export function sum(arr) { return arr.reduce((a,b) => a + b, 0); }
 export function avg(arr) { return arr.length ? sum(arr) / arr.length : 0; }
@@ -34,6 +68,9 @@ export function stDev(arr) {
   const variance = avg(arr.map(v => (v - mean) ** 2));
   return Math.sqrt(variance);
 }
+
+
+
 export function computePips(trade = {}, pair = '') {
   const { priceEN, priceTP, priceSL, type } = trade;
   
@@ -46,20 +83,18 @@ export function computePips(trade = {}, pair = '') {
     pair === 'XAUUSD' ? 10 :
     10000;
 
-  const mul = pairsMap[pair].mul;
+  const multiplier = PAIRS[pair].value;
 
-  // --- raw pips (pos/neg sesuai Buy/Sell)
   const rawTP = type === 'Buy' ? (tp - en) * factor : (en - tp) * factor;
   const rawSL = type === 'Buy' ? (sl - en) * factor : (en - sl) * factor;
 
-  // --- standarisasi:
   // pTP selalu positif, pSL selalu negatif
   const pTP = Math.abs(rawTP);
   const pSL = -Math.abs(rawSL);
 
   // --- nilai ter-multiply (value pips)
-  const vTP = pTP * mul;
-  const vSL = pSL * mul;
+  const vTP = pTP * multiplier;
+  const vSL = pSL * multiplier;
 
   return {
     pTP, // selalu positif

@@ -40,7 +40,7 @@ export class PreviewTable {
     // add new rows
     trades.forEach((trade, idx) => {
       if (!this.rowMap.has(trade.id)) {
-        const tr = this._createTableRow(trade, idx);
+        const tr = this._createTbodyRow(trade, idx);
         this.rowMap.set(trade.id, tr);
         this.tbody.append(tr);
       }
@@ -116,9 +116,7 @@ export class PreviewTable {
       });
       content.append(list);
     } else {
-      content.append(
-        create("p", { class: "status-ok" }, "All rows are valid ✅")
-      );
+      content.append(create("p", { class: "txt-c" }, "All rows are valid"));
     }
     
     return content;
@@ -155,13 +153,13 @@ export class PreviewTable {
 
   _renderBody(trades) {
     trades.forEach((trade, idx) => {
-      const tr = this._createTableRow(trade, idx);
+      const tr = this._createTbodyRow(trade, idx);
       this.rowMap.set(trade.id, tr);
       this.tbody.append(tr);
     });
   }
 
-  _createTableRow(trade, idx) {
+  _createTbodyRow(trade, idx) {
     const rowNumber = idx + 1;
   
     const row = create("tr", {
