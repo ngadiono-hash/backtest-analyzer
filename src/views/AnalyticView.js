@@ -3,89 +3,154 @@ import { $, $$, create } from "util/template.js";
 import * as FM           from "util/formatter.js";
 import * as CB           from "builder/chart_builder.js";
 import * as TB           from "builder/table_builder.js";
-import { Filter }        from "ui/Filter.js";
 
-  
 export class AnalyticView {
   constructor({ stats, filter, onChange }) {
     this.onChange = onChange;
     this.data = stats;
-    // log(this.data)
-    this.filter = filter;
+    this.filter = { ...filter };
+
     this.tabs = ["overview","general","monthly","streak","drawdown","accumulate","summary"];
     this.root = create("section", { className: "page-stats" });
 
-    this.renderLayout();
-    this.renderFilter();
-    this.renderContent();
+    this._mounted = false;
+    this._initLayout();
+    this._initFilter();
+    this._initSwiper();
+
+    this.update({ stats, filter, dirty: { meta: true, data: true } });
   }
 
   render() {
     return this.root;
   }
 
-  /* ---------- layout ---------- */
+  /* ---------- mount once ---------- */
 
-  renderLayout() {
-    this.root.innerHTML = ""; // aman, view ini stateless
-    this.nav = this.createSection();
-    this.root.append(this.nav);
+  _initLayout() {
+    // navbar
+    this.navBar = create("div", { className: "nav-bar" },
+      ...this.tabs.map((id, i) =>
+        create("button", {
+          className: "nav-btn",
+          dataset: { index: i }
+        }, FM.capitalize(id))
+      )
+    );
+
+    // swiper
+    this.swiperEl  = create("div", { className: "swiper" });
+    this.wrapperEl = create("div", { className: "swiper-wrapper" },
+      ...this.tabs.map(id =>
+        create("div", { id, className: "swiper-slide" })
+      )
+    );
+    this.swiperEl.append(this.wrapperEl);
+
+    // filter placeholder
+    this.filterBar = create("div", { className: "filter-bar" });
+
+    this.root.append(this.navBar, this.swiperEl, this.filterBar);
   }
 
-  /* ---------- filter ---------- */
+  _initSwiper() {
+    const btns = $$(".nav-btn", this.navBar);
 
-  renderFilter() {
-    const fill = new Filter({
-      ranges: this.data.meta.ranges,
-      pairs: this.data.meta.pairs,
-      onChange: this.onChange,
-      state: this.filter
-    });
-
-    this.root.append(fill.el);
-  }
-
-  /* ---------- content ---------- */
-
-  renderContent() {
-    this.renderOverview?.(this.data);
-    this.tableGeneral(this.data.general);
-    this.chartGlobalEquity(this.data.curve);
-  }
-
-  
-  createSection() {
-    const navBar = create('div', { class: 'nav-bar' });
-    navBar.append(...this.tabs.map((id, i) => create('button', { class: 'nav-btn', 'data-index': i }, FM.capitalize(id))));
-    const swiper = create('div', { class: 'swiper' });
-    const wrapper = create('div', { class: 'swiper-wrapper' });
-    wrapper.append(...this.tabs.map(id => create('div', { id, class: 'swiper-slide' })));
-    swiper.append(wrapper);
-    this.root.append(navBar, swiper);
-  
-    const navBtn = $$(".nav-btn", navBar);
     const updateTabs = (active) => {
-      navBtn.forEach((btn, i) => {
-        const isActive = i === active;
-        btn.classList.toggle("active", isActive);
-        if (isActive) {
-          btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-        }
+      btns.forEach((b, i) => {
+        const on = i === active;
+        b.classList.toggle("active", on);
+        on && b.scrollIntoView({ inline: "center", block: "nearest" });
       });
     };
-    const swp = new Swiper(swiper, {
+
+    this.swiper = new Swiper(this.swiperEl, {
       loop: true,
       slidesPerView: 1,
       resistanceRatio: 0.5,
       speed: 250,
       autoHeight: false,
       touchStartPreventDefault: false,
-      on: { realIndexChange: sw => updateTabs(sw.realIndex) }
+      on: {
+        realIndexChange: sw => updateTabs(sw.realIndex)
+      }
     });
-  
+
     updateTabs(0);
-    navBtn.forEach(btn => btn.addEventListener("click", () => swp.slideToLoop(+btn.dataset.index)));
+    btns.forEach(b =>
+      b.onclick = () => this.swiper.slideToLoop(+b.dataset.index)
+    );
   }
+
+  /* ---------- filter (controlled UI) ---------- */
+
+  _initFilter() {
+    this.rangeGroup = create("div", { className: "filter-group range" });
+    this.pairGroup  = create("div", { className: "filter-group pair" });
+    this.filterBar.append(this.rangeGroup, this.pairGroup);
+  }
+
+  _renderRange(ranges) {
+    this.rangeGroup.replaceChildren(
+      ...ranges.map(r =>
+        create("button", {
+          className: this.filter.range === r ? "active" : "",
+          onclick: () => this._toggleRange(r)
+        }, r.toUpperCase())
+      )
+    );
+  }
+
+  _renderPairs(pairs) {
+    this.pairGroup.replaceChildren(
+      ...pairs.map(({ pair, count }) =>
+        create("button", {
+          className: this.filter.pairs?.includes(pair) ? "active" : "",
+          disabled: !count,
+          onclick: () => this._togglePair(pair)
+        },
+          pair,
+          create("small", { className: "badge" }, count)
+        )
+      )
+    );
+  }
+
+  _toggleRange(range) {
+    this.filter.range = this.filter.range === range ? null : range;
+    this.onChange(this.filter);
+  }
+
+  _togglePair(pair) {
+    const set = new Set(this.filter.pairs ?? []);
+    set.has(pair) ? set.delete(pair) : set.add(pair);
+    this.filter.pairs = set.size ? [...set] : null;
+    this.onChange(this.filter);
+  }
+
+  /* ---------- public update ---------- */
+
+  update({ stats, filter, dirty }) {
+    this.data = stats;
+    this.filter = { ...filter };
+
+    if (dirty.meta) {
+      this._renderRange(stats.meta.ranges);
+      this._renderPairs(stats.meta.pairs);
+    }
+
+    if (dirty.data) {
+      this._updateSlides(stats.data);
+    }
+  }
+
+  /* ---------- slide updates ---------- */
+
+  _updateSlides(data) {
+    this.tableGeneral?.(data.general);
+    this.chartGlobalEquity?.(data.curve);
+  }
+
   
   
   tableGeneral(stats) {

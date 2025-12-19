@@ -12,50 +12,62 @@ export class Model {
     this.core = new ModelAnalytic();
     this.filter = { pairs: null, range: null };
   }
+
   async initialize() {
     const rows = await TradeStore.getAll();
-  
     if (!rows.length) {
       this.trades = [];
       return this._setState("EMPTY");
     }
-  
+
     this.trades = rows;
-  
-    this._buildAndEmit();
+    this._buildAndEmit("init");
   }
-  
+
   rebuild(filterPatch) {
     if (this.state !== "READY") return;
     this.filter = { ...this.filter, ...filterPatch };
-    log(this.filter)
-    this._buildAndEmit();
-  }
-
-  _buildAndEmit() {
-    this.stats = this.core.build(this.trades, this.filter);
-    this._setState("READY", { stats: this.stats, filter: this.filter });
+    this._buildAndEmit("filter");
   }
 
   async commitToDB() {
-    if (!this.trades.length || this.state == "READY") return;
-  
+    if (!this.trades.length || this.state === "READY") return;
+
     const invalid = this.trades.filter(t => !t.valid);
-    if (invalid.length) return this._feedback("error", `Cannot proceed analysis, there are ${invalid.length} invalid rows`);
-    
+    if (invalid.length)
+      return this._feedback(
+        "error",
+        `Cannot proceed analysis, there are ${invalid.length} invalid rows`
+      );
+
     try {
-      for (const t of this.trades) {
+      for (const t of this.trades)
         await TradeStore.insert(this.pre.mapToDB(t));
-      }
-  
-      const rows = await TradeStore.getAll();
-      this.trades = rows;
-  
-      this._buildAndEmit();
+
+      this.trades = await TradeStore.getAll();
+      this._buildAndEmit("commit");
+
     } catch (err) {
       this._feedback("error", `Something wrong: ${err.message}`);
     }
   }
+
+  /* ---------- internal ---------- */
+
+  _buildAndEmit(reason) {
+    const stats = this.core.build(this.trades, this.filter);
+
+    this._setState("READY", {
+      stats,
+      filter: this.filter,
+      dirty: {
+        meta: reason === "init" || reason === "filter",
+        data: true,
+      },
+      reason,
+    });
+  }
+
 
   loadFile(raw, fileName) {
     try {
