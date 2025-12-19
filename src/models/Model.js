@@ -1,41 +1,74 @@
 // src/models/Model.js
 import { EventBus } from "core/EventBus.js";
 import { TradeStore } from "db/DataStore.js";
-import * as DT from "component/data_tools.js";
-import * as MT from "component/metric_tools.js";
+import { ModelPreview } from "model/ModelPreview.js";
+import { ModelAnalytic } from "model/ModelAnalytic.js";
 
 export class Model {
   constructor() {
     this.state = "EMPTY";
     this.trades = [];
+    this.pre = new ModelPreview();
+    this.core = new ModelAnalytic();
+    this.filter = { pairs: null, range: null };
   }
-
   async initialize() {
     const rows = await TradeStore.getAll();
-    if (!rows.length) return this._setState("EMPTY");
-    this.trades = rows
-      .map(t => MT.finalizeTrade(t))
-      .sort((a, b) => a.dateEX - b.dateEX);
-    this._setState("READY", { trades: this.trades });
+  
+    if (!rows.length) {
+      this.trades = [];
+      return this._setState("EMPTY");
+    }
+  
+    this.trades = rows;
+  
+    this._buildAndEmit();
+  }
+  
+  rebuild(filterPatch) {
+    if (this.state !== "READY") return;
+    this.filter = { ...this.filter, ...filterPatch };
+    log(this.filter)
+    this._buildAndEmit();
+  }
+
+  _buildAndEmit() {
+    this.stats = this.core.build(this.trades, this.filter);
+    this._setState("READY", { stats: this.stats, filter: this.filter });
   }
 
   async commitToDB() {
-    if (!this.trades.length) return;
+    if (!this.trades.length || this.state == "READY") return;
+  
     const invalid = this.trades.filter(t => !t.valid);
     if (invalid.length) return this._feedback("error", `Cannot proceed analysis, there are ${invalid.length} invalid rows`);
+    
     try {
       for (const t of this.trades) {
-        await TradeStore.insert(MT.mapToDB(t));
+        await TradeStore.insert(this.pre.mapToDB(t));
       }
+  
       const rows = await TradeStore.getAll();
-      this.trades = rows
-        .map(t => MT.finalizeTrade(t))
-        .sort((a, b) => a.dateEX - b.dateEX);
-      this._setState("READY", { trades: this.trades });
+      this.trades = rows;
+  
+      this._buildAndEmit();
     } catch (err) {
       this._feedback("error", `Something wrong: ${err.message}`);
     }
   }
+
+  loadFile(raw, fileName) {
+    try {
+      this.trades = this.pre.buildTrade(raw);
+      this.fileName = fileName;
+      const payload = { trades: this.trades, fileName: this.fileName };
+      this._setState("PREVIEW", payload);
+      this._feedback("success", `Loaded ${this.trades.length} trades from ${fileName}`);
+    } catch (err) {
+      this._feedback("error", `Failed to load file: ${err.message}`);
+    }
+  }
+  
 
   async deleteAll() {
     try {
@@ -48,33 +81,31 @@ export class Model {
     }
   }
 
-  loadFile(raw, fileName) {
-    try {
-      this.trades = DT.buildTrade(raw);
-      this.fileName = fileName;
-      const payload = { trades: this.trades, fileName: this.fileName };
-      this._setState("PREVIEW", payload);
-      this._feedback("success", `Loaded ${this.trades.length} trades from ${fileName}`);
-    } catch (err) {
-      this._feedback("error", `Failed to load file: ${err.message}`);
-    }
-  }
-
   updateRow(cmd) {
     const { id, changes, idx } = cmd;
-    const row = this.trades.findIndex(t => t.id === id);  
-    if (row === -1) return;
-    const merged = { ...this.trades[row], ...changes };  
-    const validated = DT.validate([merged])[0];  
-    this.trades[row] = validated;
-    EventBus.emit("model:preview-updated", { action: "edit-row", payload: { id, row: validated, trades: this.trades }});
-    this._feedback(validated.valid ? "success" : "warning",
-      validated.valid  
-        ? `Row ${idx} updated successfully`  
-        : `Row ${idx} updated but still invalid`,
+    const i = this.trades.findIndex(t => t.id === id);
+    if (i === -1) return;
+    const merged = { ...this.trades[i], ...changes };
+  
+    const normalized = this.pre.normalize([merged])[0];
+  
+    this.trades[i] = normalized;
+    const validated = this.pre.validate([normalized])[0];
+  
+    this.trades[i] = validated;
+    EventBus.emit("model:preview-updated", {
+      action: "edit-row",
+      payload: { id, row: validated, trades: this.trades }
+    });
+  
+    this._feedback(
+      validated.valid ? "success" : "warning",
+      validated.valid
+        ? `Row ${idx} is valid now`
+        : `Row ${idx} updated but still invalid`
     );
   }
-
+  
   deleteRow(cmd) {
     const { id, idx } = cmd;
     const row = this.trades.findIndex(t => t.id === id);  

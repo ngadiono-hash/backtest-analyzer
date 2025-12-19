@@ -1,67 +1,75 @@
-export const MONTHS = { 
-  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 
-};
-export const MONTH_NAMES = Object.keys(MONTHS); 
-export const MONTH_FULL_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
+import { 
+  MONTHS, 
+  MONTH_NAMES, 
+  MONTH_FULL_NAMES, 
+  TIMEFRAME, 
+  TIMEZONE,
+  PAIRS,
+} from "core/Constants.js"
+
 export function getUniquePairs(stats) {
   const s = new Set();
   stats.p.forEach(x => s.add(x.pair));
   return Array.from(s);
 }
-// =========================
+
 //  DATE HELPERS
 // =========================
-export function safeDate(val) {
-  if (!val) return null;
-  if (val instanceof Date) return isNaN(val) ? null : val;
-  const d = new Date(val);
-  return isNaN(d) ? null : d;
+//input = "2023-03"
+export function getMonthName(input, full = false) {
+  if (!input) return "-";
+  const [, m] = input.split("-");
+  const idx = Number(m) - 1;
+  return (full ? MONTH_FULL_NAMES : MONTH_NAMES)[idx] ?? "???";
+}
+// input = unixTimestamp || date ISO
+export function dateDMY(input) {
+  if (!input) return "-";
+  const d = new Date(input + TIMEZONE * 36e5);
+  if (Number.isNaN(d)) return "-";
+  return `${String(d.getUTCDate()).padStart(2,"0")} ${MONTH_NAMES[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(-2)}`;
 }
 
-export function dateLocal(dateISO) {
-  const d = safeDate(dateISO);
-  return d 
-    ? d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
-    : "-";
+// input: "23-Jan-24"
+export function toTimestamp(input, { defaultTime = "12:00:00" } = {}) {
+  if (!input) return null;
+
+  const [dd, mon, yy] = input.split("-");
+  const month = MONTHS[mon];
+  if (!dd || month == null || !yy) return null;
+
+  const y = Number(yy);
+  if (Number.isNaN(y)) return null;
+
+  const now = new Date().getFullYear() % 100;
+  const year = yy.length === 2
+    ? y <= now + 1 ? 2000 + y : 1900 + y
+    : y;
+
+  const [hh, mm, ss = 0] = defaultTime.split(":").map(Number);
+
+  return Date.UTC(
+    year,
+    month,
+    Number(dd),
+    hh - TIMEZONE,
+    mm,
+    ss
+  );
 }
 
-export function getMonthName(ym, full = false) {
-  if (!ym) return "-";
-  const [y, m] = ym.split("-");
-  const monthIndex = Number(m) - 1; // 01 → 0, 08 → 7
-  const mon = MONTH_NAMES[monthIndex] || "???";
-  return full ? MONTH_FULL_NAMES[monthIndex] : MONTH_NAMES[monthIndex];
+export function yearMonth(ts) {
+  const d = new Date(ts + TIMEZONE * 36e5);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2,"0")}`;
 }
 
-export function dateDMY(dateISO) {
-  const d = safeDate(dateISO);
-  if (!d) return "-";
-  return `${String(d.getDate()).padStart(2, "0")} ${MONTH_NAMES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
-}
-
-export function dateISO(dateStr, defaultHour = "12:00") {
-  if (!dateStr) return null;
-
-  const [d, m, y] = dateStr.split("-");
-  if (!d || !m || !y) return null;
-
-  const yy = +y;
-  const nowYY = new Date().getFullYear() % 100;
-  const fullYear = y.length === 2
-    ? yy <= nowYY + 1 ? 2000 + yy : 1900 + yy
-    : +y;
-
-  const month = String(MONTHS[m] + 1).padStart(2, "0");
-
-  return new Date(`${fullYear}-${month}-${d.padStart(2, "0")}T${defaultHour}:00+07:00`);
-}
-// =========================
 //  NUMBER HELPERS
 // =========================
+export const round = (n, d = 2) =>
+  typeof n === 'number' && Number.isFinite(n)
+    ? Math.round((n + Number.EPSILON) * 10 ** d) / 10 ** d
+    : n;
+
 export function num(val = 0, decimals = 1) {
   const n = Number(val);
   return n || n === 0
@@ -80,7 +88,6 @@ export function formatPrice(pair, price) {
 		return !price || isNaN(n) ? '' : n.toFixed(dec);
 	};
 
-// =========================
 //  TIME HELPERS
 // =========================
 function timeParts(totalMinutes) {
@@ -104,7 +111,47 @@ export function msToTime(ms = 0) {
   return mins ? timeParts(mins) : "-";
 }
 
-// =========================
+export function estimateBarsHeld(entryTs, exitTs) {
+  if (!entryTs || !exitTs) return 1;
+
+  const hours = removeWeekendHours(entryTs, exitTs);
+  const tf = TIMEFRAME == "1h" ? 1 : TIMEFRAME == "1d" ? 24 : 4;
+
+  return Math.max(1, Math.round(hours / tf));
+}
+
+function removeWeekendHours(eTs, xTs, ctx) {
+  let hours = (xTs - eTs) / 36e5;
+  const shift = TIMEZONE * 36e5;
+
+  const e = new Date(eTs + shift);
+
+  // anchor ke awal minggu (Senin)
+  const base = new Date(Date.UTC(
+    e.getUTCFullYear(),
+    e.getUTCMonth(),
+    e.getUTCDate()
+  ));
+  base.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7));
+
+  // Saturday 04:00 local
+  base.setUTCDate(base.getUTCDate() + 5);
+  base.setUTCHours(4, 0, 0, 0);
+
+  let wStart = base.getTime() - shift;
+  let wEnd   = wStart + 2 * 86400e3;
+
+  for (; wStart < xTs; wStart += 7 * 86400e3, wEnd += 7 * 86400e3) {
+    const overlapStart = Math.max(wStart, eTs);
+    const overlapEnd   = Math.min(wEnd, xTs);
+
+    if (overlapEnd > overlapStart) {
+      hours -= (overlapEnd - overlapStart) / 36e5;
+    }
+  }
+
+  return hours;
+}
 //  STRING FORMATTING
 // =========================
 export function capitalize(s) {
@@ -122,7 +169,6 @@ export function toTitle(str) {
     .join(" ");
 }
 
-// =========================
 //  METRIC FORMATTER
 // =========================
 export function metricFormat(value, type = "float", unit = "") {
@@ -152,42 +198,3 @@ export function metricFormat(value, type = "float", unit = "") {
   return { txt, css };
 }
 
-export function estimateBarsHeld(entry, exit) {
-  const e = safeDate(entry);
-  const x = safeDate(exit);
-  if (!e || !x) return 1;
-
-  let hours = removeWeekendHours(e, x);
-
-  return Math.max(1, Math.round(hours / 4));
-}
-
-function removeWeekendHours(e, x) {
-  let hours = (x - e) / 36e5;
-
-  // Weekend start: Saturday 04:00
-  const ws = new Date(e);
-  ws.setHours(4, 0, 0, 0);
-  ws.setDate(ws.getDate() + ((6 - ws.getDay() + 7) % 7)); // next Saturday
-
-  // Weekend end: Monday 04:00
-  const we = new Date(ws);
-  we.setDate(ws.getDate() + 2); // Saturday → Monday
-  // Monday → 04:00 handled by ws hour = 04:00
-
-  // Loop through all weekends within the range
-  for (let wStart = ws, wEnd = we;
-       wStart < x;
-       wStart = new Date(wStart.getTime() + 7 * 86400e3),
-       wEnd = new Date(wEnd.getTime() + 7 * 86400e3)) {
-
-    const overlapStart = Math.max(wStart, e);
-    const overlapEnd   = Math.min(wEnd, x);
-
-    if (overlapEnd > overlapStart) {
-      hours -= (overlapEnd - overlapStart) / 36e5;
-    }
-  }
-
-  return hours;
-}

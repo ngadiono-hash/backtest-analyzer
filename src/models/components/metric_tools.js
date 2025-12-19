@@ -1,57 +1,6 @@
 // src/models/components/metric_tools.js
 import * as FM from 'util/formatter.js';
 
-const PAIRS = {
-  XAUUSD: { value: 0.5 },
-  GBPJPY: { value: 1.0 }, EURNZD: { value: 1.0 }, EURJPY: { value: 1.0 }, USDJPY: { value: 1.0 }, CHFJPY: { value: 1.0 },
-  AUDJPY: { value: 1.5 }, CADJPY: { value: 1.5 }, NZDJPY: { value: 1.5 }, GBPUSD: { value: 1.5 }, EURUSD: { value: 1.5 }, USDCAD: { value: 1.5 },
-  USDCHF: { value: 2.0 }, AUDUSD: { value: 2.0 }, NZDUSD: { value: 2.0 }, EURGBP: { value: 2.0 },
-};
-
-export function finalizeTrade(t) {
-    const dEN = new Date(t.dateEN);
-    const dEX = new Date(t.dateEX);
-  
-    return {
-      ...t,
-      dateEN: dEN,
-      dateEX: dEX,
-      pips:  t.isWin ? t.pTP : t.pSL,
-      vpips: t.isWin ? t.vTP : t.vSL,
-      bars: FM.estimateBarsHeld(dEN, dEX)
-    };
-  }
-
-export function mapToDB(t) {
-    const dEN = FM.dateISO(t.dateEN);
-    const dEX = FM.dateISO(t.dateEX);
-  
-    const { pTP, pSL, vTP, vSL } = computePips(t, t.pair);
-    const isWin  = t.result === 'TP';
-    const isLong = t.type === 'Buy';
-  
-    return {
-      pair: t.pair,
-      isWin,
-      isLong,
-  
-      dateEN: dEN.getTime(),
-      dateEX: dEX.getTime(),
-  
-      month: `${dEX.getFullYear()}-${String(dEX.getMonth() + 1).padStart(2, '0')}`,
-  
-      priceEN: +t.priceEN,
-      priceTP: +t.priceTP,
-      priceSL: +t.priceSL,
-  
-      pTP,
-      pSL,
-      vTP,
-      vSL,
-  
-    };
-  }
-
 export function sum(arr) { return arr.reduce((a,b) => a + b, 0); }
 export function avg(arr) { return arr.length ? sum(arr) / arr.length : 0; }
 export function min(arr) { return Math.min(...arr); }
@@ -67,41 +16,6 @@ export function stDev(arr) {
   const mean = avg(arr);
   const variance = avg(arr.map(v => (v - mean) ** 2));
   return Math.sqrt(variance);
-}
-
-
-
-export function computePips(trade = {}, pair = '') {
-  const { priceEN, priceTP, priceSL, type } = trade;
-  
-  const en = +priceEN;
-  const tp = +priceTP;
-  const sl = +priceSL;
-
-  const factor =
-    pair.endsWith('JPY') ? 100 :
-    pair === 'XAUUSD' ? 10 :
-    10000;
-
-  const multiplier = PAIRS[pair].value;
-
-  const rawTP = type === 'Buy' ? (tp - en) * factor : (en - tp) * factor;
-  const rawSL = type === 'Buy' ? (sl - en) * factor : (en - sl) * factor;
-
-  // pTP selalu positif, pSL selalu negatif
-  const pTP = Math.abs(rawTP);
-  const pSL = -Math.abs(rawSL);
-
-  // --- nilai ter-multiply (value pips)
-  const vTP = pTP * multiplier;
-  const vSL = pSL * multiplier;
-
-  return {
-    pTP, // selalu positif
-    pSL, // selalu negatif
-    vTP,
-    vSL
-  };
 }
 
 export function computeStreaks(data, MIN_STREAK = 2) {

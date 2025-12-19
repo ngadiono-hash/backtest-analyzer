@@ -21,19 +21,21 @@ export class Controller {
       this.model.loadFile(raw, fileName);
     });
     EventBus.on("ui:edit-row", (e) => {
-      const { data } = e.detail;
-      this.model.updateRow(data);
+      this.model.updateRow(e.detail);
     });
     EventBus.on("ui:delete-row", (e) => {
-      const { data } = e.detail;
-      this.model.deleteRow(data);
+      this.model.deleteRow(e.detail);
     });
     EventBus.on("ui:delete-all", () => {
       this.model.deleteAll();
     });
-    EventBus.on("ui:save-db", (e) => {
+    EventBus.on("ui:save-db", () => {
       this.model.commitToDB();
     });
+    EventBus.on("ui:filter-change", (e) => {
+      this.model.rebuild(e.detail);
+    });
+    
   }
 
   _bindModelEvents() {
@@ -52,12 +54,10 @@ export class Controller {
           break;
       }
     });
-    EventBus.on("model:load-db", (e) => {
-      this.view.renderDashboard(e.detail);
-    });
     EventBus.on("model:feedback", (e) => {
       const { type, message } = e.detail;
       this.view.notify(type, message);
     });
+    
   }
 }

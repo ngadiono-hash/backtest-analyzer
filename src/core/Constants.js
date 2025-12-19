@@ -41,3 +41,15 @@ export const EVENTS = {
   MODEL_ERROR:           "model:error",
   
 };
+
+export const TIMEFRAME = "4h";
+export const TIMEZONE = 7;
+export const MONTH_FULL_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+export const MONTH_NAMES = MONTH_FULL_NAMES.map(m => m.slice(0, 3));
+export const MONTHS = Object.fromEntries(MONTH_NAMES.map((m, i) => [m, i]));
+export const PAIRS = {
+  XAUUSD: 0.5,
+  GBPJPY: 1.0, EURNZD: 1.0, EURJPY: 1.0, USDJPY: 1.0, CHFJPY: 1.0,
+  AUDJPY: 1.5, CADJPY: 1.5, NZDJPY: 1.5, GBPUSD: 1.5, EURUSD: 1.5, USDCAD: 1.5,
+  USDCHF: 2.0, AUDUSD: 2.0, NZDUSD: 2.0, EURGBP: 2.0,
+};

@@ -1,9 +1,9 @@
 // src/views/View.js
 import { EventBus } from "core/EventBus.js";
-import { FAB, Modal, Notify } from "ui/ui_tools.js";
-import { FileHandle } from "builder/FileHandle.js";
-import { PreviewTable } from "builder/PreviewTable.js";
-import { AnalyticSheet } from "builder/AnalyticSheet.js";
+import { FAB, Modal, Notify } from "ui/UI.js";
+import { FileHandle } from "view/FileHandle.js";
+import { PreviewTable } from "view/PreviewTable.js";
+import { AnalyticView } from "view/AnalyticView.js";
 
 export class View {
   constructor() {
@@ -19,7 +19,7 @@ export class View {
 
   renderState(state, payload = null) {
     this.app.innerHTML = "";
-
+    
     switch (state) {
       case "EMPTY":
         this.renderLANDING();
@@ -28,18 +28,20 @@ export class View {
       case "PREVIEW":
         this.renderPREVIEW(payload);
         this._injectFAB([
-          { label: "Info",   onClick: () => this._showSnapShoot() },
-          { label: "Process",onClick: () => EventBus.emit("ui:save-db") },
-          { label: "Add",    onClick: () => EventBus.emit("ui:add-record") },
-          { label: "Delete", onClick: () => this._confirmDelete(false)  },
+          { label: "info",   onClick: () => this._showSnapShoot() },
+          { label: "process",onClick: () => EventBus.emit("ui:save-db") },
+          { label: "add",    onClick: () => EventBus.emit("ui:add-record") },
+          { label: "delete", onClick: () => this._confirmDelete(false)  },
         ]);
         break;
 
       case "READY":
         this.renderDASHBOARD(payload);
         this._injectFAB([
-          { label: "Delete", onClick: () => this._confirmDelete(false) },
-          { label: "Export", onClick: () => EventBus.emit("ui:export-data") },
+          { label: "unfilter", onClick: () => EventBus.emit("ui:filter-data") },
+          { label: "export", onClick: () => EventBus.emit("ui:export-data") },
+          { label: "switch-off", onClick: () => EventBus.emit("ui:toggle-data") },
+          { label: "delete", onClick: () => this._confirmDelete(false) },
         ]);
         break;
     }
@@ -62,13 +64,6 @@ export class View {
     });
     this._renderView(this.preview);
   }
-  
-  renderDASHBOARD(data) {
-    this.ready = new AnalyticSheet({
-      
-    });
-    this._renderView(this.ready);
-  }  
 
   previewUpdateRow({ trades, stats, fileName }) {
     if (!this.preview) return;
@@ -88,6 +83,18 @@ export class View {
     modal.render();
   }
   
+  renderDASHBOARD(payload) {
+    const { stats, filter } = payload;
+    this.ready = new AnalyticView({
+      stats,
+      filter: filter,
+      onChange: (filter) => {
+        EventBus.emit("ui:filter-change", filter);
+      }
+    });
+    this._renderView(this.ready);
+  }
+  
   _confirmDelete(single = true, data = null) {
     const strT = single ? `Delete row ${data.idx}` : `Delete all record`;
     const strC = `Are you sure to delete ${ single ? "this row?" : "this record?"}`;
@@ -105,9 +112,7 @@ export class View {
   }
   
   _injectFAB(actions) {
-    this.fab?.remove();
-    this.fab = new FAB(actions);
-    this.fab.render();
+    this.fab = new FAB(actions).render();
   }
 
   _renderView(viewInstance) {

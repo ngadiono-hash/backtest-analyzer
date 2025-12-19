@@ -2,19 +2,15 @@
 import { $, create } from "util/template.js";
 
 const LABELS = {
-  Delete : "🗑️", Add : "📝", Process: "📊", Info : "❗", Help : "❓", Export : "📥", Setup  : "⚙️"
+  Filter: "🗂️", Delete : "🗑️", Add : "📝", Process: "📊", Info : "❗", Help : "❓", Export : "📥", Setup  : "⚙️"
 }
 const SLOTS = ["fab-action-1", "fab-action-2", "fab-action-3", "fab-action-4"];
 
 export class FAB {
   constructor(actions = []) {
+    $(".fab-wrapper")?.remove();
     this.root = create("div", { class: "fab-wrapper" });
-
-    const toggle = create("input", {
-      id: "fabCheckbox",
-      type: "checkbox",
-      class: "fab-checkbox"
-    });
+    const toggle = create("input", { id: "fabCheckbox", type: "checkbox", class: "fab-checkbox" });
 
     const label = create("label", { class: "fab", for: "fabCheckbox" },
       create("span", { class: "fab-dots fab-dots-1" }),
@@ -31,11 +27,12 @@ export class FAB {
           title: action.label,
           onclick: action.onClick
         },
-        LABELS[action.label] ?? action.label
+        // LABELS[action.label]
+        create("i", { class: `${action.label}`} )
       );
       
       wheel.append(btn);
-      btn.addEventListener("click", () => toggle.checked = false);
+      // btn.addEventListener("click", () => toggle.checked = false);
     });
 
     this.root.append(toggle, label, wheel);
@@ -44,9 +41,6 @@ export class FAB {
 
   }
 
-  // render() {
-  //   return this.root;
-  // }
   render() { return document.body.append(this.root); }
 }
 
@@ -101,7 +95,10 @@ export class Modal {
   }
 
   close() { this.root.remove(); }
-  render() { return document.body.append(this.root); }
+  render() {
+    $(".fab-checkbox").checked = false;
+    return document.body.append(this.root);
+  }
 }
 
 export class Notify {

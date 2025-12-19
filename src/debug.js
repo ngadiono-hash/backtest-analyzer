@@ -62,7 +62,7 @@ eruda.init();
 function logJson(value, opts = {}) {
   const {
     maxArrayItems = 5,
-    maxObjectProps = 12,
+    maxObjectProps = 17,
     maxDepth = 5,
     indent = 2,
   } = opts;

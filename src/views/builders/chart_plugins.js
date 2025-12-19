@@ -1,4 +1,4 @@
-import * as FM from "utils/converter.js";
+import * as FM from "util/formatter.js";
 
 const DEFAULT_ULTIMATE = { enabled: false, above: "#089981", below: "#f23645" };
 

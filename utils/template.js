@@ -11,21 +11,21 @@ export const create = (tag, props = {}, ...children) => {
   }
   for (const key in props) {
     const val = props[key];
+
     if (key === "dataset" && val && typeof val === "object") {
-      // dataset: { id: "10" } → data-id="10"
       for (const d in val) el.dataset[d] = val[d];
+    
     } else if (key === "style" && val && typeof val === "object") {
-      // style: { backgroundColor: "red" }
       Object.assign(el.style, val);
+      
     } else if (key in el) {
-      // DOM property: id, className, value, textContent, etc.
       el[key] = val;
-    } else {
-      // attribute HTML: for, class, tabindex, aria-*, dll
+      
+    } else { // sebisa mungkin hindari penggunaan ini
       el.setAttribute(key, val);
     }
   }
-  // Tambahkan children (text, element, number)
+  
   for (const child of children)
     el.append(child instanceof Node ? child : document.createTextNode(child));
 

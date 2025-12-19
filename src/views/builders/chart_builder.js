@@ -1,6 +1,6 @@
-// ~/helpers/chart_renderer.js
+// ~src/views/builders/chart_builder.js
 import { $, $$, create } from "util/template.js";
-import * as FM           from "util/converter.js";
+import * as FM           from "util/formatter.js";
 import { plugins }       from "builder/chart_plugins.js";
 
 
@@ -145,24 +145,22 @@ function _enableResize(container, handle, chart) {
 
 // === LINE CHART BUILDER
 
-export function lineChartConfig(src, opt = { tooltip: true, zoom: false }) {
+export function lineChartConfig(src) {
   const labels = src.p.map((_, i) => i + 1);
-
-  // Transform data menjadi object lengkap per titik
   const pips = src.p.map((p, i) => ({
     x: i + 1,
     y: p.equity,
-    date: p.date,
+    time: FM.dateDMY(p.time),
     pair: p.pair,
-    value: p.value
+    result: p.result
   }));
 
   const vpips = src.v.map((v, i) => ({
     x: i + 1,
     y: v.equity,
-    date: v.date,
+    time: FM.dateDMY(v.time),
     pair: v.pair,
-    value: v.value
+    result: v.result
   }));
   // Default properties yang sama untuk semua dataset
   const datasetDefaults = {
@@ -201,7 +199,7 @@ export function lineChartConfig(src, opt = { tooltip: true, zoom: false }) {
       responsive: true,
       maintainAspectRatio: false,
 
-      crosshair: { enabled: opt.tooltip },
+      crosshair: { enabled: true },
 
       layout: { padding: { right: 5 } },
 
@@ -270,7 +268,7 @@ export function lineChartConfig(src, opt = { tooltip: true, zoom: false }) {
 
         // --- Tooltip reading data from dataset ---
         tooltip: {
-          enabled: opt.tooltip,
+          enabled: true,
           cornerRadius: 0,
           titleFont: { size: 10 },
           bodyFont: { size: 10 },
@@ -281,11 +279,11 @@ export function lineChartConfig(src, opt = { tooltip: true, zoom: false }) {
               const d = ctx[0].raw;
         
               // Jika tidak punya properti data asli → itu inject
-              if (!d || d.injected || d.date === undefined) {
-                return "#0 | Start";
+              if (!d || d.injected || d.time === undefined) {
+                return "Start";
               }
         
-              return `#${ctx[0].dataIndex} | ${d.date} | ${d.pair}`;
+              return `${d.pair} | ${d.time}`;
             },
         
             label: (ctx) => {
@@ -295,7 +293,7 @@ export function lineChartConfig(src, opt = { tooltip: true, zoom: false }) {
                 return "Initial State (0)";
               }
         
-              return `${FM.num(d.value)} | ${FM.num(d.y)}`;
+              return `${FM.num(d.result)} | ${FM.num(d.y)}`;
             },
         
             labelColor: (ctx) => {
@@ -303,14 +301,14 @@ export function lineChartConfig(src, opt = { tooltip: true, zoom: false }) {
               const ds = ctx.dataset;
         
               // Inject OR missing props → netral
-              if (!d || d.injected || d.value === undefined) {
+              if (!d || d.injected || d.result === undefined) {
                 return {
                   borderColor: "#999",
                   backgroundColor: "#999",
                 };
               }
         
-              const color = d.value >= 0 ? ds.segmentColor.above : ds.segmentColor.below;
+              const color = d.result >= 0 ? ds.segmentColor.above : ds.segmentColor.below;
         
               return {
                 borderColor: color,
@@ -332,14 +330,6 @@ export function lineChartConfig(src, opt = { tooltip: true, zoom: false }) {
           }
         },
 
-        zoom: {
-          pan: { enabled: opt.zoom, mode: "x", threshold: 10 },
-          zoom: {
-            wheel: { enabled: opt.zoom, speed: 0.05 },
-            pinch: { enabled: opt.zoom },
-            mode: "x"
-          }
-        }
       }
     }
   };
@@ -437,9 +427,9 @@ function _updateLineChart(chart, filtered) {
     ...filtered.p.map((p, i) => ({
       x: i + 1,
       y: typeof p.equity_recalc === "number" ? p.equity_recalc : null,
-      date: p.date,
+      time: FM.dateDMY(p.time),
       pair: p.pair,
-      value: p.value
+      result: p.result
     }))
   ];
 
@@ -448,9 +438,9 @@ function _updateLineChart(chart, filtered) {
     ...filtered.v.map((v, i) => ({
       x: i + 1,
       y: typeof v.equity_recalc === "number" ? v.equity_recalc : null,
-      date: v.date,
+      time: FM.dateDMY(v.time),
       pair: v.pair,
-      value: v.value
+      result: v.result
     }))
   ];
 
