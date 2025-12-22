@@ -126,10 +126,9 @@ export class ViewStatistics {
   }
 
   tableAccumulation(stats) {
+    log(stats)
     const container = $("#accumulate");
     const b = new TB.Tables(container).setId("monthly-table");
-  
-    // ===== HEADER: Y-axis = Month/Total, X-axis = Years =====
     const years = [...new Set(
       Object.keys(stats.monthly).map(k => k.split("-")[0])
     )].sort();
@@ -138,46 +137,31 @@ export class ViewStatistics {
       create("th", { className: "pivot pivot-xy pips-mode", textContent: "Month" }),
       ...years.map(y => TB.Cells.headCell(y, "pivot pivot-x pips-mode"))
     ];
-  
-    // ===== ROWS: Each row = 1 month OR Total =====
     const rows = FM.MONTH_NAMES.map(monthName => {
       const idx = FM.MONTHS[monthName];
       const mm = String(idx + 1).padStart(2, "0");
-  
       const cells = years.map(year => {
         const entry = stats.monthly[`${year}-${mm}`];
         return TB.Cells.pvCell(entry, "N");
       });
-  
       return [
         TB.Cells.textCell(monthName, "pivot pivot-y pips-mode"),
         ...cells
       ];
     });
-  
-    // ===== TOTAL row per year =====
     const totalRow = [
       TB.Cells.textCell("Total", "pivot pivot-y pips-mode"),
       ...years.map(y => TB.Cells.pvCell(stats.yearly[y], "N"))
     ];
     rows.push(totalRow);
-  
-    // ===== GRAND TOTAL ROW (1 merged cell) =====
     const totalValueCell = TB.Cells.pvCell(stats.total, "N");
     const pivotGrand = TB.Cells.textCell("Grand", "pivot pivot-y pips-mode");
-    // Value cell with colspan across all year columns
     const mergedValueCell = create("td", { 
       colspan: years.length,
       class: "grand-total-row"
     });
-    
-    // copy childNodes dari pvCell
     mergedValueCell.append(...totalValueCell.childNodes);
-    
-    // push ke rows
     rows.push([ pivotGrand, mergedValueCell ]);
-  
-    // ===== BUILD =====
     b.header(header).rows(rows).build();
     container.prepend(TB.Toggler(container));
   }

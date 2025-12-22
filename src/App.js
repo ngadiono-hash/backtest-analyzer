@@ -1,12 +1,12 @@
-// src/controllers/Controller.js
-import { EventBus } from "core/EventBus.js";
+// src/App.js
 import { Model } from "model/Model.js";
 import { View } from "view/View.js";
 
-export class Controller {
+class App {
   constructor() {
     this.model = new Model();
     this.view = new View();
+    this.bootstrap();
   }
 
   bootstrap() {
@@ -16,34 +16,34 @@ export class Controller {
   }
 
   _bindViewEvents() {
-    EventBus.on("ui:upload-file", (e) => {
+    EVENT.on("ui:upload-file", (e) => {
       const { raw, fileName } = e.detail;
       this.model.loadFile(raw, fileName);
     });
-    EventBus.on("ui:edit-row", (e) => {
+    EVENT.on("ui:edit-row", (e) => {
       this.model.updateRow(e.detail);
     });
-    EventBus.on("ui:delete-row", (e) => {
+    EVENT.on("ui:delete-row", (e) => {
       this.model.deleteRow(e.detail);
     });
-    EventBus.on("ui:delete-all", () => {
+    EVENT.on("ui:delete-all", () => {
       this.model.deleteAll();
     });
-    EventBus.on("ui:save-db", () => {
+    EVENT.on("ui:save-db", () => {
       this.model.commitToDB();
     });
-    EventBus.on("ui:filter-change", (e) => {
+    EVENT.on("ui:filter-change", (e) => {
       this.model.rebuild(e.detail);
     });
     
   }
 
   _bindModelEvents() {
-    EventBus.on("model:state-change", (e) => {
+    EVENT.on("model:state-change", (e) => {
       const { state, payload } = e.detail;
       this.view.renderState(state, payload);
     });
-    EventBus.on("model:preview-updated", (e) => {
+    EVENT.on("model:preview-updated", (e) => {
       const { action, payload } = e.detail;
       switch (action) {
         case "edit-row":
@@ -54,10 +54,12 @@ export class Controller {
           break;
       }
     });
-    EventBus.on("model:feedback", (e) => {
+    EVENT.on("model:feedback", (e) => {
       const { type, message } = e.detail;
       this.view.notify(type, message);
     });
     
   }
 }
+
+document.addEventListener('DOMContentLoaded', new App());

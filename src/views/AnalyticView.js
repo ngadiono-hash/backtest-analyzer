@@ -1,5 +1,4 @@
 // src/views/builders/AnalyticSheet.js
-import { $, $$, create } from "util/template.js";
 import * as FM           from "util/formatter.js";
 import * as CB           from "builder/chart_builder.js";
 import * as TB           from "builder/table_builder.js";
@@ -9,16 +8,16 @@ export class AnalyticView {
     this.onChange = onChange;
     this.data = stats;
     this.filter = { ...filter };
-
+    log(stats)
     this.tabs = ["overview","general","monthly","streak","drawdown","accumulate","summary"];
-    this.root = create("section", { className: "page-stats" });
+    this.root = create("section", { class: "page-stats" });
 
     this._mounted = false;
     this._initLayout();
     this._initFilter();
     this._initSwiper();
 
-    this.update({ stats, filter, dirty: { meta: true, data: true } });
+    //this.update({ stats, filter, dirty: { meta: true, data: true } });
   }
 
   render() {
@@ -28,7 +27,6 @@ export class AnalyticView {
   /* ---------- mount once ---------- */
 
   _initLayout() {
-    // navbar
     this.navBar = create("div", { className: "nav-bar" },
       ...this.tabs.map((id, i) =>
         create("button", {
@@ -37,8 +35,6 @@ export class AnalyticView {
         }, FM.capitalize(id))
       )
     );
-
-    // swiper
     this.swiperEl  = create("div", { className: "swiper" });
     this.wrapperEl = create("div", { className: "swiper-wrapper" },
       ...this.tabs.map(id =>
@@ -46,10 +42,7 @@ export class AnalyticView {
       )
     );
     this.swiperEl.append(this.wrapperEl);
-
-    // filter placeholder
-    this.filterBar = create("div", { className: "filter-bar" });
-
+    this.filterBar = create("div", { className: "filter-bar collapsed" });
     this.root.append(this.navBar, this.swiperEl, this.filterBar);
   }
 
@@ -82,8 +75,6 @@ export class AnalyticView {
     );
   }
 
-  /* ---------- filter (controlled UI) ---------- */
-
   _initFilter() {
     this.rangeGroup = create("div", { className: "filter-group range" });
     this.pairGroup  = create("div", { className: "filter-group pair" });
@@ -100,35 +91,42 @@ export class AnalyticView {
       )
     );
   }
-
-  _renderPairs(pairs) {
-    this.pairGroup.replaceChildren(
-      ...pairs.map(({ pair, count }) =>
-        create("button", {
-          className: this.filter.pairs?.includes(pair) ? "active" : "",
-          disabled: !count,
-          onclick: () => this._togglePair(pair)
-        },
-          pair,
-          create("small", { className: "badge" }, count)
-        )
-      )
-    );
+  _renderPairs(data) {
+    const pairs = ["ALL", ...FM.getUniquePairs(data)];
+    const counts = data.p.reduce((acc, t) => {
+      acc[t.pair] = (acc[t.pair] || 0) + 1;
+      return acc;
+    }, {});
+    pairs.forEach(pair => {
+      const count = pair === "ALL" ? data.p.length : (counts[pair] ?? 0);
+      const btn = create("button", { 
+        class: `${pair === "ALL" ? "active" : ""}`, "data-pair": pair 
+      });
+      btn.append(document.createTextNode(pair + " "));
+      const badge = create("small", { class: "badge" }, count);
+      btn.append(badge);
+      this.pairGroup.append(btn);
+    });
   }
-
-  _toggleRange(range) {
-    this.filter.range = this.filter.range === range ? null : range;
-    this.onChange(this.filter);
-  }
-
-  _togglePair(pair) {
-    const set = new Set(this.filter.pairs ?? []);
-    set.has(pair) ? set.delete(pair) : set.add(pair);
-    this.filter.pairs = set.size ? [...set] : null;
-    this.onChange(this.filter);
-  }
-
-  /* ---------- public update ---------- */
+  
+  // _toggleRange(range) {
+  //   this.filter.range = this.filter.range === range ? null : range;
+  //   this.onChange(this.filter);
+  // }
+  
+  // _togglePair(pair) {
+  //   const set = new Set(this.filter.pairs ?? []);
+  
+  //   if (set.has(pair)) set.delete(pair);
+  //   else set.add(pair);
+  
+  //   // kosong → ALL
+  //   this.filter.pairs = set.size ? [...set] : null;
+  
+  //   // **tidak ada mutate pairs meta**
+  //   this.onChange(this.filter);
+  //   // this._renderPairs(this.data.meta.pairs); // selalu render semua pair
+  // }
 
   update({ stats, filter, dirty }) {
     this.data = stats;
@@ -144,11 +142,11 @@ export class AnalyticView {
     }
   }
 
-  /* ---------- slide updates ---------- */
-
   _updateSlides(data) {
     this.tableGeneral?.(data.general);
     this.chartGlobalEquity?.(data.curve);
+    this.tableAccumulation?.(data.period.accum);
+    this.monthlyPerformance?.(data.yearly, data.monthly);
   }
 
   
@@ -172,38 +170,135 @@ export class AnalyticView {
     ]));
 
     b.header(header).rows(rows).build();
-    container.prepend(TB.Toggler(container));
+    // container.prepend(TB.Toggler(container));
   }
-
 
   chartGlobalEquity(stats) {
     const overview = $("#overview", this.root);
     overview.innerHTML = "";
-  
-    // 1. Layout
     const { wrapper, canvas, controls } = this._buildChartLayout(stats);
     overview.append(wrapper);
-    // overview.append(controls);
-  
-    // 2. Chart
-    // const userOpt = CB.lineChartControl(wrapper);
+    
     const config  = CB.lineChartConfig(stats);
     const chart   = CB.initChart("equity-global", canvas, config);
-  
-    //CB.bindChartControl(wrapper, chart);
     CB.resizeConfig(wrapper, chart);
-  
-    // 3. Event
     CB.lineChartAllPairs(controls, stats, chart)
-
     return chart;
+  }
+  
+  tableAccumulation(accum) {
+    const { monthly, yearly, total } = accum;
+  
+    const container = $("#accumulate", this.root);
+    const table = new TB.Tables(container).setId("monthly-table");
+  
+    const years = Object.keys(yearly).sort();
+  
+    /* ---------- header ---------- */
+  
+    const header = [
+      create("th", { className: "pivot pivot-xy pips-mode" }, "Month"),
+      ...years.map(y => TB.Cells.headCell(y, "pivot pivot-x pips-mode"))
+    ];
+  
+    /* ---------- rows ---------- */
+  
+    const rows = MONTH_NAMES.map(name => {
+      const mm = String(MONTHS[name] + 1).padStart(2, "0");
+  
+      const cells = years.map(y =>
+        TB.Cells.pvCell(monthly[`${y}-${mm}`], "N")
+      );
+  
+      return [
+        TB.Cells.textCell(name, "pivot pivot-y pips-mode"),
+        ...cells
+      ];
+    });
+  
+    /* ---------- total per year ---------- */
+  
+    rows.push([
+      TB.Cells.textCell("Total", "pivot pivot-y pips-mode"),
+      ...years.map(y => TB.Cells.pvCell(yearly[y], "N"))
+    ]);
+  
+    /* ---------- grand total ---------- */
+  
+    const grand = TB.Cells.pvCell(total, "N");
+    const merged = create("td", {
+      colspan: years.length,
+      className: "grand-total-row"
+    });
+    merged.append(...grand.childNodes);
+  
+    rows.push([
+      TB.Cells.textCell("Grand", "pivot pivot-y pips-mode"),
+      merged
+    ]);
+  
+    table.header(header).rows(rows).build();
+  }
+
+  monthlyPerformance(yearly, monthly) {
+    const container = $("#monthly", this.root);
+    container.innerHTML = "";
+    if (!monthly || !Object.keys(monthly).length) {
+      container.textContent = "No monthly data available.";
+      return;
+    }
+  
+    // --- Group months by year ----------
+    const yearMap = {};
+    for (const monthKey in monthly) {
+      const [y] = monthKey.split("-");
+      if (!yearMap[y]) yearMap[y] = [];
+      yearMap[y].push(monthKey);
+    }
+  
+    // --- Build Accordion for each YEAR ---
+    for (const year in yearMap) {
+      const yearSection = this._buildYearSection(
+        year,
+        yearMap[year],
+        monthly,
+        yearly[year] ?? null
+      );
+      container.append(yearSection);
+    }
+  }
+
+  _buildYearSection(year, monthKeys, stats) {
+    const header = CB.createHeaderYear(year, monthKeys, stats);
+    const body = create("div", { class: "accordion-content" });
+    monthKeys.sort().forEach(mk => body.append(this._buildMonthSection(mk, stats[mk])));
+    header.append(body);
+    return header;
+  }
+
+  _buildMonthSection(monthKey, datas) {
+    const data = datas.equity
+    const header = CB.createHeaderMonth(monthKey, datas);
+    const body = create("div", { class: "accordion-content" });
+    const { wrapper, canvas, controls } = this._buildChartLayout(data);
+    body.append(wrapper);
+    body.append(controls);
+    const config  = CB.lineChartConfig(data);
+    $('input[type="checkbox"]', header).addEventListener("change", (e) => {
+      if (e.target.checked) {
+        const chart = CB.initChart(`equity-${monthKey}`, canvas, config);
+        CB.lineChartAllPairs(controls, data, chart);
+      }
+    });
+    header.append(body);
+    return header;
   }
   
   _buildChartLayout(data) {
     const canvas  = create("canvas", { class: "canvas" });
     const wrapper = create("div", { class: "chart-wrapper" }, canvas);
-  
-    const controls = create("div", { class: "pair-filter" });
+    
+    const controls = create("div", { class: "filter-group pair" });
     const pairs = ["ALL", ...FM.getUniquePairs(data)];
     const counts = data.p.reduce((acc, t) => {
       acc[t.pair] = (acc[t.pair] || 0) + 1;
@@ -212,15 +307,15 @@ export class AnalyticView {
     pairs.forEach(pair => {
       const count = pair === "ALL" ? data.p.length : (counts[pair] ?? 0);
       const btn = create("button", { 
-        class: `pair-btn ${pair === "ALL" ? "active" : ""}`, 
-        "data-pair": pair 
+        class: `${pair === "ALL" ? "active" : ""}`, "data-pair": pair 
       });
       btn.append(document.createTextNode(pair + " "));
-      const badge = create("small", { class: "pair-count" }, count);
+      const badge = create("small", { class: "badge" }, count);
       btn.append(badge);
       controls.append(btn);
     });
-  
     return { wrapper, canvas, controls };
   }
+
+  
 }

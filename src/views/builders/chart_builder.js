@@ -3,7 +3,6 @@ import { $, $$, create } from "util/template.js";
 import * as FM           from "util/formatter.js";
 import { plugins }       from "builder/chart_plugins.js";
 
-
 Chart.register(...plugins);
 
 export const initChart = (key, canvas, config) => {
@@ -15,62 +14,6 @@ export const initChart = (key, canvas, config) => {
   window.charts[key] = new Chart(canvas, config);
   return window.charts[key];
 };
-
-export function lineChartControl(container) {
-  const opt = { tooltip: true, zoom: false };
-  const wrap = create("div", { class: "chart-options" });
-  wrap.append(
-    create("label", {}, 
-      "Tooltip ",
-      create("input", { type: "checkbox", checked: true, class: "toggleTooltip" })
-    ),
-    create("label", {}, 
-      "Zoom ",
-      create("input", { type: "checkbox", class: "toggleZoom" })
-    ),
-    create("button", { class: "reset" }, "Reset")
-  );
-  container.prepend(wrap);
-  return opt;
-}
-
-export function bindChartControl(container, chart) {
-  container.addEventListener("change", (e) => {
-    
-    if (e.target.matches(".toggleTooltip")) {
-      const enabled = e.target.checked;
-      chart.options.plugins.tooltip.enabled = enabled;
-      chart.options.crosshair.enabled = enabled;
-      chart.update("none");
-    }
-
-    if (e.target.matches(".toggleZoom")) {
-      const enabled = e.target.checked;
-      const zoom = chart.options.plugins.zoom;
-      zoom.pan.enabled = enabled;
-      zoom.zoom.wheel.enabled = enabled;
-      zoom.zoom.pinch.enabled = enabled;
-      chart.update("none");
-    }
-  });
-
-  $(".reset", container)?.addEventListener("click", () => {
-    chart.resetZoom("active");
-
-    // reset chart config
-    chart.options.plugins.tooltip.enabled = false;
-    chart.options.plugins.zoom.pan.enabled = false;
-    chart.options.plugins.zoom.zoom.wheel.enabled = false;
-    chart.options.plugins.zoom.zoom.pinch.enabled = false;
-    chart.options.crosshair.enabled = false;
-
-    // reset UI
-    $(".toggleTooltip", container).checked = true;
-    $(".toggleZoom", container).checked   = false;
-
-    chart.update("none");
-  });
-}
 
 /* === R E S I Z E R */
 export function resizeConfig(container, chart) {
@@ -154,15 +97,13 @@ export function lineChartConfig(src) {
     pair: p.pair,
     result: p.result
   }));
-
-  const vpips = src.v.map((v, i) => ({
+  const value = src.v.map((v, i) => ({
     x: i + 1,
     y: v.equity,
     time: FM.dateDMY(v.time),
     pair: v.pair,
     result: v.result
   }));
-  // Default properties yang sama untuk semua dataset
   const datasetDefaults = {
     tension: 0,
     pointRadius: 0,
@@ -171,7 +112,6 @@ export function lineChartConfig(src) {
     fill: false,
     backgroundColor: undefined
   };
-
   const A1 = "#089981", B1 = "#f23645";
   const A2 = "#36A2EB", B2 = "#FFB60C";
 
@@ -188,7 +128,7 @@ export function lineChartConfig(src) {
         },
         {
           label: "value",
-          data: vpips,
+          data: value,
           segmentColor: { enabled: true, above: A2, below: B2 },
           ...datasetDefaults
         }
@@ -198,18 +138,13 @@ export function lineChartConfig(src) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-
       crosshair: { enabled: true },
-
       layout: { padding: { right: 5 } },
-
       interaction: {
         mode: "index",
         intersect: false
       },
-
       scales: {
-
         x: {
           grid: { display: false },
           ticks: {
@@ -219,7 +154,6 @@ export function lineChartConfig(src) {
             callback: (v) => (v === 0 ? "0" : v)
           }
         },
-
         y: {
           beginAtZero: true,
           grid: { display: false },
@@ -232,7 +166,7 @@ export function lineChartConfig(src) {
 
       plugins: {
         title: {
-          display: true,
+          display: false,
           text: "Pips vs Value",
           position: "top"
         },
@@ -277,30 +211,19 @@ export function lineChartConfig(src) {
           callbacks: {
             title: (ctx) => {
               const d = ctx[0].raw;
-        
-              // Jika tidak punya properti data asli → itu inject
-              if (!d || d.injected || d.time === undefined) {
-                return "Start";
-              }
-        
+              if (!d || d.injected || d.time === undefined) return "Start";
               return `${d.pair} | ${d.time}`;
             },
         
             label: (ctx) => {
               const d = ctx.raw;
-        
-              if (!d || d.injected || d.pair === undefined) {
-                return "Initial State (0)";
-              }
-        
+              if (!d || d.injected || d.pair === undefined) return "Initial State (0)";
               return `${FM.num(d.result)} | ${FM.num(d.y)}`;
             },
         
             labelColor: (ctx) => {
               const d = ctx.raw;
               const ds = ctx.dataset;
-        
-              // Inject OR missing props → netral
               if (!d || d.injected || d.result === undefined) {
                 return {
                   borderColor: "#999",
@@ -342,7 +265,7 @@ export function lineChartAllPairs(controls, data, chart) {
     if (!btn) return;
 
     const pair = btn.dataset.pair;
-    const btnAll = controls.querySelector('[data-pair="ALL"]');
+    const btnAll = $('[data-pair="ALL"]', controls);
 
     if (pair === "ALL") {
       [...controls.children].forEach(b => b.classList.remove("active"));
@@ -358,7 +281,6 @@ export function lineChartAllPairs(controls, data, chart) {
     }
     const selected  = _getActivePairs(controls);
     const filtered  = _filterStatsByPair(data, selected);
-    
     _updateLineChart(chart, filtered);
   });
 }
@@ -367,45 +289,38 @@ function _getActivePairs(controls) {
   const active = [...$$(".pair-btn.active", controls)]
     .map(b => b.dataset.pair)
     .filter(p => p !== "ALL");
+  
   return active.length ? active : ["ALL"];
 }
 
 function _filterStatsByPair(data, selected) {
-  // jika ALL dipilih, kita masih kembalikan array penuh,
-  // tapi pastikan setiap row punya equity_recalc = row.equity (global)
   if (selected.includes("ALL")) {
     return {
       p: data.p.map(row => ({ ...row, equity_recalc: row.equity })),
       v: data.v.map(row => ({ ...row, equity_recalc: row.equity }))
     };
   }
-
-  // Filter rows by selected pairs (keep original global order)
   const rowsP = data.p.filter(row => selected.includes(row.pair));
   const rowsV = data.v.filter(row => selected.includes(row.pair));
-
-  // Recalculate equity for p (cumulative sum of value)
   let eqP = 0;
   const recalcP = rowsP.map(row => {
-    eqP += row.value;
+    eqP += row.result;
     return {
       ...row,
       equity_recalc: eqP
     };
   });
-
-  // Recalculate equity for v
   let eqV = 0;
   const recalcV = rowsV.map(row => {
-    eqV += row.value;
+    eqV += row.result;
     return {
       ...row,
       equity_recalc: eqV
     };
   });
-
   return { p: recalcP, v: recalcV };
 }
+
 function _updateLineChart(chart, filtered) {
   // jika tidak ada data (filtered.p kosong), isi satu titik baseline saja
   if (!filtered || (!filtered.p?.length && !filtered.v?.length)) {
@@ -452,9 +367,9 @@ export function createHeaderYear(year, monthKeys, stats) {
 
   monthKeys.forEach(mKey => {
     const s = stats[mKey].summary;
-    totalTrades += s.totalTrades;
-    totalNetP += s.netPips;
-    totalNetV += s.netVPips;
+    totalTrades += s.count;
+    totalNetP += s.netP;
+    totalNetV += s.netV;
   });
 
   const avgP = FM.metricFormat(totalNetP / monthKeys.length, "R");
@@ -493,10 +408,10 @@ export function createHeaderMonth(monthKey, data) {
   const [y, m] = monthKey.split("-");
   const name = FM.getMonthName(monthKey, true);
   const s = data.summary;
-  const avgP = FM.metricFormat(s.avgPips, "R");
-  const avgV = FM.metricFormat(s.avgVPips, "R");
-  const netP = FM.metricFormat(s.netPips, "R");
-  const netV = FM.metricFormat(s.netVPips, "R");
+  const avgP = FM.metricFormat(s.avgP, "R");
+  const avgV = FM.metricFormat(s.avgV, "R");
+  const netP = FM.metricFormat(s.netP, "R");
+  const netV = FM.metricFormat(s.netV, "R");
   
   const section = create("div", { class: "accordion acc-month" },
     create("input", { type: "checkbox", id: `${name}-${y}`, class: "accordion-input" }),
@@ -504,7 +419,7 @@ export function createHeaderMonth(monthKey, data) {
       create("div", { class: "row" },
         create("div", { class: "cell" }, `${name} ${y}`,
           create("br"),
-          create("small", `${s.totalTrades} trades`)
+          create("small", `${s.count} trades`)
         ),
         create("div", { class: "cell txt-r" },
           create("span", { class: `p-mode ${netP.css}` }, netP.txt,

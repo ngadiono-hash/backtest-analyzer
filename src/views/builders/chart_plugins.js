@@ -43,6 +43,21 @@ const UltimatePlugin = {
 
     chart.$ultimateInjected = true;
   },
+  
+  beforeDraw(chart, args, opts) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+
+    ctx.save();
+    ctx.fillStyle = opts.bg || "#f2f2f2";
+    ctx.fillRect(
+      chartArea.left,
+      chartArea.top,
+      chartArea.width,
+      chartArea.height
+    );
+    ctx.restore();
+  },
 
   // -------------------------------------------------
   // 2) BEFORE DATASETS DRAW

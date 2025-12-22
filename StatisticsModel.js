@@ -24,8 +24,8 @@ export class StatisticsModel {
     return {
       curve,
       symbols: this.getDataSymbols(trades),
-      period: this.getDataPeriod(trades),
-      general: this.getDataGeneral(trades),
+      //period: this.getDataPeriod(trades),
+      //general: this.getDataGeneral(trades),
       ddown: this.getDataDrawdown(curve),
       monthly: this.getDataMonthly(trades),
       yearly: this.getDataYearly(trades),

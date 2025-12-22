@@ -1,5 +1,4 @@
 // src/models/Model.js
-import { EventBus } from "core/EventBus.js";
 import { TradeStore } from "db/DataStore.js";
 import { ModelPreview } from "model/ModelPreview.js";
 import { ModelAnalytic } from "model/ModelAnalytic.js";
@@ -105,7 +104,7 @@ export class Model {
     const validated = this.pre.validate([normalized])[0];
   
     this.trades[i] = validated;
-    EventBus.emit("model:preview-updated", {
+    EVENT.emit("model:preview-updated", {
       action: "edit-row",
       payload: { id, row: validated, trades: this.trades }
     });
@@ -123,17 +122,17 @@ export class Model {
     const row = this.trades.findIndex(t => t.id === id);  
     if (row === -1) return;
     this.trades.splice(row, 1);  
-    EventBus.emit("model:preview-updated", { action: "delete-row", payload: { id, trades: this.trades }}); 
+    EVENT.emit("model:preview-updated", { action: "delete-row", payload: { id, trades: this.trades }}); 
     this._feedback("success", `Row ${idx} deleted successfully`);
   }
 
   _setState(state, payload = null) {
     this.state = state;
-    EventBus.emit("model:state-change", { state, payload });
+    EVENT.emit("model:state-change", { state, payload });
   }
 
   _feedback(type, message, meta = null) {
-    EventBus.emit("model:feedback", { type, message, meta });
+    EVENT.emit("model:feedback", { type, message, meta });
   }
   
 }

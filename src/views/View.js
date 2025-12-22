@@ -1,14 +1,13 @@
 // src/views/View.js
-import { EventBus } from "core/EventBus.js";
-import { FAB, Modal, Notify } from "ui/UI.js";
-import { FileHandle } from "view/FileHandle.js";
-import { PreviewTable } from "view/PreviewTable.js";
-import { AnalyticView } from "view/AnalyticView.js";
+import * as UI from "ui/UI.js";
+import { FileHandle }         from "view/FileHandle.js";
+import { PreviewTable }       from "view/PreviewTable.js";
+import { AnalyticView }       from "view/AnalyticView.js";
 
 export class View {
   constructor() {
     this.app = document.getElementById("app");
-    this.notif = new Notify();
+    this.notif = new UI.Notify();
     this.preview = null;
     this.ready = null;
     this.state = null;
@@ -18,35 +17,6 @@ export class View {
     return this.notif.show(type, message);
   }
 
-  // renderState(state, payload = null) {
-  //   this.app.innerHTML = "";
-    
-  //   switch (state) {
-  //     case "EMPTY":
-  //       this.renderLANDING();
-  //       break;
-
-  //     case "PREVIEW":
-  //       this.renderPREVIEW(payload);
-  //       this._injectFAB([
-  //         { label: "info",   onClick: () => this._showSnapShoot() },
-  //         { label: "process",onClick: () => EventBus.emit("ui:save-db") },
-  //         { label: "add",    onClick: () => EventBus.emit("ui:add-record") },
-  //         { label: "delete", onClick: () => this._confirmDelete(false)  },
-  //       ]);
-  //       break;
-
-  //     case "READY": // fokus kita
-  //       this.renderDASHBOARD(payload);
-  //       this._injectFAB([
-  //         { label: "unfilter", onClick: () => EventBus.emit("ui:filter-data") },
-  //         { label: "export", onClick: () => EventBus.emit("ui:export-data") },
-  //         { label: "switch-off", onClick: () => EventBus.emit("ui:toggle-data") },
-  //         { label: "delete", onClick: () => this._confirmDelete(false) },
-  //       ]);
-  //       break;
-  //   }
-  // }
 renderState(state, payload = null) {
   const prev = this.state;
   this.state = state;
@@ -72,8 +42,8 @@ renderState(state, payload = null) {
       this.renderPREVIEW(payload);
       this._injectFAB([
         { label: "info",    onClick: () => this._showSnapShoot() },
-        { label: "process", onClick: () => EventBus.emit("ui:save-db") },
-        { label: "add",     onClick: () => EventBus.emit("ui:add-record") },
+        { label: "process", onClick: () => EVENT.emit("ui:save-db") },
+        { label: "add",     onClick: () => EVENT.emit("ui:add-record") },
         { label: "delete",  onClick: () => this._confirmDelete(false) },
       ]);
       break;
@@ -81,9 +51,9 @@ renderState(state, payload = null) {
     case "READY":
       this.renderDASHBOARD(payload);
       this._injectFAB([
-        { label: "unfilter",   onClick: () => EventBus.emit("ui:filter-data") },
-        { label: "export",     onClick: () => EventBus.emit("ui:export-data") },
-        { label: "switch-off", onClick: () => EventBus.emit("ui:toggle-data") },
+        { label: "tune",   onClick: (e) => this._toggleFilter(e) },
+        { label: "export",     onClick: () => EVENT.emit("ui:export-data") },
+        { label: "switch-off", onClick: () => EVENT.emit("ui:toggle-data") },
         { label: "delete",     onClick: () => this._confirmDelete(false) },
       ]);
       break;
@@ -93,7 +63,7 @@ renderState(state, payload = null) {
   renderLANDING() {
     const view = new FileHandle({
       onProcess: ({ raw, fileName }) => {
-        EventBus.emit("ui:upload-file", { raw, fileName });
+        EVENT.emit("ui:upload-file", { raw, fileName });
       }
     });
     this._renderView(view);
@@ -102,23 +72,12 @@ renderState(state, payload = null) {
   renderPREVIEW(data) {
     this.preview = new PreviewTable({
       data,
-      onEdit: (data) => EventBus.emit("ui:edit-row", { data }),
+      onEdit: (data) => EVENT.emit("ui:edit-row", { data }),
       onDelete: (data) => this._confirmDelete(true, data),
     });
     this._renderView(this.preview);
   }
   
-  // renderDASHBOARD(payload) {
-  //   const { stats, filter } = payload;
-  //   this.ready = new AnalyticView({
-  //     stats,
-  //     filter: filter,
-  //     onChange: (filter) => {
-  //       EventBus.emit("ui:filter-change", filter);
-  //     }
-  //   });
-  //   this._renderView(this.ready);
-  // }
 renderDASHBOARD(payload) {
   const { stats, filter, dirty } = payload;
 
@@ -128,7 +87,7 @@ renderDASHBOARD(payload) {
       stats,
       filter,
       onChange: (filter) => {
-        EventBus.emit("ui:filter-change", filter);
+        EVENT.emit("ui:filter-change", filter);
       }
     });
     this._renderView(this.ready);
@@ -150,7 +109,7 @@ renderDASHBOARD(payload) {
   }
   
   _showSnapShoot() {
-    const modal = new Modal({
+    const modal = new UI.Modal({
       title: "Preview Status",
       content: this.preview.getSnapShoots()
     });
@@ -162,19 +121,24 @@ renderDASHBOARD(payload) {
     const strC = `Are you sure to delete ${ single ? "this row?" : "this record?"}`;
     const emt = single ? "ui:delete-row" : "ui:delete-all";
     
-    const modal = new Modal({
+    const modal = new UI.Modal({
       title: strT,
       content: strC,
       actions: [
         { label: "Cancel", class: "btn btn-warning", onClick: () => {} },
-        { label: "Delete", class: "btn btn-danger", onClick: () => EventBus.emit(emt, { data }) }
+        { label: "Delete", class: "btn btn-danger", onClick: () => EVENT.emit(emt, { data }) }
       ]
     });
     modal.render();
   }
   
+_toggleFilter(e) {
+  $(".filter-bar", this.root).classList.toggle("collapsed");
+  $(".swiper", this.root).classList.toggle("shrink");
+}
+  
   _injectFAB(actions) {
-    this.fab = new FAB(actions).render();
+    this.fab = new UI.FAB(actions).render();
   }
 
   _renderView(viewInstance) {

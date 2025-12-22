@@ -1,4 +1,3 @@
-import { $, $$, create } from "util/template.js";
 import * as FM from "util/formatter.js";
 
 export class PreviewTable {

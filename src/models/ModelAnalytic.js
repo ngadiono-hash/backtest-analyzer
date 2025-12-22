@@ -1,137 +1,99 @@
 // src/models/ModelAnalytic.js
-import * as MT from "component/metric_tools.js";
 import * as FM from "util/formatter.js";
+import * as MT from "component/metric_tools.js";
 
-const RANGE_OPTIONS = {
-  "3m": 90,
-  "6m": 180,
-  "1y": 365,
-};
+const RANGE = { "3 months": 90, "6 months": 180, "1 year": 365 };
+const DAY = 864e5;
 
 export class ModelAnalytic {
 
-  /* ---------- public ---------- */
-
-  build(trades, filter = { range: null, pairs: null }) {
-    const rows  = this.prepareTrades(trades);
-    const slice = this.applyFilter(rows, filter);
-    const core  = this.buildCore(slice);
-
+  build(trades, filter) {
+    const src  = trades.map(this._finalize).sort((a,b)=>a.dateEX-b.dateEX);
+    const slice = this._filter(src, filter);
+    const core  = this._core(slice);
     return {
-      meta: this.buildMeta(slice),
-      data: this.buildData(core),
+      meta: this._meta(trades),
+      data: {
+        curve: this.buildCurve(core),
+        general: this._general(core.trades),
+        period: this._period(core),
+        monthly: this._monthlyDetail(src),
+        yearly: this._yearlyDetail(src),
+      }
     };
   }
 
-  /* ---------- meta ---------- */
-
-  buildMeta(trades) {
-    const pairMap = Object.create(null);
-
-    for (const { pair } of trades) {
-      pairMap[pair] = (pairMap[pair] ?? 0) + 1;
-    }
-
+  _meta(trades) {
+    const pairs = {};
+    for (const { pair } of trades) pairs[pair] = (pairs[pair]||0)+1;
     return {
-      pairs: Object.entries(pairMap).map(
-        ([pair, count]) => ({ pair, count })
-      ),
-      ranges: Object.keys(RANGE_OPTIONS),
+      pairs: Object.entries(pairs).map(([pair,count])=>({ pair, count })),
+      ranges: Object.keys(RANGE)
     };
   }
 
-  /* ---------- data domain ---------- */
-
-  buildData(core) {
-    return {
-      curve: this.buildCurve(core),
-      general: this.buildGeneral(core.trades),
-      byPair: core.byPair,
-      byMonth: core.byMonth,
-      byYear: core.byYear,
-      streak: core.streak,
-    };
-  }
-
-  /* ---------- filtering ---------- */
-
-  applyFilter(trades, { pairs = null, range = null }) {
+  _filter(trades, { pairs, range }) {
     let out = trades;
 
     if (pairs?.length) {
-      const set = new Set(pairs);
-      out = out.filter(t => set.has(t.pair));
+      const s = new Set(pairs);
+      out = out.filter(t => s.has(t.pair));
     }
 
-    if (range && RANGE_OPTIONS[range]) {
+    if (RANGE[range]) {
       const last = out.at(-1)?.dateEX;
-      if (!last) return out;
-
-      const from = last - RANGE_OPTIONS[range] * 864e5;
-      out = out.filter(t => t.dateEX >= from);
+      if (last) out = out.filter(t => t.dateEX >= last - RANGE[range]*DAY);
     }
 
     return out;
   }
 
-  /* ---------- preparation ---------- */
-
-  prepareTrades(trades) {
-    return trades
-      .map(t => this.finalizeTrade(t))
-      .sort((a, b) => a.dateEX - b.dateEX);
-  }
-
-  finalizeTrade(t) {
+  _finalize(t) {
+    const isWin = t.isWin;
     return {
       ...t,
-      pResult: t.isWin ? t.pTP : t.pSL,
-      vResult: t.isWin ? t.vTP : t.vSL,
-      bars: FM.estimateBarsHeld(t.dateEN, t.dateEX),
+      pResult: isWin ? t.pTP : t.pSL,
+      vResult: isWin ? t.vTP : t.vSL,
+      bars: FM.estimateBarsHeld(t.dateEN, t.dateEX)
     };
   }
 
-  /* ---------- core ---------- */
-
-  buildCore(trades) {
-    let pEquity = 0;
-    let vEquity = 0;
+  _core(trades) {
+    let pEq=0, vEq=0;
 
     const core = {
       trades,
       curve: [],
-      byPair: Object.create(null),
-      byMonth: Object.create(null),
-      byYear: Object.create(null),
-      streak: [],
+      byPair: {},
+      byMonth: {},
+      byYear: {},
+      streak: []
     };
 
     for (const t of trades) {
-      pEquity += t.pResult;
-      vEquity += t.vResult;
+      pEq += t.pResult;
+      vEq += t.vResult;
 
       core.curve.push({
         time: t.dateEX,
         pips: t.pResult,
         value: t.vResult,
-        pEquity: FM.round(pEquity),
-        vEquity: FM.round(vEquity),
+        pEquity: FM.round(pEq),
+        vEquity: FM.round(vEq),
         pair: t.pair,
       });
 
-      (core.byPair[t.pair] ??= []).push(t);
-      (core.byMonth[t.month] ??= []).push(t);
-
-      const y = new Date(t.dateEX).getFullYear();
-      (core.byYear[y] ??= []).push(t);
+      (core.byPair[t.pair]  ??= []).push(t);
+      (core.byMonth[t.month]??= []).push(t);
+      (core.byYear[new Date(t.dateEX).getFullYear()] ??= []).push(t);
 
       core.streak.push(t.isWin);
     }
 
     return core;
   }
-
-
+  
+  /* ---------- main method ---------- */
   buildCurve(core) {
     return {
       p: core.curve.map(c => ({
@@ -150,193 +112,264 @@ export class ModelAnalytic {
     };
   }
   
-  buildGeneral(trades) {
+  _buildCurve(trades) {
+    let cumP = 0, cumV = 0;
+    const p = [];
+    const v = [];
   
-    const makeAcc = () => ({
-      win: 0,
-      loss: 0,
+    for (const { pair, dateEX, pResult, vResult } of trades) {
   
-      sumWinP: 0,
-      sumLossP: 0,
-      sumWinV: 0,
-      sumLossV: 0,
+      cumP += pResult;
+      cumV += vResult;
   
-      sumP: 0,
-      sumV: 0,
+      p.push({
+        pair,
+        equity: cumP,
+        time: dateEX,
+        result: pResult
+      });
   
-      sumSqP: 0,
-      sumSqV: 0,
+      v.push({
+        pair,
+        equity: cumV,
+        time: dateEX,
+        result: vResult
+      });
+    }
   
-      maxWinP: -Infinity,
-      maxWinV: -Infinity,
-      maxLossP: Infinity,
-      maxLossV: Infinity,
+    return { p, v };
+  }
   
-      holdSum: 0,
-      holdMax: 0,
+  _general(trades) {
+
+    const acc = () => ({
+      w:0,l:0, swp:0, slp:0, swv:0, slv:0,
+      sp:0, sv:0, sqp:0, sqv:0,
+      maxWp:-1e9, maxWv:-1e9, maxLp:1e9, maxLv:1e9,
+      hs:0, hm:0
     });
-  
-    const acc = {
-      a: makeAcc(), // all
-      l: makeAcc(), // long
-      s: makeAcc(), // short
-    };
-  
-    // -----------------------------
-    // 1 PASS ACCUMULATION
-    // -----------------------------
+
+    const A={ a:acc(), l:acc(), s:acc() };
+
     for (const t of trades) {
-      const targets = [
-        acc.a,
-        t.isLong ? acc.l : acc.s
-      ];
-  
-      for (const g of targets) {
-        const p = t.pResult;
-        const v = t.vResult;
-  
-        g.sumP += p;
-        g.sumV += v;
-        g.sumSqP += p * p;
-        g.sumSqV += v * v;
-  
-        g.holdSum += t.bars;
-        g.holdMax = Math.max(g.holdMax, t.bars);
-  
+      const gs=[A.a, t.isLong?A.l:A.s];
+      for (const g of gs) {
+        const { pResult:p, vResult:v, bars } = t;
+
+        g.sp+=p; g.sv+=v; g.sqp+=p*p; g.sqv+=v*v;
+        g.hs+=bars; g.hm=Math.max(g.hm,bars);
+
         if (t.isWin) {
-          g.win++;
-          g.sumWinP += p;
-          g.sumWinV += v;
-          g.maxWinP = Math.max(g.maxWinP, p);
-          g.maxWinV = Math.max(g.maxWinV, v);
+          g.w++; g.swp+=p; g.swv+=v;
+          g.maxWp=Math.max(g.maxWp,p);
+          g.maxWv=Math.max(g.maxWv,v);
         } else {
-          g.loss++;
-          g.sumLossP += p;
-          g.sumLossV += v;
-          g.maxLossP = Math.min(g.maxLossP, p);
-          g.maxLossV = Math.min(g.maxLossV, v);
+          g.l++; g.slp+=p; g.slv+=v;
+          g.maxLp=Math.min(g.maxLp,p);
+          g.maxLv=Math.min(g.maxLv,v);
         }
       }
     }
-  
-    // -----------------------------
-    // BUILDER
-    // -----------------------------
+
     const build = g => {
-      const tradeCount = g.win + g.loss;
-  
-      const avgP = tradeCount ? g.sumP / tradeCount : 0;
-      const avgV = tradeCount ? g.sumV / tradeCount : 0;
-  
-      const stdevP = tradeCount
-        ? Math.sqrt(g.sumSqP / tradeCount - avgP * avgP)
-        : 0;
-  
-      const stdevV = tradeCount
-        ? Math.sqrt(g.sumSqV / tradeCount - avgV * avgV)
-        : 0;
-  
-      const avgWinP = g.win ? g.sumWinP / g.win : 0;
-      const avgLossP = g.loss ? g.sumLossP / g.loss : 0;
-      const avgWinV = g.win ? g.sumWinV / g.win : 0;
-      const avgLossV = g.loss ? g.sumLossV / g.loss : 0;
-  
+      const n=g.w+g.l||1;
+      const avgP=g.sp/n, avgV=g.sv/n;
+      const sdP=Math.sqrt(g.sqp/n-avgP*avgP)||0;
+      const sdV=Math.sqrt(g.sqv/n-avgV*avgV)||0;
+
+      const awp=g.w?g.swp/g.w:0, alp=g.l?g.slp/g.l:0;
+      const awv=g.w?g.swv/g.w:0, alv=g.l?g.slv/g.l:0;
+
       return {
-        totalTrade: { p: tradeCount, v: tradeCount, t: "int" },
-        winTrade:   { p: g.win, v: g.win, t: "int" },
-        lossTrade:  { p: g.loss, v: g.loss, t: "int" },
-  
-        winrate: {
-          p: tradeCount ? g.win / tradeCount * 100 : 0,
-          v: tradeCount ? g.win / tradeCount * 100 : 0,
-          t: "%"
+        totalTrade:{p:n,v:n,t:"int"},
+        winTrade:{p:g.w,v:g.w,t:"int"},
+        lossTrade:{p:g.l,v:g.l,t:"int"},
+        winrate:{p:g.w/n*100,v:g.w/n*100,t:"%"},
+        grossProfit:{p:g.swp,v:g.swv,t:""},
+        grossLoss:{p:Math.abs(g.slp),v:Math.abs(g.slv),t:""},
+        netReturn:{p:g.sp,v:g.sv,t:"R"},
+        avgReturn:{p:avgP,v:avgV,t:"R"},
+        // medianReturn:{p:0,v:0,t:"R"},
+        stdDeviation:{p:sdP,v:sdV,t:"R"},
+        avgProfit:{p:awp,v:awv,t:""},
+        avgLoss:{p:alp,v:alv,t:""},
+        maxProfit:{p:g.maxWp<0?0:g.maxWp,v:g.maxWv<0?0:g.maxWv,t:""},
+        maxLoss:{p:g.maxLp>0?0:g.maxLp,v:g.maxLv>0?0:g.maxLv,t:""},
+        profitFactor:{
+          p:g.swp/Math.abs(g.slp||1),
+          v:g.swv/Math.abs(g.slv||1),
+          t:""
         },
-  
-        grossProfit: { p: g.sumWinP, v: g.sumWinV, t: "" },
-        grossLoss:   { p: Math.abs(g.sumLossP), v: Math.abs(g.sumLossV), t: "" },
-  
-        netReturn: {
-          p: g.sumP,
-          v: g.sumV,
-          t: "R"
+        avgRiskReward:{
+          p:awp/Math.abs(alp||1),
+          v:awv/Math.abs(alv||1),
+          t:"1:"
         },
-  
-        avgReturn: {
-          p: avgP,
-          v: avgV,
-          t: "R"
-        },
-  
-        medianReturn: {
-          p: 0, // intentionally omitted (needs sorted list)
-          v: 0,
-          t: "R"
-        },
-  
-        stdDeviation: {
-          p: stdevP,
-          v: stdevV,
-          t: "R"
-        },
-  
-        avgProfit: {
-          p: avgWinP,
-          v: avgWinV,
-          t: ""
-        },
-  
-        avgLoss: {
-          p: avgLossP,
-          v: avgLossV,
-          t: ""
-        },
-  
-        maxProfit: {
-          p: g.maxWinP === -Infinity ? 0 : g.maxWinP,
-          v: g.maxWinV === -Infinity ? 0 : g.maxWinV,
-          t: ""
-        },
-  
-        maxLoss: {
-          p: g.maxLossP === Infinity ? 0 : g.maxLossP,
-          v: g.maxLossV === Infinity ? 0 : g.maxLossV,
-          t: ""
-        },
-  
-        profitFactor: {
-          p: g.sumWinP / Math.abs(g.sumLossP || 1),
-          v: g.sumWinV / Math.abs(g.sumLossV || 1),
-          t: ""
-        },
-  
-        avgRiskReward: {
-          p: avgWinP / Math.abs(avgLossP || 1),
-          v: avgWinV / Math.abs(avgLossV || 1),
-          t: "1:"
-        },
-  
-        avgHold: {
-          p: tradeCount ? g.holdSum / tradeCount : 0,
-          v: tradeCount ? g.holdSum / tradeCount : 0,
-          t: "time"
-        },
-  
-        maxHold: {
-          p: g.holdMax,
-          v: g.holdMax,
-          t: "time"
-        }
+        avgHold:{p:g.hs/n,v:g.hs/n,t:"time"},
+        maxHold:{p:g.hm,v:g.hm,t:"time"}
       };
     };
+
+    return { a:build(A.a), l:build(A.l), s:build(A.s) };
+  }
   
-    // -----------------------------
-    // FINAL OUTPUT
-    // -----------------------------
+  _period(core) {
+    const monthly = {};
+    const yearly  = {};
+    const total   = { p: 0, v: 0 };
+  
+    /* ---------- monthly ---------- */
+  
+    for (const [month, list] of Object.entries(core.byMonth)) {
+      let p = 0, v = 0;
+  
+      for (const t of list) {
+        p += t.pResult;
+        v += t.vResult;
+      }
+  
+      monthly[month] = { p, v };
+      total.p += p;
+      total.v += v;
+    }
+  
+    /* ---------- yearly ---------- */
+  
+    for (const [year, list] of Object.entries(core.byYear)) {
+      let p = 0, v = 0;
+  
+      for (const t of list) {
+        p += t.pResult;
+        v += t.vResult;
+      }
+  
+      yearly[year] = { p, v };
+    }
+  
+    /* ---------- derived arrays ---------- */
+  
+    const monthlyArr = Object.keys(monthly)
+      .sort() // YYYY-MM asc
+      .map(k => ({ key: k, ...monthly[k] }));
+  
+    const yearlyArr = Object.keys(yearly)
+      .sort()
+      .map(k => ({ key: k, ...yearly[k] }));
+  
+    /* ---------- props ---------- */
+  
+    const first = core.trades[0].dateEN;
+    const last  = core.trades.at(-1).dateEX;
+  
+    const start = new Date(first).toLocaleDateString("id-ID", {
+      day: "numeric", month: "short", year: "numeric"
+    });
+  
+    const end = new Date(last).toLocaleDateString("id-ID", {
+      day: "numeric", month: "short", year: "numeric"
+    });
+  
+    const countM   = monthlyArr.length;
+    const countY   = countM / 12;
+    const avgTrade = core.trades.length / countM;
+  
     return {
-      a: build(acc.a),
-      l: build(acc.l),
-      s: build(acc.s),
+      accum: { monthly, yearly, total },
+      prop: {
+        period: `${start} - ${end}`,
+        months: `${countM} months`,
+        years:  `${countY.toFixed(1)} years`,
+        monthly: MT.callMonthlyFunc(monthlyArr, avgTrade),
+        yearly:  MT.callYearlyFunc(yearlyArr)
+      }
     };
+  }
+  
+  _yearlyDetail(trades) {
+    const yearMap = {};
+  
+    for (const t of trades) {
+      const year = t.month.slice(0, 4);
+  
+      (yearMap[year] ??= []).push(t);
+    }
+  
+    const result = {};
+  
+    for (const y in yearMap) {
+      const list = yearMap[y];
+  
+      let netP = 0;
+      let netV = 0;
+  
+      for (const t of list) {
+        netP += t.pResult;
+        netV += t.vResult;
+      }
+  
+      const totalTrades = list.length;
+  
+      result[y] = {
+        count: totalTrades,
+        netP: FM.round(netP),
+        netV: FM.round(netV),
+        avgP: FM.round(netP/totalTrades),
+        avgV: FM.round(netV/totalTrades)
+      };
+    }
+    return result;
+  }
+  
+  _monthlyDetail(trades) {
+    const result = {};
+  
+    const monthMap = {};
+    for (const t of trades) {
+      if (!monthMap[t.month]) monthMap[t.month] = [];
+      monthMap[t.month].push(t);
+    }
+  
+    for (const month in monthMap) {
+      const list = monthMap[month];
+  
+      const equity = this._buildCurve(list);
+  
+      const pairMap = {};
+      for (const t of list) {
+        if (!pairMap[t.pair]) pairMap[t.pair] = [];
+        pairMap[t.pair].push(t);
+      }
+  
+      const byPair = {};
+      for (const p in pairMap) {
+        byPair[p] = this._buildCurve(pairMap[p]);
+      }
+  
+      let totalTrades = list.length;
+      let netP = 0;
+      let netV = 0;
+  
+      for (const t of list) {
+        netP += t.pResult;
+        netV += t.vResult;
+      }
+  
+  
+      result[month] = {
+        equity,
+        pairs: Object.keys(pairMap),
+        byPair,
+  
+        summary: {
+          count: totalTrades,
+          netP: FM.round(netP),
+          netV: FM.round(netV),
+          avgP: FM.round(netP/totalTrades),
+          avgV: FM.round(netV/totalTrades)
+        }
+      };
+    }
+    return result;
   }
 
   

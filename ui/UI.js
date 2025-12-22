@@ -1,9 +1,5 @@
-// ui/ui_tools.js
-import { $, create } from "util/template.js";
+// ui/UI.js
 
-const LABELS = {
-  Filter: "🗂️", Delete : "🗑️", Add : "📝", Process: "📊", Info : "❗", Help : "❓", Export : "📥", Setup  : "⚙️"
-}
 const SLOTS = ["fab-action-1", "fab-action-2", "fab-action-3", "fab-action-4"];
 
 export class FAB {
@@ -27,12 +23,10 @@ export class FAB {
           title: action.label,
           onclick: action.onClick
         },
-        // LABELS[action.label]
         create("i", { class: `${action.label}`} )
       );
       
       wheel.append(btn);
-      // btn.addEventListener("click", () => toggle.checked = false);
     });
 
     this.root.append(toggle, label, wheel);
