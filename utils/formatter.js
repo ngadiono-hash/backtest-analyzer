@@ -103,47 +103,6 @@ export function msToTime(ms = 0) {
   return mins ? timeParts(mins) : "-";
 }
 
-export function estimateBarsHeld(entryTs, exitTs) {
-  if (!entryTs || !exitTs) return 1;
-
-  const hours = removeWeekendHours(entryTs, exitTs);
-  const tf = TIMEFRAME == "1h" ? 1 : TIMEFRAME == "1d" ? 24 : 4;
-
-  return Math.max(1, Math.round(hours / tf));
-}
-
-function removeWeekendHours(eTs, xTs, ctx) {
-  let hours = (xTs - eTs) / 36e5;
-  const shift = TIMEZONE * 36e5;
-
-  const e = new Date(eTs + shift);
-
-  // anchor ke awal minggu (Senin)
-  const base = new Date(Date.UTC(
-    e.getUTCFullYear(),
-    e.getUTCMonth(),
-    e.getUTCDate()
-  ));
-  base.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7));
-
-  // Saturday 04:00 local
-  base.setUTCDate(base.getUTCDate() + 5);
-  base.setUTCHours(4, 0, 0, 0);
-
-  let wStart = base.getTime() - shift;
-  let wEnd   = wStart + 2 * 86400e3;
-
-  for (; wStart < xTs; wStart += 7 * 86400e3, wEnd += 7 * 86400e3) {
-    const overlapStart = Math.max(wStart, eTs);
-    const overlapEnd   = Math.min(wEnd, xTs);
-
-    if (overlapEnd > overlapStart) {
-      hours -= (overlapEnd - overlapStart) / 36e5;
-    }
-  }
-
-  return hours;
-}
 //  STRING FORMATTING
 // =========================
 export function capitalize(s) {

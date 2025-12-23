@@ -2,7 +2,8 @@
 import * as UI from "ui/UI.js";
 import { FileHandle }         from "view/FileHandle.js";
 import { PreviewTable }       from "view/PreviewTable.js";
-import { AnalyticView }       from "view/AnalyticView.js";
+import { AnalyticAdaptor }    from "view/AnalyticAdaptor.js";
+import { AnalyticView }    from "view/AnalyticView.js";
 
 export class View {
   constructor() {
@@ -17,48 +18,46 @@ export class View {
     return this.notif.show(type, message);
   }
 
-renderState(state, payload = null) {
-  const prev = this.state;
-  this.state = state;
-
-  // FULL RESET hanya jika pindah halaman besar
-  const hardReset =
-    state !== prev ||
-    state === "EMPTY" ||
-    state === "PREVIEW";
-
-  if (hardReset) {
-    this.app.innerHTML = "";
-    this.ready = null;
-    this.preview = null;
+  renderState(state, payload = null) {
+    const prev = this.state;
+    this.state = state;
+    const hardReset =
+      state !== prev ||
+      state === "EMPTY" ||
+      state === "PREVIEW";
+  
+    if (hardReset) {
+      this.app.innerHTML = "";
+      this.ready = null;
+      this.preview = null;
+    }
+  
+    switch (state) {
+      case "EMPTY":
+        this.renderLANDING();
+        break;
+  
+      case "PREVIEW":
+        this.renderPREVIEW(payload);
+        this._injectFAB([
+          { label: "info",    onClick: () => this._showSnapShoot() },
+          { label: "process", onClick: () => EVENT.emit("ui:save-db") },
+          { label: "add",     onClick: () => EVENT.emit("ui:add-record") },
+          { label: "delete",  onClick: () => this._confirmDelete(false) },
+        ]);
+        break;
+  
+      case "READY":
+        this.renderDASHBOARD(payload);
+        this._injectFAB([
+          { label: "tune",   onClick: (e) => this._toggleFilter(e) },
+          { label: "export",     onClick: () => EVENT.emit("ui:export-data") },
+          { label: "switch-off", onClick: () => EVENT.emit("ui:toggle-data") },
+          { label: "delete",     onClick: () => this._confirmDelete(false) },
+        ]);
+        break;
+    }
   }
-
-  switch (state) {
-    case "EMPTY":
-      this.renderLANDING();
-      break;
-
-    case "PREVIEW":
-      this.renderPREVIEW(payload);
-      this._injectFAB([
-        { label: "info",    onClick: () => this._showSnapShoot() },
-        { label: "process", onClick: () => EVENT.emit("ui:save-db") },
-        { label: "add",     onClick: () => EVENT.emit("ui:add-record") },
-        { label: "delete",  onClick: () => this._confirmDelete(false) },
-      ]);
-      break;
-
-    case "READY":
-      this.renderDASHBOARD(payload);
-      this._injectFAB([
-        { label: "tune",   onClick: (e) => this._toggleFilter(e) },
-        { label: "export",     onClick: () => EVENT.emit("ui:export-data") },
-        { label: "switch-off", onClick: () => EVENT.emit("ui:toggle-data") },
-        { label: "delete",     onClick: () => this._confirmDelete(false) },
-      ]);
-      break;
-  }
-}
 
   renderLANDING() {
     const view = new FileHandle({
@@ -79,23 +78,23 @@ renderState(state, payload = null) {
   }
   
 renderDASHBOARD(payload) {
-  const { stats, filter, dirty } = payload;
+  const { rows } = payload;
+
+  if (!this.adaptor)
+    this.adaptor = new AnalyticAdaptor(rows);
 
   if (!this.ready) {
-    // FIRST MOUNT
     this.ready = new AnalyticView({
-      stats,
-      filter,
-      onChange: (filter) => {
-        EVENT.emit("ui:filter-change", filter);
+      data: this.adaptor.view,     // ⬅ initial view
+      meta: this.adaptor.base.meta,
+      onFilter: patch => {
+        const view = this.adaptor.updateFilter(patch);
+        this.ready.update(view);   // ⬅ penting
       }
     });
-    this._renderView(this.ready);
-    return;
-  }
 
-  // PARTIAL UPDATE
-  this.ready.update({ stats, filter, dirty });
+    this._renderView(this.ready);
+  }
 }
 
   previewUpdateRow({ trades, stats, fileName }) {
@@ -132,10 +131,10 @@ renderDASHBOARD(payload) {
     modal.render();
   }
   
-_toggleFilter(e) {
-  $(".filter-bar", this.root).classList.toggle("collapsed");
-  $(".swiper", this.root).classList.toggle("shrink");
-}
+  _toggleFilter(e) {
+    $(".filter-bar", this.root).classList.toggle("collapsed");
+    $(".swiper", this.root).classList.toggle("shrink");
+  }
   
   _injectFAB(actions) {
     this.fab = new UI.FAB(actions).render();
