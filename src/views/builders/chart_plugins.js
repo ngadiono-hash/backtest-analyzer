@@ -1,7 +1,6 @@
 import * as FM from "util/formatter.js";
 
 const DEFAULT_ULTIMATE = { enabled: false, above: "#089981", below: "#f23645" };
-
 const UltimatePlugin = {
   id: "ultimate",
 
@@ -14,36 +13,10 @@ const UltimatePlugin = {
     if (typeof v === "object" && "y" in v) return v.y;
     return 0;
   },
-
   // -------------------------------------------------
   // 1) BEFORE UPDATE
   //    Inject titik awal {x:0, y:0} dengan struktur aman
   // -------------------------------------------------
-  beforeUpdate(chart) {
-    if (chart.$ultimateInjected) return;
-    if (chart.config.type !== "line") return;
-
-    chart.data.datasets.forEach((ds) => {
-      if (!Array.isArray(ds.data)) return;
-
-      const first = ds.data[0];
-      const firstY = this._getY(first);
-
-      // Inject titik zero hanya kalau data pertama bukan 0
-      ds.data = [
-        { x: 0, y: 0, __injected: true },
-        ...ds.data
-      ];
-    });
-
-    // Labels juga harus ditambah jika data pakai labels biasa
-    if (Array.isArray(chart.data.labels)) {
-      chart.data.labels = ["0", ...chart.data.labels];
-    }
-
-    chart.$ultimateInjected = true;
-  },
-  
   beforeDraw(chart, args, opts) {
     const { ctx, chartArea } = chart;
     if (!chartArea) return;
@@ -244,155 +217,129 @@ const UltimatePlugin = {
     });
   }
 };
-
 const DEFAULT_CROSSHAIR = {
   enabled: true,
-  color: 'rgba(0, 0, 0, 0.3)',
-  labelBg: 'rgba(0, 0, 0, 0.8)',
-  enableX: true,
-  enableY: true,
-  lineStyle: 'dashed'
+  color: "rgba(0,0,0,0.3)",
+  labelBg: "rgba(0,0,0,0.8)"
 };
+
 const customCrosshairPlugin = {
   id: "crosshair",
-
-  afterInit(chart) {
-    chart.canvas.addEventListener("mouseleave", () => {
-      chart.$crosshair = null;
-      chart.draw();
-    });
-  },
-
-  afterEvent(chart, args) {
-    const cfg = {
-      ...DEFAULT_CROSSHAIR,
-      ...(chart.options.crosshair || {})
-    };
-    if (!cfg.enabled) return;
-
-    const e = args.event;
-    if (e.type !== "mousemove") return;
-
-    const xScale = chart.scales.x;
-    const yScale = chart.scales.y;
-
-    // --- Tooltip aktif → crosshair mengikuti tooltip ---
-    if (chart.options.plugins.tooltip.enabled) return;
-
-    // --- Tooltip OFF → manual tracking ---
-    const index = Math.round(xScale.getValueForPixel(e.x));
-
-    if (index < 0 || index >= chart.data.labels.length) {
-      chart.$crosshair = null;
-      return;
-    }
-
-    // Ambil dataset pertama untuk referensi jika multi dataset
-    const ds0 = chart.data.datasets[0];
-    const value = ds0.data[index];
-
-    chart.$crosshair = {
-      x: xScale.getPixelForValue(index),
-      y: yScale.getPixelForValue(value),
-      index,
-      datasetIndex: 0,
-      value
-    };
-  },
 
   afterDraw(chart) {
     const cfg = {
       ...DEFAULT_CROSSHAIR,
-      ...(chart.options.crosshair || {})
+      ...(chart.options.crosshair || {}),
     };
     if (!cfg.enabled) return;
 
-    let pos = null;
+    const tooltip = chart.tooltip;
 
-    // --- PRIORITAS 1: Tooltip (jika aktif dan ada datapoint) ---
-    const tip = chart.tooltip;
-    if (tip && tip.dataPoints?.length && chart.options.plugins.tooltip.enabled) {
-      const p = tip.dataPoints[0];
-      const datasetIndex = p.datasetIndex;
-      const index = p.dataIndex;
-      const el = chart.getDatasetMeta(datasetIndex).data[index];
-      
-      pos = {
-        x: el.x,
-        y: el.y,
-        datasetIndex,
-        index
-      };
-      chart.$crosshair = pos;
+    if (
+      !chart.options.plugins.tooltip?.enabled ||
+      !tooltip ||
+      tooltip.opacity < 1 ||
+      !tooltip.dataPoints?.length
+    ) {
+      return;
     }
-
-    // --- PRIORITAS 2: Fallback dari afterEvent (tooltip off) ---
-    if (!pos) pos = chart.$crosshair;
-
-    if (!pos) return;
 
     const ctx = chart.ctx;
     const { top, bottom, left, right } = chart.chartArea;
 
+    const p = tooltip.dataPoints[0];
+
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+
+    const xVal = p.parsed.x ?? p.dataIndex;
+    const yVal = p.parsed.y;
+
+    const x = xScale.getPixelForValue(xVal);
+    const y = yScale.getPixelForValue(yVal);
+
     ctx.save();
     ctx.strokeStyle = cfg.color;
     ctx.lineWidth = 1;
+    ctx.setLineDash([6, 4]);
 
-    if (cfg.lineStyle === "dashed") ctx.setLineDash([6, 4]);
-    else ctx.setLineDash([]);
+    // --- Horizontal ---
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+    ctx.stroke();
 
-    // --- Horizontal line ---
-    if (cfg.enableY) {
-      ctx.beginPath();
-      ctx.moveTo(left, pos.y);
-      ctx.lineTo(right, pos.y);
-      ctx.stroke();
-    }
+    // --- Vertical ---
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
 
-    // --- Vertical line ---
-    if (cfg.enableX) {
-      ctx.beginPath();
-      ctx.moveTo(pos.x, top);
-      ctx.lineTo(pos.x, bottom);
-      ctx.stroke();
-    }
+    ctx.setLineDash([]);
 
-    // --- Draw Y label ---
-    const yLabel = FM.num(chart.scales.y.getValueForPixel(pos.y), 1);
-    drawLabel(ctx, yLabel, chart.scales.y.left, pos.y, cfg.labelBg, false);
-
-    // --- Draw X label (ingat: label sekarang punya "0") ---
-    const xLabel = chart.data.labels[pos.index] ?? "";
-    drawLabel(ctx, xLabel, pos.x, bottom, cfg.labelBg, true);
+    // --- Labels ---
+    drawYLabel(ctx, chart, y, cfg);
+    drawXLabel(ctx, chart, p.dataIndex, x, bottom, cfg);
 
     ctx.restore();
-
-    /* Helper */
-    function drawLabel(ctx, text, x, y, bg, center = false) {
-      const pad = 4;
-      ctx.font = "12px sans-serif";
-      const w = ctx.measureText(text).width + pad * 2;
-      const h = 18;
-
-      ctx.fillStyle = bg;
-
-      if (center) {
-        ctx.fillRect(x - w / 2, y, w, h);
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, x, y + h / 2);
-      } else {
-        ctx.fillRect(x, y - h / 2, w, h);
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, x + pad, y);
-      }
-    }
-  }
+  },
 };
 
+/* ---------------- HELPERS ---------------- */
+
+function drawYLabel(ctx, chart, y, cfg) {
+  const val = chart.scales.y.getValueForPixel(y);
+  const text = FM.num(val, 1);
+
+  drawLabel(
+    ctx,
+    text,
+    chart.scales.y.left,
+    y,
+    cfg.labelBg,
+    false,
+    cfg.font
+  );
+}
+
+function drawXLabel(ctx, chart, index, x, bottom, cfg) {
+  let text = chart.scales.x.getValueForPixel(x);
+  text = text.toFixed(0)
+
+  drawLabel(
+    ctx,
+    text,
+    x,
+    bottom,
+    cfg.labelBg,
+    true,
+    cfg.font
+  );
+}
+
+function drawLabel(ctx, text, x, y, bg, center, font) {
+  const pad = 4;
+  const h = 18;
+
+  ctx.font = font;
+  const w = ctx.measureText(text).width + pad * 2;
+
+  ctx.fillStyle = bg;
+
+  if (center) {
+    ctx.fillRect(x - w / 2, y, w, h);
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x, y + h / 2);
+  } else {
+    ctx.fillRect(x, y - h / 2, w, h);
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x + pad, y);
+  }
+}
 export const plugins = [
   UltimatePlugin,
   customCrosshairPlugin

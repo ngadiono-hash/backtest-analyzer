@@ -50,10 +50,10 @@ export class View {
       case "READY":
         this.renderDASHBOARD(payload);
         this._injectFAB([
-          { label: "tune",   onClick: (e) => this._toggleFilter(e) },
-          { label: "export",     onClick: () => EVENT.emit("ui:export-data") },
-          { label: "switch-off", onClick: () => EVENT.emit("ui:toggle-data") },
-          { label: "delete",     onClick: () => this._confirmDelete(false) },
+          { label: "tune",    onClick: (e) => this._toggleFilter(e) },
+          { label: "export",  onClick: () => EVENT.emit("ui:export-data") },
+          { label: "gesture", onClick: (e) => this._swiperToggle(e), active: localStorage.getItem("swiper") },
+          { label: "delete",  onClick: () => this._confirmDelete(false) },
         ]);
         break;
     }
@@ -77,25 +77,26 @@ export class View {
     this._renderView(this.preview);
   }
   
-renderDASHBOARD(payload) {
-  const { rows } = payload;
-
-  if (!this.adaptor)
-    this.adaptor = new AnalyticAdaptor(rows);
-
-  if (!this.ready) {
-    this.ready = new AnalyticView({
-      data: this.adaptor.view,     // ⬅ initial view
-      meta: this.adaptor.base.meta,
-      onFilter: patch => {
-        const view = this.adaptor.updateFilter(patch);
-        this.ready.update(view);   // ⬅ penting
-      }
-    });
-
-    this._renderView(this.ready);
+  renderDASHBOARD(payload) {
+    const { rows } = payload;
+  
+    this.adaptor ??= new AnalyticAdaptor();
+    this.adaptor.setSource(rows);
+  
+    if (!this.ready) {
+      this.ready = new AnalyticView({
+        meta: this.adaptor.meta,
+        onFilter: patch => {
+          const view = this.adaptor.applyFilter(patch);
+          this.ready.update(view);
+        }
+      });
+  
+      this._renderView(this.ready);
+    }
+  
+    this.ready.update(this.adaptor.getView());
   }
-}
 
   previewUpdateRow({ trades, stats, fileName }) {
     if (!this.preview) return;
@@ -107,6 +108,16 @@ renderDASHBOARD(payload) {
     this.preview.rowDeleted({ id, trades, stats });
   }
   
+  _swiperToggle(e) {
+    const wasOn = localStorage.getItem("swiper") !== null;
+    const on = !wasOn;
+    if (on) localStorage.setItem("swiper", 1);
+    else localStorage.removeItem("swiper");
+  
+    e.target.closest("a")?.classList.toggle("active", on);
+    this.ready?.applySwiperState(on);
+  }
+
   _showSnapShoot() {
     const modal = new UI.Modal({
       title: "Preview Status",

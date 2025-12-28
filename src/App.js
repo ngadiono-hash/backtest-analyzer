@@ -63,3 +63,9 @@ class App {
 }
 
 document.addEventListener('DOMContentLoaded', new App());
+document.addEventListener("click", e => {
+  const el = e.target.closest("a,button");
+  if (!el) return;
+  el.classList.toggle("tap");
+  setTimeout(() => el.classList.toggle("tap"), 180);
+});

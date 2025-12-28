@@ -1,322 +1,301 @@
-// src/views/builders/AnalyticSheet.js
-import * as FM           from "util/formatter.js";
-import * as CB           from "builder/chart_builder.js";
-import * as TB           from "builder/table_builder.js";
+import * as FM from "util/formatter.js";
+import * as CB from "builder/chart_builder.js";
+import * as TB from "builder/table_builder.js";
 
 export class AnalyticView {
-  constructor({ data, onFilter }) {
-    this.data = data;
-    this.onFilter = onFilter;
-    this.tabs = ["overview","general","monthly","streak","drawdown","accumulate","summary"];
-    this.root = create("section", { class: "page-stats" });
-
-    this._initLayout();
-    // this._initFilter();
-    this._initSwiper();
-    this._initContent(this.data);
-  }
-
-  render() {
-    return this.root;
-  }
-
-  /* ---------- mount once ---------- */
-
-  _initLayout() {
-    this.navBar = create("div", { className: "nav-bar" },
-      ...this.tabs.map((id, i) =>
-        create("button", {
-          className: "nav-btn",
-          dataset: { index: i }
-        }, FM.capitalize(id))
-      )
-    );
-    this.swiperEl  = create("div", { className: "swiper" });
-    this.wrapperEl = create("div", { className: "swiper-wrapper" },
-      ...this.tabs.map(id =>
-        create("div", { id, className: "swiper-slide" })
-      )
-    );
-    this.swiperEl.append(this.wrapperEl);
-    this.filterBar = create("div", { className: "filter-bar collapsed" });
-    this.root.append(this.navBar, this.swiperEl, this.filterBar);
-  }
-
-  _initSwiper() {
-    const btns = $$(".nav-btn", this.navBar);
-
-    const updateTabs = (active) => {
-      btns.forEach((b, i) => {
-        const on = i === active;
-        b.classList.toggle("active", on);
-        on && b.scrollIntoView({ inline: "center", block: "nearest" });
-      });
-    };
-
-    this.swiper = new Swiper(this.swiperEl, {
-      loop: true,
-      slidesPerView: 1,
-      resistanceRatio: 0.5,
-      speed: 250,
-      autoHeight: false,
-      touchStartPreventDefault: false,
-      on: {
-        realIndexChange: sw => updateTabs(sw.realIndex)
-      }
+  constructor({ meta, onFilter }) {
+    Object.assign(this, {
+      meta, onFilter,
+      tabs: ["overview","general","monthly","streak","drawdown","summaries"],
+      root: create("section", { class: "page-stats" }),
+      charts: Object.create(null)
     });
-
-    updateTabs(0);
+    this._initLayout(); 
+    this._initFilter();
+    this._initSwiper();
+  }
+  
+  applySwiperState(on) {
+    this.swiper.allowTouchMove = on;
+    this.swiper.update();
+  }
+  
+  _initSwiper() {
+    if (this.swiper) return;
+  
+    const btns = $$(".nav-btn", this.navBar),
+      sync = i => btns.forEach((b,x)=>
+        b.classList.toggle("active", x === i) &&
+        x === i &&
+        b.scrollIntoView({ inline:"center" })
+      );
+    let stateSwipe = localStorage.getItem("swiper") ? true : false;
+    this.swiper = new Swiper(this.swiperEl,{
+      loop:true, slidesPerView:1, resistanceRatio:.5, speed:250, touchStartPreventDefault:false, 
+      allowTouchMove: stateSwipe,
+      on:{ realIndexChange: sw => (sync(sw.realIndex), this._renderActiveTab()) }
+    });
+  
+    sync(0);
+  
     btns.forEach(b =>
       b.onclick = () => this.swiper.slideToLoop(+b.dataset.index)
     );
   }
+  
+  render = () => this.root;
+
+  update(v) {
+    if (!v) return;
+    this.lastView = v;
+    this._updateRanges(v.filter);
+    this._updatePairs(v.pairStats, v.filter.pairs);
+    this._renderActiveTab(true);
+  }
+  
+  /* ---------- filter ---------- */
+  
+  _updateRanges({ range, years=[] }) {
+    this.rangeGroup.innerHTML = "";
+    this.rangeBtns = [];
+  
+    const ranges = ["ALL","3M","6M", ...years];
+  
+    ranges.forEach(r => {
+      const btn = create(
+        "button",
+        {
+          className: "range-btn",
+          dataset: { range: r },
+          onclick: () => this.onFilter({ range: r })
+        },
+        r
+      );
+      btn.classList.toggle("active", r === range);
+      this.rangeBtns.push(btn);
+      this.rangeGroup.append(btn);
+    });
+  }
+  
+  _updatePairs(stats = {}, active = []) {
+    const act = new Set(active);
+  
+    Object.entries(stats).forEach(([pair, count]) => {
+      let b = this.pairBtns.get(pair);
+  
+      if (!b) {
+        b = create("button", {
+          className: "pair-btn",
+          dataset: { pair },
+          onclick: () => this.onFilter({ pair, on: !b.classList.contains("active") })
+        },
+          create("span", { className: "pair-label" }, pair),
+          create("small", { className: "badge" }, count)
+        );
+        this.pairBtns.set(pair, b);
+        this.pairGroup.append(b);
+      } else {
+        $(".badge", b).textContent = count;
+      }
+  
+      b.classList.toggle("active", act.has(pair));
+    });
+  
+    [...this.pairBtns].forEach(([p,b]) => !(p in stats) && (b.remove(), this.pairBtns.delete(p)));
+  }
+
+  /* ---------- init ---------- */
+
+  _initLayout() {
+    this.navBar = create("div", { class:"nav-bar" },
+      ...this.tabs.map((t,i)=>create("button",{class:"nav-btn",dataset:{index:i}},FM.capitalize(t)))
+    );
+
+    this.wrapperEl = create("div",{class:"swiper-wrapper"},
+      ...this.tabs.map(id=>create("div",{id,class:"swiper-slide"}))
+    );
+
+    this.swiperEl  = create("div",{class:"swiper"},this.wrapperEl);
+    this.filterBar = create("div",{class:"filter-bar collapsed"});
+    this.root.append(this.navBar,this.swiperEl,this.filterBar);
+  }
+
+  // _initSwiper() {
+  //   const btns = $$(".nav-btn", this.navBar),
+  //     sync = i => btns.forEach((b,x)=>
+  //       b.classList.toggle("active", x === i) && x === i && b.scrollIntoView({inline:"center"})
+  //     );
+
+  //   this.swiper = new Swiper(this.swiperEl,{
+  //     loop:true,slidesPerView:1,resistanceRatio:.5,speed:250,touchStartPreventDefault:false,
+  //     on:{ realIndexChange: sw => (sync(sw.realIndex), this._renderActiveTab()) }
+  //   });
+
+  //   sync(0);
+  //   btns.forEach(b => b.onclick = (e) => {
+  //     this.swiper.slideToLoop(+b.dataset.index);
+  //   });
+  // }
 
   _initFilter() {
-    this.rangeGroup = create("div", { className: "filter-group range" });
-    this.pairGroup  = create("div", { className: "filter-group pair" });
-    this.filterBar.append(this.rangeGroup, this.pairGroup);
+    this.rangeGroup = create("div",{class:"filter-group range"});
+    this.pairGroup  = create("div",{class:"filter-group pair"});
+    this.rangeBtns  = [];
+    this.pairBtns   = new Map();
+    this.filterBar.append(this.rangeGroup,this.pairGroup);
   }
 
-renderRangeFilters(container, ranges, onChange) {
-  container.innerHTML = "";
+  /* ---------- tabs ---------- */
 
-  ranges.forEach(r => {
-    const btn = document.createElement("button");
-    btn.className = "range-btn";
-    btn.dataset.range = r.id;
-    btn.textContent = r.label;
+  _renderActiveTab(force=false) {
+    if (!this.lastView || !this.swiper) return;
+    const i = this.swiper.realIndex;
+    if (!force && this._activeTab === i) return;
+    this._activeTab = i;
 
-    btn.onclick = () => {
-      [...container.children].forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      onChange(r.id);
+    const d = this.lastView.data;
+    ({
+      overview:  () => this._sectionOverview(d.curve),
+      general:   () => this._sectionGeneral(d.general),
+      monthly:   () => this._sectionYearMonth(d.monthly),
+      streak:    () => this._sectionStreak(d.streak),
+      summaries: () => this._sectionSummaries(d.summaries),
+    })[this.tabs[i]]?.();
+  }
+
+  /* ---------- sections ---------- */
+
+  _sectionOverview = d =>
+    this._renderChart({ key:"equity-global", container:$("#overview",this.root), data:d, config:CB.lineChartConfig });
+
+  _sectionGeneral(d) {
+    new TB.Tables($("#general",this.root)).setId("general-table")
+      .header([
+        create("th",{class:"pivot pivot-xy p-mode"},"Metrics"),
+        ...["All","Long","Short"].map(h=>TB.Cells.headCell(h,"pivot pivot-x p-mode"))
+      ])
+      .rows(Object.keys(d.a).map(k=>[
+        TB.Cells.textCell(FM.toTitle(k),"pivot pivot-y p-mode"),
+        TB.Cells.pvCell(d.a[k]), TB.Cells.pvCell(d.l[k]), TB.Cells.pvCell(d.s[k])
+      ]))
+      .build();
+  }
+
+  _sectionYearMonth(d) {
+    const r=$("#monthly",this.root); r.innerHTML="";
+    if (!d || !Object.keys(d).length) return r.textContent="No monthly data available.";
+    Object.keys(d).sort().reverse().forEach(y=>r.append(this._buildYearSection(y,d[y])));
+  }
+
+  _buildYearSection(y,{summary,months}) {
+    const h = CB.createHeaderYear(y,summary),
+      b = create("div",{class:"accordion-content"});
+    Object.keys(months).sort().forEach(m=>b.append(this._buildMonthSection(m,months[m])));
+    return h.append(b), h;
+  }
+
+  _buildMonthSection(m,d) {
+    const h = CB.createHeaderMonth(m,d),
+      b = create("div",{class:"accordion-content"});
+    $('input[type="checkbox"]', h).onchange = e => e.target.checked &&
+      this._renderChart({key:`equity-${m}`,container:b,data:d.equity,config:CB.lineChartConfig,resize:false});
+    return h.append(b), h;
+  }
+
+  _sectionSummaries(d) {
+    const r = $("#summaries",this.root); r.innerHTML="";
+    const {monthly,yearly,total}=d.accumulate,
+          {countM,countY,period,summaryM,summaryY}=d.summary,
+          years=Object.keys(yearly).sort(),
+          sec=[create("div",{class:"mb-2"}),create("div",{class:"mb-2"})];
+
+    r.append(...sec);
+
+    new TB.Tables(sec[0]).setId("monthly-table")
+      .header([create("th",{class:"pivot pivot-xy p-mode"},"Month"),...years.map(y=>TB.Cells.headCell(y,"pivot pivot-x p-mode"))])
+      .rows([
+        ...MONTH_NAMES.map(n=>{
+          const mm=String(MONTHS[n]+1).padStart(2,"0");
+          return [TB.Cells.textCell(n,"pivot pivot-y p-mode"),...years.map(y=>TB.Cells.pvCell(monthly[`${y}-${mm}`],"N"))];
+        }),
+        [TB.Cells.textCell("Total","pivot pivot-y p-mode"),...years.map(y=>TB.Cells.pvCell(yearly[y],"N"))]
+      ])
+      .build(create("h3",{class:"txt-c pivot p-mode p-2"},
+        `${FM.dateDMY(period.start,true)} - ${FM.dateDMY(period.end,true)}`));
+
+    new TB.Tables(sec[1]).setId("summary-table")
+      .rows([
+        [create("td",{colspan:2,class:"pivot sprt p-mode"},`Summary Performance of ${countM}`)],
+        ...Object.entries(summaryM).map(([k,v])=>[TB.Cells.textCell(FM.toTitle(k),"pivot pivot-y p-mode"),TB.Cells.pvCell(v)]),
+        [create("td",{colspan:2,class:"pivot sprt p-mode"},`Summary Performance of ${countY}`)],
+        ...Object.entries(summaryY).map(([k,v])=>[TB.Cells.textCell(FM.toTitle(k),"pivot pivot-y p-mode"),TB.Cells.pvCell(v)])
+      ])
+      .build();
+  }
+  
+  _sectionStreak(d) {
+    const root = $("#streak");
+    root.innerHTML = "";
+  
+    const tabBar = create("div", { className: "streak-tabs" });
+    const panels = create("div", { className: "streak-panels" });
+  
+    const tabs = {
+      win: TB.buildCard("win", d.win, "streak-tab"),
+      lose: TB.buildCard("lose", d.lose, "streak-tab")
     };
-
-    container.appendChild(btn);
-  });
-}
-
-renderPairFilters(container, pairs, onChange) {
-  container.innerHTML = "";
-
-  const btnAll = document.createElement("button");
-  btnAll.className = "pair-btn active";
-  btnAll.dataset.pair = "ALL";
-  btnAll.textContent = "ALL";
-
-  container.appendChild(btnAll);
-
-  pairs.forEach(p => {
-    const btn = document.createElement("button");
-    btn.className = "pair-btn";
-    btn.dataset.pair = p;
-    btn.textContent = p;
-    container.appendChild(btn);
-  });
-
-  container.onclick = e => {
-    const btn = e.target.closest(".pair-btn");
-    if (!btn) return;
-
-    const pair = btn.dataset.pair;
-
-    if (pair === "ALL") {
-      [...container.children].forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      onChange(null); // null = ALL
-      return;
-    }
-
-    btn.classList.toggle("active");
-    btnAll.classList.remove("active");
-
-    const active = [...container.querySelectorAll(".pair-btn.active")]
-      .map(b => b.dataset.pair)
-      .filter(p => p !== "ALL");
-
-    if (!active.length) {
-      btnAll.classList.add("active");
-      onChange(null);
-    } else {
-      onChange(active);
-    }
-  };
-}
-
-  _initContent(data) {
-    // this.tableGeneral?.(data.general);
-    this.chartGlobalEquity?.(data.view.curve);
-    // this.tableAccumulation?.(data.period.accum);
-    // this.monthlyPerformance?.(data.yearly, data.monthly);
-  }
-
   
-  
-  // tableGeneral(data) {
-  //   const container = $("#general", this.root);
-  //   const b = new TB.Tables(container).setId("general-table");
-
-  //   const header = [
-  //     create("th", { class:"pivot pivot-xy pips-mode" }, "Metrics"),
-  //     TB.Cells.headCell("All", "pivot pivot-x pips-mode"),
-  //     TB.Cells.headCell("Long", "pivot pivot-x pips-mode"),
-  //     TB.Cells.headCell("Short", "pivot pivot-x pips-mode"),
-  //   ];
-
-  //   const rows = Object.keys(data.a).map(m => ([
-  //     TB.Cells.textCell(FM.toTitle(m), "pivot pivot-y pips-mode"),
-  //     TB.Cells.pvCell(data.a[m]),
-  //     TB.Cells.pvCell(data.l[m]),
-  //     TB.Cells.pvCell(data.s[m])
-  //   ]));
-
-  //   b.header(header).rows(rows).build();
-  //   // container.prepend(TB.Toggler(container));
-  // }
-
-  chartGlobalEquity(data) {
-    const overview = $("#overview", this.root);
-    overview.innerHTML = "";
-    const { wrapper, canvas, controls } = this._buildChartLayout(data);
-    overview.append(wrapper);
-    
-    const config  = CB.lineChartConfig(data);
-    const chart   = CB.initChart("equity-global", canvas, config);
-    CB.resizeConfig(wrapper, chart);
-    // CB.lineChartAllPairs(controls, stats, chart)
-    return chart;
-  }
-  
-  // tableAccumulation(accum) {
-  //   const { monthly, yearly, total } = accum;
-  
-  //   const container = $("#accumulate", this.root);
-  //   const table = new TB.Tables(container).setId("monthly-table");
-  
-  //   const years = Object.keys(yearly).sort();
-  
-  //   /* ---------- header ---------- */
-  
-  //   const header = [
-  //     create("th", { className: "pivot pivot-xy pips-mode" }, "Month"),
-  //     ...years.map(y => TB.Cells.headCell(y, "pivot pivot-x pips-mode"))
-  //   ];
-  
-  //   /* ---------- rows ---------- */
-  
-  //   const rows = MONTH_NAMES.map(name => {
-  //     const mm = String(MONTHS[name] + 1).padStart(2, "0");
-  
-  //     const cells = years.map(y =>
-  //       TB.Cells.pvCell(monthly[`${y}-${mm}`], "N")
-  //     );
-  
-  //     return [
-  //       TB.Cells.textCell(name, "pivot pivot-y pips-mode"),
-  //       ...cells
-  //     ];
-  //   });
-  
-  //   /* ---------- total per year ---------- */
-  
-  //   rows.push([
-  //     TB.Cells.textCell("Total", "pivot pivot-y pips-mode"),
-  //     ...years.map(y => TB.Cells.pvCell(yearly[y], "N"))
-  //   ]);
-  
-  //   /* ---------- grand total ---------- */
-  
-  //   const grand = TB.Cells.pvCell(total, "N");
-  //   const merged = create("td", {
-  //     colspan: years.length,
-  //     className: "grand-total-row"
-  //   });
-  //   merged.append(...grand.childNodes);
-  
-  //   rows.push([
-  //     TB.Cells.textCell("Grand", "pivot pivot-y pips-mode"),
-  //     merged
-  //   ]);
-  
-  //   table.header(header).rows(rows).build();
-  // }
-
-  // monthlyPerformance(yearly, monthly) {
-  //   const container = $("#monthly", this.root);
-  //   container.innerHTML = "";
-  //   if (!monthly || !Object.keys(monthly).length) {
-  //     container.textContent = "No monthly data available.";
-  //     return;
-  //   }
-  
-  //   // --- Group months by year ----------
-  //   const yearMap = {};
-  //   for (const monthKey in monthly) {
-  //     const [y] = monthKey.split("-");
-  //     if (!yearMap[y]) yearMap[y] = [];
-  //     yearMap[y].push(monthKey);
-  //   }
-  
-  //   // --- Build Accordion for each YEAR ---
-  //   for (const year in yearMap) {
-  //     const yearSection = this._buildYearSection(
-  //       year,
-  //       yearMap[year],
-  //       monthly,
-  //       yearly[year] ?? null
-  //     );
-  //     container.append(yearSection);
-  //   }
-  // }
-
-  // _buildYearSection(year, monthKeys, stats) {
-  //   const header = CB.createHeaderYear(year, monthKeys, stats);
-  //   const body = create("div", { class: "accordion-content" });
-  //   monthKeys.sort().forEach(mk => body.append(this._buildMonthSection(mk, stats[mk])));
-  //   header.append(body);
-  //   return header;
-  // }
-
-  // _buildMonthSection(monthKey, datas) {
-  //   const data = datas.equity
-  //   const header = CB.createHeaderMonth(monthKey, datas);
-  //   const body = create("div", { class: "accordion-content" });
-  //   const { wrapper, canvas, controls } = this._buildChartLayout(data);
-  //   body.append(wrapper);
-  //   body.append(controls);
-  //   const config  = CB.lineChartConfig(data);
-  //   $('input[type="checkbox"]', header).addEventListener("change", (e) => {
-  //     if (e.target.checked) {
-  //       const chart = CB.initChart(`equity-${monthKey}`, canvas, config);
-  //       CB.lineChartAllPairs(controls, data, chart);
-  //     }
-  //   });
-  //   header.append(body);
-  //   return header;
-  // }
-  
-  _buildChartLayout(data) {
-    const canvas  = create("canvas", { class: "canvas" });
-    const wrapper = create("div", { class: "chart-wrapper" }, canvas);
-    
-    const controls = create("div", { class: "filter-group pair" });
-    const pairs = ["ALL", ...FM.getUniquePairs(data)];
-    const counts = data.p.reduce((acc, t) => {
-      acc[t.pair] = (acc[t.pair] || 0) + 1;
-      return acc;
-    }, {});
-    pairs.forEach(pair => {
-      const count = pair === "ALL" ? data.p.length : (counts[pair] ?? 0);
-      const btn = create("button", { 
-        class: `${pair === "ALL" ? "active" : ""}`, "data-pair": pair 
-      });
-      btn.append(document.createTextNode(pair + " "));
-      const badge = create("small", { class: "badge" }, count);
-      btn.append(badge);
-      controls.append(btn);
+    Object.entries(tabs).forEach(([side, tab]) => {
+      tab.dataset.tab = side;
+      tabBar.append(tab);
     });
-    return { wrapper, canvas, controls };
-  }
-
   
+    const panel = side =>
+      create("div", {
+        className: "streak-panel p-2",
+        dataset: { panel: side, state: "inactive" }
+      });
+  
+    const panelsMap = {
+      win: panel("win"),
+      lose: panel("lose")
+    };
+  
+    TB.showDetailSheet("win", d.win, panelsMap.win);
+    TB.showDetailSheet("lose", d.lose, panelsMap.lose);
+  
+    panels.append(panelsMap.win, panelsMap.lose);
+    root.append(tabBar, panels);
+  
+    const activate = side => {
+      for (const k in tabs) {
+        tabs[k].dataset.state = k === side ? "active" : "inactive";
+        panelsMap[k].dataset.state = k === side ? "active" : "inactive";
+      }
+    };
+  
+    activate("win");
+  
+    tabBar.addEventListener("click", e => {
+      const tab = e.target.closest("[data-tab]");
+      if (!tab) return;
+      activate(tab.dataset.tab);
+    });
+  }
+  
+  /* ---------- chart ---------- */
+
+  _renderChart({key,container,data,config,resize=true}) {
+    let c=this.charts[key];
+    if (!c) {
+      const cv=create("canvas",{class:"canvas"}),
+            w=create("div",{class:"chart-wrapper"},cv);
+      container.innerHTML=""; container.append(w);
+      return this.charts[key]=new Chart(cv,config(data)), resize&&CB.resizeConfig(w,this.charts[key]), this.charts[key];
+    }
+    const cfg = config(data);
+    c.data.labels = cfg.data.labels;
+    cfg.data.datasets.forEach((d,i) => c.data.datasets[i].data = d.data);
+    return c.update(), c;
+  }
 }

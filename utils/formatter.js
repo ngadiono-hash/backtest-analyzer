@@ -8,18 +8,23 @@ export function getUniquePairs(stats) {
 //  DATE HELPERS
 // =========================
 //input = "2023-03"
-export function getMonthName(input, full = false) {
+export function getMonthName(input, full = true) {
   if (!input) return "-";
-  const [, m] = input.split("-");
+  const m = input.slice(5, 7);      // lebih tegas daripada split
   const idx = Number(m) - 1;
-  return (full ? MONTH_FULL_NAMES : MONTH_NAMES)[idx] ?? "???";
+  if (idx < 0 || idx > 11) return "???";
+  return (full ? MONTH_FULL_NAMES : MONTH_NAMES)[idx];
 }
 // input = unixTimestamp || date ISO
-export function dateDMY(input) {
+export function dateDMY(input, full = false) {
   if (!input) return "-";
   const d = new Date(input + TIMEZONE * 36e5);
   if (Number.isNaN(d)) return "-";
-  return `${String(d.getUTCDate()).padStart(2,"0")} ${MONTH_NAMES[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(-2)}`;
+  const dd = String(d.getUTCDate()).padStart(2,"0")
+  const mm = (full ? MONTH_FULL_NAMES : MONTH_NAMES)[d.getUTCMonth()];
+  const yy = String(d.getUTCFullYear());
+  const yyy = full ? yy : yy.slice(-2);
+  return `${dd} ${mm} ${yyy}`;
 }
 
 // input: "23-Jan-24"

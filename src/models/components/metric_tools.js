@@ -259,13 +259,11 @@ export function callYearlyFunc(yearlyArr) {
       t: ""
     },
     bestYear: {
-      //key: yearlyArr[bestYearIndex].key,
       p: yearlyArr[bestYearIndex].p,
       v: yearlyArr[bestYearIndex].v,
       t: ""
     },
     worstYear: {
-      //key: yearlyArr[worstYearIndex].key,
       p: yearlyArr[worstYearIndex].p,
       v: yearlyArr[worstYearIndex].v,
       t: ""

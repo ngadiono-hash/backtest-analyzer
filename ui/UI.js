@@ -1,4 +1,10 @@
 // ui/UI.js
+export const tap = e => {
+  const el = e.target.closest("a,button");
+  if (!el) return;
+  el.classList.toggle("tap");
+  setTimeout(() => el.classList.toggle("tap"), 180);
+};
 
 const SLOTS = ["fab-action-1", "fab-action-2", "fab-action-3", "fab-action-4"];
 
@@ -17,9 +23,10 @@ export class FAB {
     const wheel = create("div", { class: "fab-wheel" });
 
     actions.slice(0, 4).forEach((action, i) => {
+      const act = action?.active ? "active" : "";
       const btn = create("a",
         {
-          class: `fab-action ${SLOTS[i]}`,
+          class: `fab-action ${act} ${SLOTS[i]}`,
           title: action.label,
           onclick: action.onClick
         },
@@ -30,7 +37,10 @@ export class FAB {
     });
 
     this.root.append(toggle, label, wheel);
-    this.root.addEventListener("click", e => e.stopPropagation());
+    this.root.addEventListener("click", e => {
+      tap(e);
+      e.stopPropagation();
+    });
     document.addEventListener("click", () => toggle.checked = false );
 
   }

@@ -5,105 +5,76 @@ import { plugins }       from "builder/chart_plugins.js";
 
 Chart.register(...plugins);
 
-export const initChart = (key, canvas, config) => {
-  window.charts ??= {};
-  if (window.charts[key]) window.charts[key].destroy();
-  if (config._height) {
-    canvas.canvas.height = config._height;
-  }
-  window.charts[key] = new Chart(canvas, config);
-  return window.charts[key];
-};
-
 /* === R E S I Z E R */
+
 export function resizeConfig(container, chart) {
-  container.append(create("div", { class: "resizer"}));
-  const handle = container.querySelector('.resizer');
-  
-  window.charts.equityObserver?.disconnect();
-  window.charts.equityResizeCleanup?.();
-  let raf = null;
-  const resizeObserver = new ResizeObserver(() => {
+  const handle = create("div", { class: "resizer" });
+  container.append(handle);
+
+  chart.equityObserver?.disconnect();
+  chart.equityResizeCleanup?.();
+
+  let raf;
+  const observer = new ResizeObserver(() => {
     if (!chart?.canvas) return;
-    if (raf) cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => {
-      chart.resize();
-      raf = null;
-    });
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => chart.resize());
   });
 
-  resizeObserver.observe(container);
-  window.charts.equityObserver = resizeObserver;
-  window.charts.equityResizeCleanup = _enableResize(container, handle, chart);
+  observer.observe(container);
+  chart.equityObserver = observer;
+  chart.equityResizeCleanup = enableResize(container, handle, chart);
 }
-function _enableResize(container, handle, chart) {
-  let startY = 0, startHeight = 0;
-  const minHeight = 150;
-  const getY = (e) => (e.touches ? e.touches[0].clientY : e.clientY);
 
-  function dragStart(e) {
+function enableResize(container, handle, chart) {
+  const MIN = 150;
+  let startY = 0, startH = 0;
+
+  const y = e => (e.touches?.[0] || e).clientY;
+
+  const stop = () => {
+    document.removeEventListener("mousemove", move);
+    document.removeEventListener("mouseup", stop);
+    document.removeEventListener("touchmove", move);
+    document.removeEventListener("touchend", stop);
+  };
+
+  const move = e => {
     e.preventDefault();
-    startY = getY(e);
-    startHeight = container.offsetHeight;
+    if (!chart?.canvas?.ownerDocument) return stop();
 
-    document.addEventListener("mousemove", dragMove);
-    document.addEventListener("mouseup", dragStop);
-    document.addEventListener("touchmove", dragMove, { passive: false });
-    document.addEventListener("touchend", dragStop);
-  }
+    container.style.height =
+      Math.max(MIN, startH + y(e) - startY) + "px";
 
-  function dragMove(e) {
+    chart.resize?.();
+  };
+
+  const start = e => {
     e.preventDefault();
-    // guard: jika chart atau canvas sudah tidak valid, stop dan cleanup
-    if (!chart || !chart.canvas || !chart.canvas.ownerDocument) {
-      dragStop();
-      return;
-    }
+    startY = y(e);
+    startH = container.offsetHeight;
 
-    const newHeight = Math.max(minHeight, startHeight + (getY(e) - startY));
-    container.style.height = newHeight + "px";
-    // guard sebelum resize
-    if (typeof chart.resize === 'function') chart.resize();
-  }
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", stop);
+    document.addEventListener("touchmove", move, { passive: false });
+    document.addEventListener("touchend", stop);
+  };
 
-  function dragStop() {
-    document.removeEventListener("mousemove", dragMove);
-    document.removeEventListener("mouseup", dragStop);
-    document.removeEventListener("touchmove", dragMove);
-    document.removeEventListener("touchend", dragStop);
-  }
+  handle.addEventListener("mousedown", start);
+  handle.addEventListener("touchstart", start, { passive: false });
 
-  handle.addEventListener("mousedown", dragStart);
-  handle.addEventListener("touchstart", dragStart, { passive: false });
-
-  // kembalikan fungsi cleanup supaya pemanggil bisa memutus listener jika perlu
   return () => {
-    try {
-      handle.removeEventListener("mousedown", dragStart);
-      handle.removeEventListener("touchstart", dragStart);
-    } catch (e) {}
-    dragStop();
+    handle.removeEventListener("mousedown", start);
+    handle.removeEventListener("touchstart", start);
+    stop();
   };
 }
 
 // === LINE CHART BUILDER
 
 export function lineChartConfig(src) {
-  const labels = src.p.map((_, i) => i + 1);
-  const pips = src.p.map((p, i) => ({
-    x: i + 1,
-    y: p.equity,
-    time: FM.dateDMY(p.time),
-    pair: p.pair,
-    result: p.result
-  }));
-  const value = src.v.map((v, i) => ({
-    x: i + 1,
-    y: v.equity,
-    time: FM.dateDMY(v.time),
-    pair: v.pair,
-    result: v.result
-  }));
+  const A1 = "#089981", B1 = "#f23645";
+  const A2 = "#36A2EB", B2 = "#FFB60C";
   const datasetDefaults = {
     tension: 0,
     pointRadius: 0,
@@ -112,13 +83,30 @@ export function lineChartConfig(src) {
     fill: false,
     backgroundColor: undefined
   };
-  const A1 = "#089981", B1 = "#f23645";
-  const A2 = "#36A2EB", B2 = "#FFB60C";
+  const pips = [
+    { x: 0, y: 0, time: null, pair: null, result: 0, __init: true },
+    ...src.p.map((d, i) => ({
+      x: i + 1,
+      y: d.equity,
+      time: FM.dateDMY(d.time),
+      pair: d.pair,
+      result: d.result
+    }))
+  ];
+  const value = [
+    { x: 0, y: 0, time: null, pair: null, result: 0, __init: true },
+    ...src.v.map((d, i) => ({
+      x: i + 1,
+      y: d.equity,
+      time: FM.dateDMY(d.time),
+      pair: d.pair,
+      result: d.result
+    }))
+  ];
 
   return {
     type: "line",
     data: {
-      labels,
       datasets: [
         {
           label: "pips",
@@ -139,19 +127,26 @@ export function lineChartConfig(src) {
       responsive: true,
       maintainAspectRatio: false,
       crosshair: { enabled: true },
-      layout: { padding: { right: 5 } },
       interaction: {
         mode: "index",
         intersect: false
       },
       scales: {
         x: {
-          grid: { display: false },
+          type: "linear",
+          grace: 0,
+          bounds: "data",
+          grid: { display: true },
           ticks: {
-            display: true,
-            autoSkip: true,
-            maxTicksLimit: 10,
-            callback: (v) => (v === 0 ? "0" : v)
+            callback(v, _, ticks) {
+              const max = this.max ?? ticks.at(-1).value;
+              return v === max ? v : null;
+            }
+            // callback(value, index, ticks) {
+            //   const last = ticks.at(-1)?.value;
+            //   if (value !== last && Math.abs(last - value) < 4) return "";
+            //   return value;
+            // }
           }
         },
         y: {
@@ -159,14 +154,17 @@ export function lineChartConfig(src) {
           grid: { display: false },
           ticks: {
             display: true,
-            callback: (v) => FM.num(v, 1)
+            callback(v, _, ticks) {
+              const max = this.max ?? ticks.at(-1).value;
+              return v === 0 || v === max ? FM.num(v) : null;
+            }
           }
         }
       },
 
       plugins: {
         title: {
-          display: false,
+          display: true,
           text: "Pips vs Value",
           position: "top"
         },
@@ -199,43 +197,37 @@ export function lineChartConfig(src) {
             chart.update();
           }
         },
-
-        // --- Tooltip reading data from dataset ---
         tooltip: {
           enabled: true,
+          intersect: false,
           cornerRadius: 0,
           titleFont: { size: 10 },
           bodyFont: { size: 10 },
-          intersect: false,
-        
           callbacks: {
-            title: (ctx) => {
-              const d = ctx[0].raw;
-              if (!d || d.injected || d.time === undefined) return "Start";
+            title(ctx) {
+              const d = ctx[0]?.raw;
+              if (!d || d.__init) return "Initial State";
               return `${d.pair} | ${d.time}`;
             },
         
-            label: (ctx) => {
+            label(ctx) {
               const d = ctx.raw;
-              if (!d || d.injected || d.pair === undefined) return "Initial State (0)";
+              if (!d || d.__init) return null;
               return `${FM.num(d.result)} | ${FM.num(d.y)}`;
             },
         
-            labelColor: (ctx) => {
+            labelColor(ctx) {
               const d = ctx.raw;
+              if (!d || d.__init) return null;
+            
               const ds = ctx.dataset;
-              if (!d || d.injected || d.result === undefined) {
-                return {
-                  borderColor: "#999",
-                  backgroundColor: "#999",
-                };
-              }
-        
-              const color = d.result >= 0 ? ds.segmentColor.above : ds.segmentColor.below;
-        
+              const color = d.result >= 0
+                ? ds.segmentColor.above
+                : ds.segmentColor.below;
+            
               return {
                 borderColor: color,
-                backgroundColor: color,
+                backgroundColor: color
               };
             }
           }
@@ -258,185 +250,59 @@ export function lineChartConfig(src) {
   };
 }
 
-export function lineChartAllPairs(controls, data, chart) {
-  controls.addEventListener("click", (e) => {
-    
-    const btn = e.target.closest(".pair-btn");
-    if (!btn) return;
-
-    const pair = btn.dataset.pair;
-    const btnAll = $('[data-pair="ALL"]', controls);
-
-    if (pair === "ALL") {
-      [...controls.children].forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-    } else {
-      btn.classList.toggle("active");
-      btnAll.classList.remove("active");
-
-      if (_getActivePairs(controls)[0] === "ALL") {
-        [...controls.children].forEach(b => b.classList.remove("active"));
-        btnAll.classList.add("active");
-      }
-    }
-    const selected  = _getActivePairs(controls);
-    const filtered  = _filterStatsByPair(data, selected);
-    _updateLineChart(chart, filtered);
+export function createHeaderYear(year, y) {
+  return buildHeader({
+    accClass: "acc-year",
+    id: String(year),
+    title: `Year ${year}`,
+    tradeCount: y.tCount,
+    netP: FM.metricFormat(y.netP, "R"),
+    avgP: FM.metricFormat(y.avgP, "R"),
+    netV: FM.metricFormat(y.netV, "R"),
+    avgV: FM.metricFormat(y.avgV, "R")
   });
 }
 
-function _getActivePairs(controls) {
-  const active = [...$$(".pair-btn.active", controls)]
-    .map(b => b.dataset.pair)
-    .filter(p => p !== "ALL");
-  
-  return active.length ? active : ["ALL"];
+export function createHeaderMonth(monthYear, monthData) {
+  const [year] = monthYear.split("-");
+  const name = FM.getMonthName(monthYear);
+  const m = monthData.summary;
+
+  return buildHeader({
+    accClass: "acc-month",
+    id: `${name}-${year}`,
+    title: `${name} ${year}`,
+    tradeCount: m.tCount,
+    netP: FM.metricFormat(m.netP, "R"),
+    avgP: FM.metricFormat(m.avgP, "R"),
+    netV: FM.metricFormat(m.netV, "R"),
+    avgV: FM.metricFormat(m.avgV, "R")
+  });
 }
 
-function _filterStatsByPair(data, selected) {
-  if (selected.includes("ALL")) {
-    return {
-      p: data.p.map(row => ({ ...row, equity_recalc: row.equity })),
-      v: data.v.map(row => ({ ...row, equity_recalc: row.equity }))
-    };
-  }
-  const rowsP = data.p.filter(row => selected.includes(row.pair));
-  const rowsV = data.v.filter(row => selected.includes(row.pair));
-  let eqP = 0;
-  const recalcP = rowsP.map(row => {
-    eqP += row.result;
-    return {
-      ...row,
-      equity_recalc: eqP
-    };
-  });
-  let eqV = 0;
-  const recalcV = rowsV.map(row => {
-    eqV += row.result;
-    return {
-      ...row,
-      equity_recalc: eqV
-    };
-  });
-  return { p: recalcP, v: recalcV };
-}
-
-function _updateLineChart(chart, filtered) {
-  // jika tidak ada data (filtered.p kosong), isi satu titik baseline saja
-  if (!filtered || (!filtered.p?.length && !filtered.v?.length)) {
-    chart.data.labels = ["0"];
-    chart.data.datasets[0].data = [{ x: 0, y: 0 }];
-    chart.data.datasets[1].data = [{ x: 0, y: 0 }];
-    chart.update();
-    return;
-  }
-
-  // Kita pakai index berdasarkan urutan filtered arrays (1..N)
-  const labels = filtered.p.map((_, i) => i + 1);
-  chart.data.labels = ["0", ...labels];
-
-  const injectPoint = { x: 0, y: 0, injected: true };
-
-  chart.data.datasets[0].data = [
-    injectPoint,
-    ...filtered.p.map((p, i) => ({
-      x: i + 1,
-      y: typeof p.equity_recalc === "number" ? p.equity_recalc : null,
-      time: FM.dateDMY(p.time),
-      pair: p.pair,
-      result: p.result
-    }))
-  ];
-
-  chart.data.datasets[1].data = [
-    injectPoint,
-    ...filtered.v.map((v, i) => ({
-      x: i + 1,
-      y: typeof v.equity_recalc === "number" ? v.equity_recalc : null,
-      time: FM.dateDMY(v.time),
-      pair: v.pair,
-      result: v.result
-    }))
-  ];
-
-  chart.update();
-}
-
-export function createHeaderYear(year, monthKeys, stats) {
-  let totalTrades = 0, totalNetP = 0, totalNetV = 0;
-
-  monthKeys.forEach(mKey => {
-    const s = stats[mKey].summary;
-    totalTrades += s.count;
-    totalNetP += s.netP;
-    totalNetV += s.netV;
-  });
-
-  const avgP = FM.metricFormat(totalNetP / monthKeys.length, "R");
-  const avgV = FM.metricFormat(totalNetV / monthKeys.length, "R");
-  const netP = FM.metricFormat(totalNetP, "R");
-  const netV = FM.metricFormat(totalNetV, "R");
-
-  const section = create("div", { class: "accordion acc-year" },
-    create("input", { type: "checkbox", id: `${year}`, class: "accordion-input" }),
-    create("label", { for: `${year}`, class: "accordion-label"},
+function buildHeader({ accClass,id,title,tradeCount,netP,avgP,netV,avgV }) {
+  return create("div", { class: `accordion ${accClass}` },
+    create("input", { type: "checkbox", id, class: "accordion-input" }),
+    create("label", { for: id, class: "accordion-label" },
       create("div", { class: "row" },
-        create("div", { class: "cell" }, `Year ${year}`,
+        create("div", { class: "cell cell-title" },
+          title,
           create("br"),
-          create("small", `${totalTrades} trades`)
+          create("small", `${tradeCount} trades`)
         ),
-        create("div", { class: "cell txt-r" },
-          create("span", { class: `p-mode ${netP.css}` }, "" + netP.txt,
-            create("br"),
-            create("small", { class: ``}, avgP.txt)
-          )
-        ),
-        create("div", { class: "cell txt-r" },
-          create("span", { class: `v-mode ${netV.css}` }, "" + netV.txt,
-            create("br"),
-            create("small", {class: ``}, avgV.txt)
-          )
-        ),
-        create("div", { class: "cell blank" }, ``)
+        metricCell("p-mode", netP, avgP),
+        metricCell("v-mode", netV, avgV),
+        create("div", { class: "cell blank" })
       )
     )
   );
-  return section;
 }
 
-export function createHeaderMonth(monthKey, data) {
-  const [y, m] = monthKey.split("-");
-  const name = FM.getMonthName(monthKey, true);
-  const s = data.summary;
-  const avgP = FM.metricFormat(s.avgP, "R");
-  const avgV = FM.metricFormat(s.avgV, "R");
-  const netP = FM.metricFormat(s.netP, "R");
-  const netV = FM.metricFormat(s.netV, "R");
-  
-  const section = create("div", { class: "accordion acc-month" },
-    create("input", { type: "checkbox", id: `${name}-${y}`, class: "accordion-input" }),
-    create("label", { for: `${name}-${y}`, class: "accordion-label"},
-      create("div", { class: "row" },
-        create("div", { class: "cell" }, `${name} ${y}`,
-          create("br"),
-          create("small", `${s.count} trades`)
-        ),
-        create("div", { class: "cell txt-r" },
-          create("span", { class: `p-mode ${netP.css}` }, netP.txt,
-            create("br"),
-            create("small", { class: ``}, avgP.txt)
-          )
-        ),
-        create("div", { class: "cell txt-r" },
-          create("span", { class: `v-mode ${netV.css}` }, netV.txt,
-            create("br"),
-            create("small", { class: `` }, avgV.txt)
-          )
-        ),
-        create("div", { class: "cell blank" }, ``)
-      )
+const metricCell = (mode, net, avg) =>
+  create("div", { class: "cell txt-r" },
+    create("span", { class: `${mode} ${net.css}` },
+      net.txt,
+      create("br"),
+      create("small", avg.txt)
     )
   );
-  
-  return section;
-}

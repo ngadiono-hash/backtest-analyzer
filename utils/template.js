@@ -12,18 +12,14 @@ export const create = (tag, props = {}, ...children) => {
   for (const key in props) {
     const val = props[key];
 
-    if (key === "dataset" && val && typeof val === "object") {
+    if (key === "dataset" && val && typeof val === "object")
       for (const d in val) el.dataset[d] = val[d];
-    
-    } else if (key === "style" && val && typeof val === "object") {
+    else if (key === "style" && val && typeof val === "object")
       Object.assign(el.style, val);
-      
-    } else if (key in el) {
+    else if (key in el)
       el[key] = val;
-      
-    } else { // sebisa mungkin hindari penggunaan ini
+    else
       el.setAttribute(key, val);
-    }
   }
   
   for (const child of children)
