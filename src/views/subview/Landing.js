@@ -1,10 +1,9 @@
-// src/views/components/FileHandle.js
 
-export class FileHandle {
+export class Landing {
   constructor({ onProcess } = {}) {
     this.onProcess = onProcess;          // callback → controller
     this.pendingFiles = [];
-    this.root = create("main", { class: "page-init" });
+    this.root = CREATE("main", { class: "page-init" });
 
     this._renderLanding();
   }
@@ -17,20 +16,20 @@ export class FileHandle {
   _renderLanding() {
     this.root.innerHTML = "";
 
-    const container = create("div", { class: "drop-container"},
-      create("span", { class: "browse"}),
-      create("span", { class: "drop-title"}, "Drop files here"),
-      create("span", "or"),
+    const container = CREATE("div", { class: "drop-container"},
+      CREATE("span", { class: "browse"}),
+      CREATE("span", { class: "drop-title"}, "Drop files here"),
+      CREATE("span", "or"),
     );
 
-    const input = create("input", { 
+    const input = CREATE("input", { 
       type: "file",
       accept: ".csv",
       multiple: true,
       class: "none"
     });
 
-    const browseBtn = create("button", { class: "btn btn-info" }, "Choose Files");
+    const browseBtn = CREATE("button", { class: "btn btn-info" }, "Choose Files");
     browseBtn.addEventListener("click", () => input.click());
 
     input.addEventListener("change", (e) => {
@@ -64,7 +63,7 @@ export class FileHandle {
 
   _renderPendingFilesList() {
     if (!this.pendingListContainer) {
-      this.pendingListContainer = create("div", { class: "pending-file-list" });
+      this.pendingListContainer = CREATE("div", { class: "pending-file-list" });
       this.root.append(this.pendingListContainer);
     }
 
@@ -73,19 +72,19 @@ export class FileHandle {
 
     if (!this.pendingFiles.length) {
       return root.append(
-        create("div", { class: "no-files" }, "No files selected yet.")
+        CREATE("div", { class: "no-files" }, "No files selected yet.")
       );
     }
 
-    root.append(create("h3", { class: "pending-title" }, "Files ready to process"));
+    root.append(CREATE("h3", { class: "pending-title" }, "Files ready to process"));
 
-    const list = create("ul", { class: "pending-list" });
+    const list = CREATE("ul", { class: "pending-list" });
 
     this.pendingFiles.forEach((file, i) => {
       list.append(
-        create("li", { class: "pending-item" },
-          create("span", { class: "file-name" }, `${i+1}. ${file.name}`),
-          create("button", {
+        CREATE("li", { class: "pending-item" },
+          CREATE("span", { class: "file-name" }, `${i+1}. ${file.name}`),
+          CREATE("button", {
             class: "btn",
             onclick: () => this._removeFile(i)
           }, "❌")
@@ -96,7 +95,7 @@ export class FileHandle {
     root.append(list);
 
     root.append(
-      create("button", {
+      CREATE("button", {
         class: "btn btn-success",
         onclick: () => this._processFiles()
       }, `Process ${this.pendingFiles.length} file(s)`)

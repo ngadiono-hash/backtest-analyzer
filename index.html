@@ -11,20 +11,21 @@
   <script src="./assets/cdn/chart-plugin-annotation.min.js"></script>
   <script src="./assets/cdn/eruda.min.js"></script>
   <script src="./src/core/Constants.js"></script>
-  <script src="./src/debug.js"></script>
+  <script src="./utils/debug.js"></script>
 </head>
 <body>
 <main id="app"></main>
 <script type="importmap">
   {
     "imports": {
-      "core/": "./src/core/",
-      "db/": "./src/db/",
-      "model/": "./src/models/",
+      "db/": "./src/core/db/",
+      "model/": "./src/core/models/",
+      "submodel/": "./src/core/models/submodel/",
+      "helper/": "./src/core/models/helpers/",
+      "adapter/": "./src/core/models/adapters/",
       "view/": "./src/views/",
-      "controller/": "./src/controllers/",
-      "component/": "./src/models/components/",
-      "builder/": "./src/views/builders/",
+      "subview/": "./src/views/subview/",
+      "builder/": "./builders/",
       "ui/": "./ui/",
       "util/": "./utils/"
     }

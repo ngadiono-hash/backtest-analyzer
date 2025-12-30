@@ -1,14 +1,11 @@
 // ~src/views/builders/chart_builder.js
-import { $, $$, create } from "util/template.js";
 import * as FM           from "util/formatter.js";
 import { plugins }       from "builder/chart_plugins.js";
-
-Chart.register(...plugins);
 
 /* === R E S I Z E R */
 
 export function resizeConfig(container, chart) {
-  const handle = create("div", { class: "resizer" });
+  const handle = CREATE("div", { class: "resizer" });
   container.append(handle);
 
   chart.equityObserver?.disconnect();
@@ -281,28 +278,28 @@ export function createHeaderMonth(monthYear, monthData) {
 }
 
 function buildHeader({ accClass,id,title,tradeCount,netP,avgP,netV,avgV }) {
-  return create("div", { class: `accordion ${accClass}` },
-    create("input", { type: "checkbox", id, class: "accordion-input" }),
-    create("label", { for: id, class: "accordion-label" },
-      create("div", { class: "row" },
-        create("div", { class: "cell cell-title" },
+  return CREATE("div", { class: `accordion ${accClass}` },
+    CREATE("input", { type: "checkbox", id, class: "accordion-input" }),
+    CREATE("label", { for: id, class: "accordion-label" },
+      CREATE("div", { class: "row" },
+        CREATE("div", { class: "cell cell-title" },
           title,
-          create("br"),
-          create("small", `${tradeCount} trades`)
+          CREATE("br"),
+          CREATE("small", `${tradeCount} trades`)
         ),
         metricCell("p-mode", netP, avgP),
         metricCell("v-mode", netV, avgV),
-        create("div", { class: "cell blank" })
+        CREATE("div", { class: "cell blank" })
       )
     )
   );
 }
 
 const metricCell = (mode, net, avg) =>
-  create("div", { class: "cell txt-r m" },
-    create("span", { class: `${mode} ${net.css}` },
+  CREATE("div", { class: "cell txt-r m" },
+    CREATE("span", { class: `${mode} ${net.css}` },
       net.txt,
-      create("br"),
-      create("small", avg.txt)
+      CREATE("br"),
+      CREATE("small", avg.txt)
     )
   );

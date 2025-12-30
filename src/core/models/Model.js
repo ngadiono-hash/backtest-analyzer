@@ -1,12 +1,12 @@
-// src/models/Model.js
-import { TradeStore } from "db/DataStore.js";
-import { ModelPreview } from "model/ModelPreview.js";
+
+import { TradeStore }   from "db/DataStore.js";
+import { Preview }      from "submodel/Preview.js";
 
 export class Model {
   constructor() {
     this.state = "EMPTY";
     this.trades = [];
-    this.pre = new ModelPreview();
+    this.pre = new Preview();
   }
 
   async initialize() {

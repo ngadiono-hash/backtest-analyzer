@@ -10,7 +10,7 @@ export function getUniquePairs(stats) {
 //input = "2023-03"
 export function getMonthName(input, full = true) {
   if (!input) return "-";
-  const m = input.slice(5, 7);      // lebih tegas daripada split
+  const m = input.slice(5, 7);
   const idx = Number(m) - 1;
   if (idx < 0 || idx > 11) return "???";
   return (full ? MONTH_FULL_NAMES : MONTH_NAMES)[idx];

@@ -3,20 +3,12 @@ import * as FM from "util/formatter.js";
 const DEFAULT_ULTIMATE = { enabled: false, above: "#089981", below: "#f23645" };
 const UltimatePlugin = {
   id: "ultimate",
-
-  // ------------------------------------------
-  // Utility: baca nilai y baik dari number atau object
-  // ------------------------------------------
   _getY(v) {
     if (v == null) return 0;
     if (typeof v === "number") return v;
     if (typeof v === "object" && "y" in v) return v.y;
     return 0;
   },
-  // -------------------------------------------------
-  // 1) BEFORE UPDATE
-  //    Inject titik awal {x:0, y:0} dengan struktur aman
-  // -------------------------------------------------
   beforeDraw(chart, args, opts) {
     const { ctx, chartArea } = chart;
     if (!chartArea) return;
@@ -31,11 +23,6 @@ const UltimatePlugin = {
     );
     ctx.restore();
   },
-
-  // -------------------------------------------------
-  // 2) BEFORE DATASETS DRAW
-  //    Matikan default line Chart.js
-  // -------------------------------------------------
   beforeDatasetsDraw(chart) {
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
@@ -45,10 +32,6 @@ const UltimatePlugin = {
       meta.dataset.options.backgroundColor = "rgba(0,0,0,0)";
     });
   },
-
-  // -------------------------------------------------
-  // 3) AFTER DATASETS DRAW (DRAW SEGMENTS)
-  // -------------------------------------------------
   afterDatasetsDraw(chart) {
     const ctx = chart.ctx;
     const { top, bottom } = chart.chartArea;
@@ -173,10 +156,6 @@ const UltimatePlugin = {
       ctx.restore();
     });
   },
-
-  // -------------------------------------------------
-  // 4) AFTER DRAW — custom hover dot
-  // -------------------------------------------------
   afterDraw(chart) {
     const ctx = chart.ctx;
     const active = chart.getActiveElements();
@@ -217,13 +196,9 @@ const UltimatePlugin = {
     });
   }
 };
-const DEFAULT_CROSSHAIR = {
-  enabled: true,
-  color: "rgba(0,0,0,0.3)",
-  labelBg: "rgba(0,0,0,0.8)"
-};
 
-const customCrosshairPlugin = {
+const DEFAULT_CROSSHAIR = { enabled: true, color: "rgba(0,0,0,0.3)", labelBg: "rgba(0,0,0,0.8)" };
+const CrosshairPlugin = {
   id: "crosshair",
 
   afterDraw(chart) {
@@ -340,7 +315,7 @@ function drawLabel(ctx, text, x, y, bg, center, font) {
     ctx.fillText(text, x + pad, y);
   }
 }
-export const plugins = [
-  UltimatePlugin,
-  customCrosshairPlugin
-  ];
+
+
+export const plugins = [ UltimatePlugin, CrosshairPlugin ];
+Chart.register(...plugins);

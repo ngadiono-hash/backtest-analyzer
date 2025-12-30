@@ -1,6 +1,6 @@
-import * as MT from "component/metric_tools.js";
+import * as MT from "helper/metrics.js";
 
-export class AnalyticAdaptor {
+export class Adaptor {
   constructor() {
     this.source = [];
     this.filter = { range:"ALL", pairs:new Set() };

@@ -1,13 +1,13 @@
 // src/views/View.js
-import * as UI from "ui/UI.js";
-import { FileHandle }         from "view/FileHandle.js";
-import { PreviewTable }       from "view/PreviewTable.js";
-import { AnalyticAdaptor }    from "view/AnalyticAdaptor.js";
-import { AnalyticView }    from "view/AnalyticView.js";
+import * as UI        from "ui/UI.js";
+import { Adaptor }    from "submodel/Adaptor.js";
+import { Landing }    from "subview/Landing.js";
+import { Preview }    from "subview/Preview.js";
+import { Analytic }   from "subview/Analytic.js";
 
 export class View {
   constructor() {
-    this.app = document.getElementById("app");
+    this.app = $("#app");
     this.notif = new UI.Notify();
     this.preview = null;
     this.ready = null;
@@ -21,10 +21,7 @@ export class View {
   renderState(state, payload = null) {
     const prev = this.state;
     this.state = state;
-    const hardReset =
-      state !== prev ||
-      state === "EMPTY" ||
-      state === "PREVIEW";
+    const hardReset = state !== prev || state === "EMPTY" || state === "PREVIEW";
   
     if (hardReset) {
       this.app.innerHTML = "";
@@ -60,7 +57,7 @@ export class View {
   }
 
   renderLANDING() {
-    const view = new FileHandle({
+    const view = new Landing({
       onProcess: ({ raw, fileName }) => {
         EVENT.emit("ui:upload-file", { raw, fileName });
       }
@@ -69,7 +66,7 @@ export class View {
   }
 
   renderPREVIEW(data) {
-    this.preview = new PreviewTable({
+    this.preview = new Preview({
       data,
       onEdit: (data) => EVENT.emit("ui:edit-row", { data }),
       onDelete: (data) => this._confirmDelete(true, data),
@@ -80,11 +77,11 @@ export class View {
   renderDASHBOARD(payload) {
     const { rows } = payload;
   
-    this.adaptor ??= new AnalyticAdaptor();
+    this.adaptor ??= new Adaptor();
     this.adaptor.setSource(rows);
   
     if (!this.ready) {
-      this.ready = new AnalyticView({
+      this.ready = new Analytic({
         onFilter: patch => {
           const view = this.adaptor.applyFilter(patch);
           this.ready.update(view);
