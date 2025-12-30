@@ -14,7 +14,6 @@ export class PreviewTable {
     this.rowMap = new Map();
     this.editingCell = null;
     this._renderInitial(data);
-    this.initSticky();
   }
   
   // PUBLIC API
@@ -282,49 +281,6 @@ export class PreviewTable {
   
   // STICKY HEADER / COLUMN
   // ============================================================
-  initSticky() {
-    const scrollArea = this.root;
-  
-    const init = () => {
-      const pivotsX  = $$(".pivot-x", scrollArea);
-      const pivotsY  = $$(".pivot-y", scrollArea);
-      const pivotsXY = $$(".pivot-xy", scrollArea);
-  
-      if (!pivotsX.length && !pivotsY.length && !pivotsXY.length) {
-        return setTimeout(init, 100);
-      }
-  
-      scrollArea.addEventListener("scroll", () => {
-        const x = scrollArea.scrollLeft;
-        const y = scrollArea.scrollTop;
-  
-        // ==== VERTICAL SCROLL ====
-        if (y > 0) {
-          pivotsX.forEach(el => el.classList.add("stuck-x"));
-          pivotsXY.forEach(el => el.classList.add("stuck-xy"));
-        } else {
-          pivotsX.forEach(el => el.classList.remove("stuck-x"));
-          // XY only removed if also no horizontal
-          if (x === 0) {
-            pivotsXY.forEach(el => el.classList.remove("stuck-xy"));
-          }
-        }
-  
-        // ==== HORIZONTAL SCROLL ====
-        if (x > 0) {
-          pivotsY.forEach(el => el.classList.add("stuck-y"));
-          pivotsXY.forEach(el => el.classList.add("stuck-xy"));
-        } else {
-          pivotsY.forEach(el => el.classList.remove("stuck-y"));
-          if (y === 0) {
-            pivotsXY.forEach(el => el.classList.remove("stuck-xy"));
-          }
-        }
-      });
-    };
-  
-    init();
-  }
 
 
 }

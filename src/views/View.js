@@ -85,7 +85,6 @@ export class View {
   
     if (!this.ready) {
       this.ready = new AnalyticView({
-        meta: this.adaptor.meta,
         onFilter: patch => {
           const view = this.adaptor.applyFilter(patch);
           this.ready.update(view);
@@ -94,7 +93,6 @@ export class View {
   
       this._renderView(this.ready);
     }
-  
     this.ready.update(this.adaptor.getView());
   }
 
@@ -115,7 +113,7 @@ export class View {
     else localStorage.removeItem("swiper");
   
     e.target.closest("a")?.classList.toggle("active", on);
-    this.ready?.applySwiperState(on);
+    this.ready?.updateSwiper(on);
   }
 
   _showSnapShoot() {

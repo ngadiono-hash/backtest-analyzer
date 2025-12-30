@@ -32,17 +32,19 @@ export class FAB {
         },
         create("i", { class: `${action.label}`} )
       );
-      
       wheel.append(btn);
     });
 
     this.root.append(toggle, label, wheel);
-    this.root.addEventListener("click", e => {
+    
+    this.root.addEventListener("pointerdown", e => {
       tap(e);
       e.stopPropagation();
     });
-    document.addEventListener("click", () => toggle.checked = false );
-
+    document.addEventListener("pointerdown", e => {
+      if (!this.root.contains(e.target))
+        toggle.checked = false;
+    });
   }
 
   render() { return document.body.append(this.root); }
@@ -148,4 +150,46 @@ export class Notify {
 
     return area;
   }
+}
+
+export function initSticky(scrollArea) {
+  const init = () => {
+    const pivotsX  = $$(".pivot-x", scrollArea);
+    const pivotsY  = $$(".pivot-y", scrollArea);
+    const pivotsXY = $$(".pivot-xy", scrollArea);
+
+    if (!pivotsX.length && !pivotsY.length && !pivotsXY.length) {
+      return setTimeout(init, 100);
+    }
+
+    scrollArea.addEventListener("scroll", () => {
+      const x = scrollArea.scrollLeft;
+      const y = scrollArea.scrollTop;
+
+      // ==== VERTICAL SCROLL ====
+      if (y > 0) {
+        pivotsX.forEach(el => el.classList.add("stuck-x"));
+        pivotsXY.forEach(el => el.classList.add("stuck-xy"));
+      } else {
+        pivotsX.forEach(el => el.classList.remove("stuck-x"));
+        // XY only removed if also no horizontal
+        if (x === 0) {
+          pivotsXY.forEach(el => el.classList.remove("stuck-xy"));
+        }
+      }
+
+      // ==== HORIZONTAL SCROLL ====
+      if (x > 0) {
+        pivotsY.forEach(el => el.classList.add("stuck-y"));
+        pivotsXY.forEach(el => el.classList.add("stuck-xy"));
+      } else {
+        pivotsY.forEach(el => el.classList.remove("stuck-y"));
+        if (y === 0) {
+          pivotsXY.forEach(el => el.classList.remove("stuck-xy"));
+        }
+      }
+    });
+  };
+
+  init();
 }

@@ -4,7 +4,6 @@ export class AnalyticAdaptor {
   constructor() {
     this.source = [];
     this.filter = { range:"ALL", pairs:new Set() };
-    this.meta = {};
     this.view = null;
   }
 
@@ -70,6 +69,8 @@ export class AnalyticAdaptor {
   _getYears = rows =>
     [...new Set(rows.map(r=>r.month&&+r.month.slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
 
+  /* ---------- main method ---------- */
+
   _computeCurve(trades) {
     let p=0,v=0; const P=[],V=[];
     trades.forEach(({pair,dateEX:time,pResult, vResult})=>{
@@ -78,8 +79,6 @@ export class AnalyticAdaptor {
     });
     return { p:P, v:V };
   }
-
-  /* ---------- general ---------- */
 
   _computeGeneral(trades) {
     const acc=()=>({
@@ -134,8 +133,6 @@ export class AnalyticAdaptor {
     return { a:build(A.a), l:build(A.l), s:build(A.s) };
   }
 
-  /* ---------- monthly / yearly ---------- */
-
   _computeYearMonth(trades) {
     const Y={}, M={}, R={};
     trades.forEach(t=>{
@@ -183,8 +180,6 @@ export class AnalyticAdaptor {
     return { tCount, mCount:m, netP, netV, avgP:netP/m, avgV:netV/m };
   }
 
-  /* ---------- period ---------- */
-
   _computePeriod(trades) {
     const M={},Y={},T={p:0,v:0};
     trades.forEach(({month,pResult,vResult})=>{
@@ -206,16 +201,13 @@ export class AnalyticAdaptor {
     return {
       accumulate:{ monthly:M, yearly:Y, total:T },
       summary:{
-        period:{start,end},
         countM:`${cM} months`,
         countY:`${(cM/12).toFixed(1)} years`,
         summaryM:MT.callMonthlyFunc(mArr,avg),
-        summaryY:MT.callYearlyFunc(yArr)
+        summaryY: { start, end, ...MT.callYearlyFunc(yArr) }
       }
     };
   }
-
-  /* ---------- streak ---------- */
   
   _computeStreak(data, MIN = 2) {
     const exact = { win: {}, loss: {} };

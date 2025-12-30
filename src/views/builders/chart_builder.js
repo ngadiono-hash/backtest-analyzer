@@ -299,7 +299,7 @@ function buildHeader({ accClass,id,title,tradeCount,netP,avgP,netV,avgV }) {
 }
 
 const metricCell = (mode, net, avg) =>
-  create("div", { class: "cell txt-r" },
+  create("div", { class: "cell txt-r m" },
     create("span", { class: `${mode} ${net.css}` },
       net.txt,
       create("br"),
