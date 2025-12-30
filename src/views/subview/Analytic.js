@@ -8,7 +8,7 @@ export class Analytic {
     Object.assign(this, {
       onFilter,
       tabs: ["overview","general","monthly","streak","drawdown","summaries"],
-      root: CREATE("section", { class: "page-stats" }),
+      root: $create("section", { class: "page-stats" }),
       charts: Object.create(null)
     });
   
@@ -61,7 +61,7 @@ export class Analytic {
     this.rangeGroup.innerHTML = "";
   
     ranges.forEach(r => {
-      const b = CREATE(
+      const b = $create(
         "button",
         { className:"range-btn", dataset:{ range:r } },
         r
@@ -89,11 +89,11 @@ export class Analytic {
     this.pairBtns = new Map();
 
     Object.entries(pairStats).forEach(([pair, count]) => {
-      const b = CREATE(
+      const b = $create(
         "button",
         { className:"pair-btn", dataset:{ pair } },
-        CREATE("span",{className:"pair-label"},pair),
-        CREATE("small",{className:"badge"},count)
+        $create("span",{className:"pair-label"},pair),
+        $create("small",{className:"badge"},count)
       );
 
       b.addEventListener("click", () =>
@@ -131,25 +131,25 @@ export class Analytic {
   /* ================= layout & infra ================= */
 
   _initLayout() {
-    this.navBar = CREATE("div",{class:"nav-bar"},
+    this.navBar = $create("div",{class:"nav-bar"},
       ...this.tabs.map((t,i)=>
-        CREATE("button",{class:"nav-btn",dataset:{index:i}},FM.capitalize(t))
+        $create("button",{class:"nav-btn",dataset:{index:i}},FM.capitalize(t))
       )
     );
 
-    this.wrapperEl = CREATE("div",{class:"swiper-wrapper"},
-      ...this.tabs.map(id=>CREATE("div",{id,class:"swiper-slide"}))
+    this.wrapperEl = $create("div",{class:"swiper-wrapper"},
+      ...this.tabs.map(id=>$create("div",{id,class:"swiper-slide"}))
     );
 
-    this.swiperEl  = CREATE("div",{class:"swiper"},this.wrapperEl);
-    this.filterBar = CREATE("div",{class:"filter-bar collapsed"});
+    this.swiperEl  = $create("div",{class:"swiper"},this.wrapperEl);
+    this.filterBar = $create("div",{class:"filter-bar collapsed"});
 
     this.root.append(this.navBar,this.swiperEl,this.filterBar);
   }
 
   _initFilter() {
-    this.rangeGroup = CREATE("div",{class:"filter-group range"});
-    this.pairGroup  = CREATE("div",{class:"filter-group pair"});
+    this.rangeGroup = $create("div",{class:"filter-group range"});
+    this.pairGroup  = $create("div",{class:"filter-group pair"});
     this.filterBar.append(this.rangeGroup,this.pairGroup);
   }
 
@@ -222,10 +222,10 @@ export class Analytic {
 
   _sectionGeneral(d) {
     const root = $("#general",this.root); root.innerHTML = "";
-    const sec = CREATE("div", { class: "p-mode"} );
+    const sec = $create("div", { class: "p-mode"} );
     new TB.Tables(sec).setId("general-table")
       .header([
-        CREATE("th",{class:"pivot pivot-xy"},"Metrics"),
+        $create("th",{class:"pivot pivot-xy"},"Metrics"),
         ...["All","Long","Short"].map(h=>TB.Cells.headCell(h,"pivot pivot-x"))
       ])
       .rows(Object.keys(d.a).map(k=>[
@@ -247,7 +247,7 @@ export class Analytic {
     const { monthly,yearly,total } = d.accumulate,
       { countM, countY, period, summaryM, summaryY } = d.summary,
       years = Object.keys(yearly).sort(),
-      sec = [CREATE("div",{class:"mb-2 p-mode"}),CREATE("div",{class:"mb-2 p-mode"}),CREATE("div",{class:"mb-2 p-mode"})];
+      sec = [$create("div",{class:"mb-2 p-mode"}),$create("div",{class:"mb-2 p-mode"}),$create("div",{class:"mb-2 p-mode"})];
 
     r.append(...sec);
 
@@ -266,7 +266,7 @@ export class Analytic {
       ...years.map(y => TB.Cells.pvCell(yearly[y], "R", "total-row"))
     ];
     const grand = TB.Cells.pvCell(total, "R");
-    const merged = CREATE("td", {
+    const merged = $create("td", {
       colspan: years.length,
       className: "grand-total-row"
     });
@@ -280,7 +280,7 @@ export class Analytic {
     new TB.Tables(sec[0])
       .setId("monthly-table")
       .header([
-        CREATE("th", { class: "pivot pivot-xy p-mode" }, "Month"),
+        $create("th", { class: "pivot pivot-xy p-mode" }, "Month"),
         ...yearHeaders
       ])
       .rows([
@@ -329,8 +329,8 @@ export class Analytic {
   _sectionStreak(d) {
     const root = $("#streak", this.root); root.innerHTML = "";
   
-    const tabBar = CREATE("div", { className: "streak-tabs" });
-    const panels = CREATE("div", { className: "streak-panels" });
+    const tabBar = $create("div", { className: "streak-tabs" });
+    const panels = $create("div", { className: "streak-panels" });
   
     const tabs = {
       win: TB.buildCard("win", d.win, "streak-tab"),
@@ -343,7 +343,7 @@ export class Analytic {
     });
   
     const panel = side =>
-      CREATE("div", {
+      $create("div", {
         className: "streak-panel p-2",
         dataset: { panel: side, state: "inactive" }
       });
@@ -442,14 +442,14 @@ export class Analytic {
 
   _buildYearSection(y,{summary,months}) {
     const h = CB.createHeaderYear(y,summary),
-      b = CREATE("div",{class:"accordion-content"});
+      b = $create("div",{class:"accordion-content"});
     Object.keys(months).sort().forEach(m=>b.append(this._buildMonthSection(m,months[m])));
     return h.append(b), h;
   }
 
   _buildMonthSection(m,d) {
     const h = CB.createHeaderMonth(m,d),
-      b = CREATE("div",{class:"accordion-content"});
+      b = $create("div",{class:"accordion-content"});
     $('input[type="checkbox"]', h).onchange = e => e.target.checked &&
       this._renderChart({key:`equity-${m}`,container:b,data:d.equity,config:CB.lineChartConfig,resize:false});
     return h.append(b), h;
@@ -458,8 +458,8 @@ export class Analytic {
   _renderChart({key,container,data,config,resize=true}) {
     let c=this.charts[key];
     if (!c) {
-      const cv=CREATE("canvas",{class:"canvas"}),
-            w=CREATE("div",{class:"chart-wrapper"},cv);
+      const cv=$create("canvas",{class:"canvas"}),
+            w=$create("div",{class:"chart-wrapper"},cv);
       container.innerHTML=""; container.append(w);
       return this.charts[key]=new Chart(cv,config(data)), resize&&CB.resizeConfig(w,this.charts[key]), this.charts[key];
     }

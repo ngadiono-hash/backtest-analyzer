@@ -6,7 +6,7 @@ export class Preview {
     this.onDelete = onDelete;
     this.onSave = onSave;
     this.HEADERS = ["pair", "type", "dateEN", "dateEX","priceEN", "priceTP", "priceSL", "result"];
-    this.root = CREATE("section", { class: "page-preview" });
+    this.root = $create("section", { class: "page-preview" });
 
     // internal state
     this.trades = [];
@@ -84,28 +84,28 @@ export class Preview {
     const totalIssues = invalidRows.reduce(
       (sum, row) => sum + row.issues.length, 0
     );
-    const content = CREATE("div", { class: "status-info" });
-    const statsBox = CREATE("div", { class: "stats" },
-      CREATE("span", "Total rows"),
-      CREATE("span", "Invalid rows"),
-      CREATE("span", "Total issues"),
+    const content = $create("div", { class: "status-info" });
+    const statsBox = $create("div", { class: "stats" },
+      $create("span", "Total rows"),
+      $create("span", "Invalid rows"),
+      $create("span", "Total issues"),
     
-      CREATE("b", $$("tbody tr").length),
-      CREATE("b", invalidRows.length),
-      CREATE("b", totalIssues)
+      $create("b", $$("tbody tr").length),
+      $create("b", invalidRows.length),
+      $create("b", totalIssues)
     );
     
     content.append(statsBox);
     
     if (invalidRows.length) {
-      const list = CREATE("ul", { class: "issues" });
+      const list = $create("ul", { class: "issues" });
       invalidRows.forEach(row => {
-        const rowItem = CREATE("li", {}, `Row ${row.row}`);
+        const rowItem = $create("li", {}, `Row ${row.row}`);
         if (row.issues.length > 0) {
-          const subList = CREATE("ul", { class: "issue-list" });
+          const subList = $create("ul", { class: "issue-list" });
           row.issues.forEach(i => {
             subList.append(
-              CREATE("li", {}, `${FM.toTitle(i.key)}: ${i.message}`)
+              $create("li", {}, `${FM.toTitle(i.key)}: ${i.message}`)
             );
           });
           rowItem.append(subList);
@@ -114,7 +114,7 @@ export class Preview {
       });
       content.append(list);
     } else {
-      content.append(CREATE("p", { class: "txt-c" }, "All rows are valid"));
+      content.append($create("p", { class: "txt-c" }, "All rows are valid"));
     }
     
     return content;
@@ -127,9 +127,9 @@ export class Preview {
 
     this.trades = trades;
 
-    this.table = CREATE("table", { id: "trade-table" });
-    this.thead = CREATE("thead");
-    this.tbody = CREATE("tbody");
+    this.table = $create("table", { id: "trade-table" });
+    this.thead = $create("thead");
+    this.tbody = $create("tbody");
 
     this._renderHeader();
     this._renderBody(trades);
@@ -139,11 +139,11 @@ export class Preview {
   }
 
   _renderHeader() {
-    const tr = CREATE("tr");
-    tr.append(CREATE("th", { class: "pivot pivot-xy" }, "#"));
+    const tr = $create("tr");
+    tr.append($create("th", { class: "pivot pivot-xy" }, "#"));
 
     this.HEADERS.forEach(h =>
-      tr.append(CREATE("th", { class: "pivot pivot-x" }, FM.toTitle(h)))
+      tr.append($create("th", { class: "pivot pivot-x" }, FM.toTitle(h)))
     );
 
     this.thead.append(tr);
@@ -160,7 +160,7 @@ export class Preview {
   _createTbodyRow(trade, idx) {
     const rowNumber = idx + 1;
   
-    const row = CREATE("tr", {
+    const row = $create("tr", {
       class: trade.valid ? "" : "invalid",
       dataset: {
         id: trade.id,
@@ -168,7 +168,7 @@ export class Preview {
       }
     });
   
-    const pivot = CREATE("td",
+    const pivot = $create("td",
       { class: "pivot pivot-y" },
       trade.valid ? rowNumber : "❌"
     );
@@ -185,7 +185,7 @@ export class Preview {
     
     this.HEADERS.forEach(key => {
       const hasError = !trade.valid && trade.issues?.[key];
-      const td = CREATE("td", {
+      const td = $create("td", {
         class: `data-cell${hasError ? " cell-error" : ""}`,
         dataset: {
           key,

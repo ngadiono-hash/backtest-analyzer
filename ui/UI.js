@@ -10,26 +10,26 @@ export class FAB {
   constructor(actions = []) {
     const SLOTS = ["fab-action-1", "fab-action-2", "fab-action-3", "fab-action-4"];
     $(".fab-wrapper")?.remove();
-    this.root = CREATE("div", { class: "fab-wrapper" });
-    const toggle = CREATE("input", { id: "fabCheckbox", type: "checkbox", class: "fab-checkbox" });
+    this.root = $create("div", { class: "fab-wrapper" });
+    const toggle = $create("input", { id: "fabCheckbox", type: "checkbox", class: "fab-checkbox" });
 
-    const label = CREATE("label", { class: "fab", for: "fabCheckbox" },
-      CREATE("span", { class: "fab-dots fab-dots-1" }),
-      CREATE("span", { class: "fab-dots fab-dots-2" }),
-      CREATE("span", { class: "fab-dots fab-dots-3" })
+    const label = $create("label", { class: "fab", for: "fabCheckbox" },
+      $create("span", { class: "fab-dots fab-dots-1" }),
+      $create("span", { class: "fab-dots fab-dots-2" }),
+      $create("span", { class: "fab-dots fab-dots-3" })
     );
 
-    const wheel = CREATE("div", { class: "fab-wheel" });
+    const wheel = $create("div", { class: "fab-wheel" });
 
     actions.slice(0, 4).forEach((action, i) => {
       const act = action?.active ? "active" : "";
-      const btn = CREATE("a",
+      const btn = $create("a",
         {
           class: `fab-action ${act} ${SLOTS[i]}`,
           title: action.label,
           onclick: action.onClick
         },
-        CREATE("i", { class: `${action.label}`} )
+        $create("i", { class: `${action.label}`} )
       );
       wheel.append(btn);
     });
@@ -53,18 +53,18 @@ export class Modal {
   constructor({ title = "", content = "", actions = null, backdrop = true }) 
   
   {
-    this.root = CREATE("div", { class: "modal-backdrop" });
-    this.modal = CREATE("div", { class: "modal" });
+    this.root = $create("div", { class: "modal-backdrop" });
+    this.modal = $create("div", { class: "modal" });
     this.backdrop = backdrop;
     this.content = content;
 
     if (title) {
-      const header = CREATE("div", { class: "modal-header" }, title);
+      const header = $create("div", { class: "modal-header" }, title);
       this.modal.append(header);
     }
 
     const custom = typeof this.content === "object";
-    const body = CREATE("div", { class: `modal-body ${custom ? "custom" : "" }` });
+    const body = $create("div", { class: `modal-body ${custom ? "custom" : "" }` });
     if (custom) {
       body.append(this.content);
     } else {
@@ -73,10 +73,10 @@ export class Modal {
     this.modal.append(body);
 
     if (Array.isArray(actions) && actions != null) {
-      const footer = CREATE("div", { class: "modal-footer" });
+      const footer = $create("div", { class: "modal-footer" });
 
       actions.forEach(action => {
-        const btn = CREATE("button", {
+        const btn = $create("button", {
           class: action.class ?? "btn",
           onclick: () => {
             action.onClick?.();
@@ -115,10 +115,10 @@ export class Notify {
   show(type = "info", message = "") {
     if (!message) return;
 
-    const notify = CREATE("div", { class: `notify ${type}` });
+    const notify = $create("div", { class: `notify ${type}` });
 
-    const text = CREATE("span", { class: "message" }, message);
-    const close = CREATE("span", { class: "close" }, "");
+    const text = $create("span", { class: "message" }, message);
+    const close = $create("span", { class: "close" }, "");
 
     notify.append(text, close);
     this.area.append(notify);
@@ -143,7 +143,7 @@ export class Notify {
   _ensureArea() {
     let area = $(".notify-area");
     if (!area) {
-      area = CREATE("div", { class: "notify-area" });
+      area = $create("div", { class: "notify-area" });
       this.root.append(area);
     }
 

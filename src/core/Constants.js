@@ -27,7 +27,7 @@ const $ = (selector, context = document) => context.querySelector(selector);
 
 const $$ = (selector, context = document) => Array.from(context.querySelectorAll(selector));
 
-const CREATE = (tag, props, ...children) => {
+const $create = (tag, props, ...children) => {
   const el = document.createElement(tag);
   if (!props || props.constructor !== Object) {
     children.unshift(props); props = {};
